@@ -390,7 +390,7 @@ export default {
 }
 
 .app-container {
-  height: 100vh;
+  min-height: 100vh;
   background: var(--bg-gradient);
 }
 
@@ -586,7 +586,8 @@ export default {
   padding: 0;
   overflow-y: auto;
   position: relative;
-  min-height: calc(100vh - 64px);
+  height: calc(100vh - 64px);
+  max-height: calc(100vh - 64px);
 }
 
 .content-wrapper {

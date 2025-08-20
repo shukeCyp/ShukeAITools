@@ -34,8 +34,8 @@
 ## 📋 环境要求
 
 ### 系统要求
-- **Python 3.9+** (需要自行安装)
-- **Node.js 16+** (用于前端开发)
+- **Python 3.9+** (启动脚本会自动使用UV安装)
+- **Node.js 16+** (启动脚本会检测并引导安装)
 - **现代浏览器** (Chrome、Firefox、Safari、Edge)
 
 ### 支持的操作系统
@@ -43,41 +43,75 @@
 - Windows 10+
 - Linux (Ubuntu 18.04+)
 
+### 自动化环境管理
+本项目使用现代化的包管理工具：
+- **UV** - 快速的Python包管理器（自动安装Python和依赖）
+- **智能检测** - 自动检测Node.js环境并提供安装引导
+- **一键启动** - 无需手动配置环境，脚本自动处理所有依赖
+
 ## 🛠️ 安装与启动
 
-### 方式一：使用启动脚本（推荐）
+### 方式一：分步启动（推荐）
 
 #### macOS/Linux
 ```bash
 # 克隆项目
-git@github.com:shukeCyp/ShukeAITools.git
+git clone git@github.com:shukeCyp/ShukeAITools.git
 cd ShukeAITools
 
 # 给脚本执行权限
-chmod +x scripts/start_all.sh
+chmod +x scripts/*.sh
 
-# 启动所有服务
-./scripts/start_all.sh
+# 启动后端服务（自动安装Python和依赖）
+./scripts/start_backend.sh
+
+# 新开终端窗口，启动前端服务（自动检测Node.js并引导安装）
+./scripts/start_frontend.sh
 ```
 
 #### Windows
 ```cmd
 # 克隆项目
-git clone https://github.com/your-username/ShukeAITools.git
+git clone git@github.com:shukeCyp/ShukeAITools.git
 cd ShukeAITools
 
-# 启动所有服务
-scripts\start_all.bat
+# 启动后端服务（自动安装Python和依赖）
+scripts\start_backend.bat
+
+# 新开命令行窗口，启动前端服务（自动检测Node.js并引导安装）
+scripts\start_frontend.bat
 ```
 
+#### 🚀 智能环境检测
+启动脚本具备以下智能功能：
+
+**Python环境管理**：
+- 自动检测并安装UV包管理器
+- 自动安装Python 3.11
+- 自动创建虚拟环境
+- 自动安装所有Python依赖
+
+**Node.js环境管理**：
+- 自动检测Node.js是否已安装
+- 如未安装，提供友好的安装引导：
+  - **Windows**：可选择使用内置安装包或在线下载
+  - **macOS/Linux**：引导到官网下载或使用包管理器安装
+
+**依赖管理**：
+- 智能选择包管理器（优先pnpm，其次npm）
+- 自动安装前端依赖
+- 自动安装Playwright浏览器
+
 ### 方式二：手动启动
+
+如果需要手动控制启动过程，可以使用以下命令：
 
 #### 1. 启动后端服务
 ```bash
 # 进入后端目录
 cd backend
 
-# 创建虚拟环境（推荐）
+# 创建虚拟环境
 python3 -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
@@ -90,53 +124,33 @@ python app.py
 
 #### 2. 启动前端服务
 ```bash
-# 新开终端窗口，进入前端目录
+# 进入前端目录
 cd frontend
 
 # 安装依赖
-npm install
+npm install  # 或 pnpm install
 
 # 启动前端开发服务器
-npm run dev
+npm run dev  # 或 pnpm run dev
 ```
 
 ### 3. 访问应用
 
 启动成功后，在浏览器中访问：
-- 🌐 **前端界面**: http://localhost:5173
+- 🌐 **前端界面**: http://localhost:9999
 - 🔧 **后端API**: http://localhost:8888
 
+> 💡 **提示**：如果前端端口显示为5173，实际访问请使用9999端口
+
 ## 📱 功能模块
+### 功能模块
 
-### ✅ 已实现功能
-
-#### 🎨 即梦文生图
-- **智能任务管理**：支持单个和批量任务创建
-- **多账号支持**：自动轮换账号，避免频率限制
-- **实时监控**：任务状态实时更新和进度跟踪
-- **批量下载**：支持批量下载生成的图片到本地
-- **灵活配置**：支持多种模型、分辨率和质量设置
-
-**支持的参数**：
-- 模型：Image 1.4, Image 2.0 Pro, Image 2.1, Image 3.0, Image 3.1
-- 分辨率：21:9, 16:9, 3:2, 4:3, 1:1, 3:4, 2:3, 9:16
-- 质量：1K
-
-### 🚧 开发计划 (TODO)
-
-#### 📹 即梦图生视频
-- [ ] 图片上传和管理
-- [ ] 视频生成参数配置
-- [ ] 视频任务队列管理
-- [ ] 生成进度监控
-- [ ] 视频下载和预览
-
-#### 🤖 即梦数字人
-- [ ] 数字人模型选择
-- [ ] 语音输入和文本转换
-- [ ] 数字人视频生成
-- [ ] 表情和动作控制
-- [ ] 批量数字人视频制作
+- ✅ **即梦国际版文生图**
+- 🚧 **即梦国际版图生视频**
+- 🚧 **即梦国际版数字人**
+- 🚧 **Runway文生图**
+- 🚧 **Runway图生视频**
+- 🚧 **Vidu图生视频**
 
 ## 🔧 配置说明
 
@@ -161,6 +175,7 @@ ShukeAITools/
 │   ├── managers/           # 任务管理器
 │   ├── models/             # 数据模型
 │   ├── utils/              # 工具函数
+│   ├── requirements.txt    # Python依赖
 │   └── app.py              # 主应用入口
 ├── frontend/               # 前端代码
 │   ├── src/                # 源代码
@@ -168,10 +183,15 @@ ShukeAITools/
 │   │   ├── views/          # 页面
 │   │   └── utils/          # 工具函数
 │   └── package.json        # 依赖配置
-├── scripts/                # 启动脚本
-│   ├── start_all.sh        # 启动所有服务(Unix)
-│   ├── start_all.bat       # 启动所有服务(Windows)
-│   └── ...
+├── scripts/                # 启动脚本和工具
+│   ├── start_backend.sh    # 启动后端服务(Unix)
+│   ├── start_backend.bat   # 启动后端服务(Windows)
+│   ├── start_frontend.sh   # 启动前端服务(Unix)
+│   ├── start_frontend.bat  # 启动前端服务(Windows)
+│   ├── uv                  # UV包管理器(Unix)
+│   ├── uv.exe              # UV包管理器(Windows)
+│   └── node-v22.18.0-x86.msi # Node.js安装包(Windows)
+├── INSTALL.md              # 详细安装指南
 └── README.md               # 项目说明
 ```
 
@@ -195,11 +215,15 @@ ShukeAITools/
 2. **账号安全**：请妥善保管你的平台账号信息，本项目不对账号安全负责
 3. **合规使用**：请遵守相关平台的使用条款和法律法规
 4. **数据备份**：建议定期备份重要的任务数据和配置信息
+5. **环境要求**：
+   - 首次运行需要网络连接以下载依赖
+   - Windows用户需要管理员权限来安装Node.js
+   - macOS用户可能需要允许运行未知开发者的应用（UV工具）
 
 ## 📞 联系方式
 
-- **项目地址**：https://github.com/your-username/ShukeAITools
-- **问题反馈**：https://github.com/your-username/ShukeAITools/issues
+- **项目地址**：https://github.com/shukeCyp/ShukeAITools
+- **问题反馈**：https://github.com/shukeCyp/ShukeAITools/issues
 
 ## 🙏 致谢
 

@@ -965,7 +965,8 @@ export default {
 <style scoped>
 .jimeng-text2img-page {
   padding: 16px 24px;
-  min-height: calc(100vh - 64px);
+  height: 100%;
+  overflow-y: auto;
 }
 
 /* 页面标题 */
