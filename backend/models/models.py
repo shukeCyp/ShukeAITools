@@ -100,3 +100,44 @@ class JimengText2ImgTask(BaseModel):
             if img:
                 images.append(img)
         return images
+
+class JimengImg2VideoTask(BaseModel):
+    """即梦图生视频任务"""
+    # 基本字段
+    prompt = TextField()  # 提示词
+    model = CharField(max_length=100, default="Video 1.0")  # 使用的模型
+    second = IntegerField(default=5)  # 视频时长（秒）
+    
+    # 状态字段 - 使用数字状态码
+    # 0: 排队中, 1: 生成中, 2: 已完成, 3: 失败
+    status = IntegerField(default=0)
+    
+    # 关联账号
+    account_id = IntegerField(null=True)  # 使用的账号ID
+    
+    # 输入图片和输出视频
+    image_path = CharField(max_length=500, null=True)  # 输入图片路径
+    video_url = CharField(max_length=500, null=True)  # 生成的视频URL
+    
+    # 时间戳
+    create_at = DateTimeField(default=datetime.now)
+    update_at = DateTimeField(default=datetime.now)
+    
+    class Meta:
+        table_name = 'jimeng_img2video_tasks'
+        
+    def get_status_text(self):
+        """获取状态文字描述"""
+        status_map = {
+            0: '排队中',
+            1: '生成中', 
+            2: '已完成',
+            3: '失败'
+        }
+        return status_map.get(self.status, '未知状态')
+        
+    def update_status(self, status):
+        """更新任务状态"""
+        self.status = status
+        self.update_at = datetime.now()
+        self.save()

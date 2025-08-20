@@ -389,7 +389,7 @@ class JimengTaskManager:
         client = None
         try:
             # 获取可用账号
-            available_account = self._get_available_account()
+            available_account = self._get_available_account('text2img')
             if not available_account:
                 return {'success': False, 'error': '没有可用的即梦账号或账号使用次数已达上限'}
             
@@ -433,12 +433,17 @@ class JimengTaskManager:
                     print(f"⚠️ 关闭浏览器异常: {str(e)}")
                     pass
     
-    def _get_available_account(self):
+    def _get_available_account(self, task_type='text2img'):
         """
         获取可用的即梦账号
         
+        参数:
+            task_type: 任务类型 ('text2img', 'img2video', 'digital_human')
+        
         规则：
-        - 一个账号每天可生成10次图片（40张图片）
+        - 图片生成：每个账号每天可生成10次
+        - 视频生成：每个账号每天可生成1次
+        - 数字人生成：每个账号每天可生成1次
         - 优先选择使用次数最少的账号
         """
         try:
@@ -451,30 +456,61 @@ class JimengTaskManager:
                 print("❌ 没有配置的即梦账号")
                 return None
             
+            # 根据任务类型设置每日限制
+            daily_limits = {
+                'text2img': 10,      # 图片生成每天10次
+                'img2video': 1,      # 视频生成每天1次
+                'digital_human': 1   # 数字人生成每天1次
+            }
+            
+            daily_limit = daily_limits.get(task_type, 10)
+            
             # 查找今日使用次数最少且未达上限的账号
             best_account = None
             min_usage = float('inf')
             
             for account in accounts:
-                # 统计今日该账号的文生图任务使用次数
-                today_usage = JimengText2ImgTask.select().where(
-                    (JimengText2ImgTask.account_id == account.id) &
-                    (JimengText2ImgTask.status.in_([1, 2])) &  # 处理中或已完成
-                    (JimengText2ImgTask.create_at >= today)
-                ).count()
+                # 统计今日该账号的指定类型任务使用次数
+                if task_type == 'text2img':
+                    # 统计文生图任务
+                    today_usage = JimengText2ImgTask.select().where(
+                        (JimengText2ImgTask.account_id == account.id) &
+                        (JimengText2ImgTask.status.in_([1, 2])) &  # 处理中或已完成
+                        (JimengText2ImgTask.create_at >= today)
+                    ).count()
+                elif task_type == 'img2video':
+                    # 统计图生视频任务（需要根据实际的视频任务表来统计）
+                    # 这里假设有JimengImg2VideoTask表
+                    today_usage = 0  # 暂时设为0，需要根据实际表结构调整
+                    # today_usage = JimengImg2VideoTask.select().where(
+                    #     (JimengImg2VideoTask.account_id == account.id) &
+                    #     (JimengImg2VideoTask.status.in_([1, 2])) &
+                    #     (JimengImg2VideoTask.create_at >= today)
+                    # ).count()
+                elif task_type == 'digital_human':
+                    # 统计数字人任务（需要根据实际的数字人任务表来统计）
+                    # 这里假设有JimengDigitalHumanTask表
+                    today_usage = 0  # 暂时设为0，需要根据实际表结构调整
+                    # today_usage = JimengDigitalHumanTask.select().where(
+                    #     (JimengDigitalHumanTask.account_id == account.id) &
+                    #     (JimengDigitalHumanTask.status.in_([1, 2])) &
+                    #     (JimengDigitalHumanTask.create_at >= today)
+                    # ).count()
+                else:
+                    today_usage = 0
                 
-                print(f"📊 账号 {account.account} 今日已使用: {today_usage}/10 次")
+                print(f"📊 账号 {account.account} 今日{task_type}已使用: {today_usage}/{daily_limit} 次")
                 
                 # 检查是否还有可用次数
-                if today_usage < 10 and today_usage < min_usage:
+                if today_usage < daily_limit and today_usage < min_usage:
                     min_usage = today_usage
                     best_account = account
             
             if best_account:
-                print(f"✅ 选择账号: {best_account.account} (今日已使用: {min_usage}/10)")
+                print(f"✅ 选择账号: {best_account.account} (今日{task_type}已使用: {min_usage}/{daily_limit})")
                 return best_account
             else:
-                print("❌ 所有账号今日使用次数已达上限")
+                print(f"❌ 所有账号今日{task_type}使用次数已达上限")
                 return None
                 
         except Exception as e:

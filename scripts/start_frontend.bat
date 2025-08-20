@@ -62,24 +62,6 @@ if %errorlevel% neq 0 (
 echo Node.js版本：
 node --version
 
-:: 检查包管理器，优先使用pnpm，其次npm
-set PKG_MANAGER=
-pnpm --version >nul 2>&1
-if %errorlevel% equ 0 (
-    set PKG_MANAGER=pnpm
-    echo 使用包管理器: pnpm
-) else (
-    npm --version >nul 2>&1
-    if %errorlevel% equ 0 (
-        set PKG_MANAGER=npm
-        echo 使用包管理器: npm
-    ) else (
-        echo 错误：未找到npm或pnpm包管理器
-        pause
-        exit /b 1
-    )
-)
-
 :: 检查依赖包
 echo 检查前端依赖...
 if not exist "node_modules" (
