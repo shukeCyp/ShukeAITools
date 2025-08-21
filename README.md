@@ -191,7 +191,6 @@ ShukeAITools/
 │   ├── uv                  # UV包管理器(Unix)
 │   ├── uv.exe              # UV包管理器(Windows)
 │   └── node-v22.18.0-x86.msi # Node.js安装包(Windows)
-├── INSTALL.md              # 详细安装指南
 └── README.md               # 项目说明
 ```
 
