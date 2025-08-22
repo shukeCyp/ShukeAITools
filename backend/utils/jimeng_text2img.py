@@ -13,30 +13,6 @@ from colorama import Fore, Style, init
 # 初始化colorama
 init()
 
-async def check_playwright_browsers():
-    """检查Playwright浏览器是否已安装，如果没有则安装"""
-    try:
-        print(f"{Fore.YELLOW}检查Playwright浏览器是否已安装...{Style.RESET_ALL}")
-        result = subprocess.run(
-            ["playwright", "install", "chromium"], 
-            capture_output=True, 
-            text=True,
-            check=False
-        )
-        
-        if result.returncode == 0:
-            print(f"{Fore.GREEN}Playwright浏览器已正确安装{Style.RESET_ALL}")
-        else:
-            print(f"{Fore.YELLOW}正在安装Playwright浏览器...{Style.RESET_ALL}")
-            subprocess.run(["playwright", "install"], check=True)
-            print(f"{Fore.GREEN}Playwright浏览器安装完成{Style.RESET_ALL}")
-            
-    except Exception as e:
-        print(f"{Fore.RED}安装Playwright浏览器时出错: {str(e)}{Style.RESET_ALL}")
-        print(f"{Fore.YELLOW}请手动运行: playwright install{Style.RESET_ALL}")
-        return False
-    
-    return True
 def get_browser_config():
     """获取固定的浏览器配置"""
     print(f"{Fore.YELLOW}使用默认浏览器配置...{Style.RESET_ALL}")
@@ -66,7 +42,11 @@ async def text2image(prompt, username, password, model="Image 3.1", aspect_ratio
         headless: 是否无头模式运行
         
     返回:
-        list: 成功时返回图片URL列表，失败时返回None
+        dict: {
+            "code": 200/601/602/603/604,
+            "data": 图片URL列表或None,
+            "message": 状态信息
+        }
     """
     print(f"{Fore.GREEN}开始自动生成文本到图片...{Style.RESET_ALL}")
     print(f"{Fore.CYAN}提示词: {Style.RESET_ALL}{prompt}")
@@ -80,9 +60,6 @@ async def text2image(prompt, username, password, model="Image 3.1", aspect_ratio
     page = None
     
     try:
-        # 检查浏览器
-        if not await check_playwright_browsers():
-            return None
             
         # 初始化浏览器
         print(f"{Fore.YELLOW}正在启动浏览器...{Style.RESET_ALL}")
@@ -180,7 +157,11 @@ async def text2image(prompt, username, password, model="Image 3.1", aspect_ratio
             print(f"{Fore.GREEN}登录成功！{Style.RESET_ALL}")
         else:
             print(f"{Fore.RED}登录可能失败，当前URL: {current_url}{Style.RESET_ALL}")
-            return None
+            return {
+                "code": 602,
+                "data": None,
+                "message": "登录失败，无法找到登录节点或页面跳转异常"
+            }
         
         # 跳转到AI工具生成页面
         print(f"{Fore.YELLOW}正在跳转到AI工具生成页面...{Style.RESET_ALL}")
@@ -313,7 +294,11 @@ async def text2image(prompt, username, password, model="Image 3.1", aspect_ratio
         
         if not task_id:
             print(f"{Fore.RED}未能获取到任务ID，生成可能失败{Style.RESET_ALL}")
-            return None
+            return {
+                "code": 603,
+                "data": None,
+                "message": "任务ID等待超时"
+            }
             
         # 等待图片生成完成
         print(f"{Fore.YELLOW}已获取任务ID，等待图片生成完成...{Style.RESET_ALL}")
@@ -331,15 +316,50 @@ async def text2image(prompt, username, password, model="Image 3.1", aspect_ratio
             print(f"{Fore.GREEN}图片生成成功！总共用时 {time.time() - start_time:.1f} 秒{Style.RESET_ALL}")
             for i, url in enumerate(image_urls):
                 print(f"{Fore.GREEN}图片{i+1} URL: {url}{Style.RESET_ALL}")
+            return {
+                "code": 200,
+                "data": image_urls,
+                "message": "图片生成成功"
+            }
         else:
             print(f"{Fore.YELLOW}等待超时或未能获取图片URL，已等待 {time.time() - start_time:.1f} 秒{Style.RESET_ALL}")
             print(f"{Fore.YELLOW}任务ID: {task_id or '未获取'}{Style.RESET_ALL}")
+            return {
+                "code": 604,
+                "data": None,
+                "message": "等待超时或未能获取图片URL"
+            }
         
-        return image_urls if image_urls else None
-        
+    except asyncio.TimeoutError as e:
+        print(f"{Fore.RED}Playwright等待超时: {str(e)}{Style.RESET_ALL}")
+        return {
+            "code": 601,
+            "data": None,
+            "message": f"Playwright等待超时: {str(e)}"
+        }
     except Exception as e:
-        print(f"{Fore.RED}生成图片时出错: {str(e)}{Style.RESET_ALL}")
-        return None
+        error_msg = str(e)
+        print(f"{Fore.RED}生成图片时出错: {error_msg}{Style.RESET_ALL}")
+        
+        # 根据错误信息判断错误类型
+        if "selector" in error_msg.lower() or "element" in error_msg.lower() or "not found" in error_msg.lower():
+            return {
+                "code": 602,
+                "data": None,
+                "message": f"找不到页面节点: {error_msg}"
+            }
+        elif "timeout" in error_msg.lower():
+            return {
+                "code": 601,
+                "data": None,
+                "message": f"操作超时: {error_msg}"
+            }
+        else:
+            return {
+                "code": 500,
+                "data": None,
+                "message": f"未知错误: {error_msg}"
+            }
     
     finally:
         # 关闭浏览器
@@ -362,12 +382,12 @@ if __name__ == "__main__":
         aspect_ratio = "1:1"
         quality = "1K"
         
-        image_urls = await test2image(prompt, username, password, model, aspect_ratio, quality, headless=False)
+        result = await text2image(prompt, username, password, model, aspect_ratio, quality, headless=False)
         
-        if image_urls:
-            print(f"{Fore.GREEN}生成成功，图片链接列表: {image_urls}{Style.RESET_ALL}")
+        if result["code"] == 200:
+            print(f"{Fore.GREEN}生成成功，图片链接列表: {result['data']}{Style.RESET_ALL}")
         else:
-            print(f"{Fore.RED}生成失败{Style.RESET_ALL}")
+            print(f"{Fore.RED}生成失败: {result['message']}{Style.RESET_ALL}")
     
     # 运行测试
     asyncio.run(test())

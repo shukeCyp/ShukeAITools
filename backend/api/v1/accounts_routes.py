@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 from flask import Blueprint, request, jsonify
-from datetime import datetime
-from backend.models.models import JimengAccount
+from datetime import datetime, date
+from backend.models.models import JimengAccount, JimengText2ImgTask, JimengImg2VideoTask
+from backend.utils.jimeng_account_login import login_and_get_cookie
+from backend.core.global_task_manager import global_task_manager
+import asyncio
 
 # 创建蓝图
 jimeng_accounts_bp = Blueprint('jimeng_accounts', __name__, url_prefix='/api/jimeng/accounts')
@@ -13,12 +16,41 @@ def get_accounts():
     try:
         accounts = list(JimengAccount.select())
         data = []
+        today = date.today()
+        
         for account in accounts:
+            # 统计今日图片生成使用次数 - 不过滤空任务
+            text2img_usage = JimengText2ImgTask.select().where(
+                (JimengText2ImgTask.account_id == account.id) &
+                (JimengText2ImgTask.create_at >= today)
+            ).count()
+            
+            # 统计今日视频生成使用次数 - 不过滤空任务
+            img2video_usage = JimengImg2VideoTask.select().where(
+                (JimengImg2VideoTask.account_id == account.id) &
+                (JimengImg2VideoTask.create_at >= today)
+            ).count()
+            
+            # 数字人暂时设为0
+            digital_human_usage = 0
+            
             data.append({
                 'id': account.id,
                 'account': account.account,
+                'password': account.password,
+                'has_cookies': bool(account.cookies),  # 添加布尔值表示是否有Cookie
                 'created_at': account.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-                'updated_at': account.updated_at.strftime('%Y-%m-%d %H:%M:%S')
+                'updated_at': account.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'today_usage': {
+                    'text2img': text2img_usage,
+                    'img2video': img2video_usage,
+                    'digital_human': digital_human_usage
+                },
+                'daily_limits': {
+                    'text2img': 10,
+                    'img2video': 2,  # 更新为2个视频任务
+                    'digital_human': 1
+                }
             })
         
         print("成功获取账号列表，总数: {}".format(len(data)))
@@ -140,36 +172,79 @@ def get_account_usage_stats():
     """获取账号使用情况统计"""
     try:
         from datetime import date
-        from backend.models.models import JimengText2ImgTask
         
         today = date.today()
         accounts = list(JimengAccount.select())
         
         stats = []
         for account in accounts:
-            # 统计今日使用次数
+            # 统计今日文生图使用次数 - 不过滤空任务
             today_text2img = JimengText2ImgTask.select().where(
                 (JimengText2ImgTask.account_id == account.id) &
-                (JimengText2ImgTask.status.in_([1, 2])) &  # 处理中或已完成
                 (JimengText2ImgTask.create_at >= today)
             ).count()
             
+            # 统计今日图生视频使用次数 - 不过滤空任务
+            today_img2video = JimengImg2VideoTask.select().where(
+                (JimengImg2VideoTask.account_id == account.id) &
+                (JimengImg2VideoTask.create_at >= today)
+            ).count()
+            
+            # 数字人暂时设为0
+            today_digital_human = 0
+            
             # 统计总使用次数
             total_text2img = JimengText2ImgTask.select().where(
-                (JimengText2ImgTask.account_id == account.id) &
-                (JimengText2ImgTask.status == 2)  # 已完成
+                (JimengText2ImgTask.account_id == account.id)
             ).count()
+            
+            total_img2video = JimengImg2VideoTask.select().where(
+                (JimengImg2VideoTask.account_id == account.id)
+            ).count()
+            
+            # 设置每日限额
+            text2img_limit = 10
+            img2video_limit = 2  # 更新为2个视频任务
+            digital_human_limit = 1
+            
+            # 判断账号状态 - 任何一种类型达到限制就视为已满
+            is_available = (today_text2img < text2img_limit) and (today_img2video < img2video_limit) and (today_digital_human < digital_human_limit)
             
             stats.append({
                 'id': account.id,
                 'account': account.account,
-                'today_text2img': today_text2img,
-                'today_limit': 10,
-                'today_remaining': max(0, 10 - today_text2img),
-                'total_text2img': total_text2img,
-                'status': 'available' if today_text2img < 10 else 'limit_reached',
+                'today_usage': {
+                    'text2img': today_text2img,
+                    'img2video': today_img2video,
+                    'digital_human': today_digital_human
+                },
+                'daily_limits': {
+                    'text2img': text2img_limit,
+                    'img2video': img2video_limit,
+                    'digital_human': digital_human_limit
+                },
+                'remaining': {
+                    'text2img': max(0, text2img_limit - today_text2img),
+                    'img2video': max(0, img2video_limit - today_img2video),
+                    'digital_human': max(0, digital_human_limit - today_digital_human)
+                },
+                'total_usage': {
+                    'text2img': total_text2img,
+                    'img2video': total_img2video,
+                    'digital_human': 0
+                },
+                'status': 'available' if is_available else 'limit_reached',
                 'last_used': None  # 可以后续添加最后使用时间
             })
+        
+        # 计算总体统计数据
+        total_today_text2img = sum(s['today_usage']['text2img'] for s in stats)
+        total_today_img2video = sum(s['today_usage']['img2video'] for s in stats)
+        total_today_digital_human = sum(s['today_usage']['digital_human'] for s in stats)
+        
+        total_remaining_text2img = sum(s['remaining']['text2img'] for s in stats)
+        total_remaining_img2video = sum(s['remaining']['img2video'] for s in stats)
+        total_remaining_digital_human = sum(s['remaining']['digital_human'] for s in stats)
         
         return jsonify({
             'success': True,
@@ -178,8 +253,18 @@ def get_account_usage_stats():
                 'summary': {
                     'total_accounts': len(accounts),
                     'available_accounts': len([s for s in stats if s['status'] == 'available']),
-                    'total_today_usage': sum(s['today_text2img'] for s in stats),
-                    'total_remaining': sum(s['today_remaining'] for s in stats)
+                    'today_usage': {
+                        'text2img': total_today_text2img,
+                        'img2video': total_today_img2video,
+                        'digital_human': total_today_digital_human,
+                        'total': total_today_text2img + total_today_img2video + total_today_digital_human
+                    },
+                    'remaining': {
+                        'text2img': total_remaining_text2img,
+                        'img2video': total_remaining_img2video,
+                        'digital_human': total_remaining_digital_human,
+                        'total': total_remaining_text2img + total_remaining_img2video + total_remaining_digital_human
+                    }
                 }
             },
             'message': '获取账号使用统计成功'
@@ -191,3 +276,113 @@ def get_account_usage_stats():
             'success': False,
             'message': '获取统计失败: {}'.format(str(e))
         }), 500
+
+@jimeng_accounts_bp.route('/<int:account_id>/get-cookie', methods=['POST'])
+def get_account_cookie(account_id):
+    """获取指定账号的Cookie"""
+    try:
+        print(f"开始获取账号Cookie，账号ID: {account_id}")
+        account = JimengAccount.get_by_id(account_id)
+        
+        # 提交任务到全局线程池
+        task_future = global_task_manager.submit_task(
+            platform_name="即梦账号",
+            task_callable=_process_cookie_task,
+            task_id=account_id,  # 传递task_id参数
+            account_id=account.id,  # 传递account_id参数
+            account_email=account.account,  # 传递account_email参数
+            task_type="获取Cookie",
+            prompt=f"获取账号 {account.account} 的Cookie"
+        )
+        
+        print(f"Cookie获取任务已提交到线程池，账号: {account.account}")
+        return jsonify({
+            'success': True,
+            'message': f'正在获取账号 {account.account} 的Cookie，请稍候...'
+        })
+        
+    except JimengAccount.DoesNotExist:
+        print(f"获取Cookie失败：账号不存在，ID: {account_id}")
+        return jsonify({
+            'success': False,
+            'message': '账号不存在'
+        }), 404
+        
+    except Exception as e:
+        print(f"获取Cookie异常，ID: {account_id}, 错误: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'获取Cookie失败: {str(e)}'
+        }), 500
+
+@jimeng_accounts_bp.route('/batch-get-cookie', methods=['POST'])
+def batch_get_account_cookie():
+    """批量获取账号Cookie"""
+    try:
+        data = request.get_json()
+        account_ids = data.get('account_ids', [])
+        
+        if not account_ids:
+            return jsonify({
+                'success': False,
+                'message': '请提供要获取Cookie的账号ID列表'
+            }), 400
+        
+        # 获取账号信息
+        accounts = list(JimengAccount.select().where(JimengAccount.id.in_(account_ids)))
+        
+        if not accounts:
+            return jsonify({
+                'success': False,
+                'message': '未找到指定的账号'
+            }), 404
+        
+        # 提交任务到全局线程池
+        for account in accounts:
+            global_task_manager.submit_task(
+                platform_name="即梦账号",
+                task_callable=_process_cookie_task,
+                task_id=account.id,  # 传递task_id参数
+                account_id=account.id,  # 传递account_id参数
+                account_email=account.account,  # 传递account_email参数
+                task_type="获取Cookie",
+                prompt=f"获取账号 {account.account} 的Cookie"
+            )
+        
+        print(f"批量获取Cookie任务已提交，账号数量: {len(accounts)}")
+        return jsonify({
+            'success': True,
+            'message': f'正在获取 {len(accounts)} 个账号的Cookie，请稍候...'
+        })
+        
+    except Exception as e:
+        print(f"批量获取Cookie异常: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'批量获取Cookie失败: {str(e)}'
+        }), 500
+
+def _process_cookie_task(account_id, account_email):
+    """处理获取Cookie的任务"""
+    try:
+        print(f"开始获取账号Cookie: {account_email}")
+        
+        # 获取账号信息
+        account = JimengAccount.get_by_id(account_id)
+        
+        # 调用登录模块获取Cookie (使用asyncio.run执行异步函数)
+        result = asyncio.run(login_and_get_cookie(account.account, account.password, headless=True))
+        
+        if result["code"] == 200 and result["data"]:
+            # 更新账号的Cookie
+            account.cookies = result["data"]
+            account.updated_at = datetime.now()
+            account.save()
+            print(f"账号 {account.account} 的Cookie获取成功并已更新")
+            return True
+        else:
+            print(f"账号 {account.account} 的Cookie获取失败: {result['message']}")
+            return False
+    except Exception as e:
+        print(f"处理Cookie任务异常，账号: {account_email}, 错误: {str(e)}")
+        return False

@@ -25,6 +25,17 @@
           <el-icon><Refresh /></el-icon>
           刷新列表
         </el-button>
+        <el-button 
+          type="success" 
+          @click="batchGetCookie"
+          :loading="batchCookieLoading"
+          size="large"
+          :disabled="selectedAccounts.length === 0"
+          class="cookie-btn"
+        >
+          <el-icon><Key /></el-icon>
+          获取选中Cookie
+        </el-button>
         <el-popconfirm
           title="确定要清空所有即梦账号吗？此操作不可恢复！"
           @confirm="clearAllAccounts"
@@ -73,26 +84,41 @@
             <el-icon size="24"><DataBoard /></el-icon>
           </div>
           <div class="stat-content">
-            <div class="stat-value">{{ usageStats.summary.available_accounts }}</div>
+            <div class="stat-value">{{ usageStats.summary?.available_accounts }}</div>
             <div class="stat-label">可用账号</div>
           </div>
         </div>
+        
+        <!-- 文生图统计 -->
         <div class="stat-card warning">
           <div class="stat-icon">
-            <el-icon size="24"><Clock /></el-icon>
+            <el-icon size="24"><Picture /></el-icon>
           </div>
           <div class="stat-content">
-            <div class="stat-value">{{ usageStats.summary.total_today_usage }}</div>
-            <div class="stat-label">今日已用</div>
+            <div class="stat-value">{{ usageStats.summary?.today_usage?.text2img || 0 }}/{{ usageStats.summary?.remaining?.text2img + (usageStats.summary?.today_usage?.text2img || 0) }}</div>
+            <div class="stat-label">文生图已用/总量</div>
           </div>
         </div>
-        <div class="stat-card success">
+        
+        <!-- 图生视频统计 -->
+        <div class="stat-card danger">
           <div class="stat-icon">
-            <el-icon size="24"><DataBoard /></el-icon>
+            <el-icon size="24"><VideoPlay /></el-icon>
           </div>
           <div class="stat-content">
-            <div class="stat-value">{{ usageStats.summary.total_remaining }}</div>
-            <div class="stat-label">今日剩余</div>
+            <div class="stat-value">{{ usageStats.summary?.today_usage?.img2video || 0 }}/{{ usageStats.summary?.remaining?.img2video + (usageStats.summary?.today_usage?.img2video || 0) }}</div>
+            <div class="stat-label">图生视频已用/总量</div>
+          </div>
+        </div>
+        
+        <!-- 数字人统计 -->
+        <div class="stat-card success">
+          <div class="stat-icon">
+            <el-icon size="24"><Avatar /></el-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ usageStats.summary?.today_usage?.digital_human || 0 }}/{{ usageStats.summary?.remaining?.digital_human + (usageStats.summary?.today_usage?.digital_human || 0) }}</div>
+            <div class="stat-label">数字人已用/总量</div>
           </div>
         </div>
       </div>
@@ -135,7 +161,12 @@
         v-loading="loading"
         class="account-table"
         :default-sort="{ prop: 'updated_at', order: 'descending' }"
+        @selection-change="handleSelectionChange"
       >
+        <el-table-column 
+          type="selection"
+          width="55"
+        />
         <el-table-column 
           prop="id" 
           label="ID" 
@@ -183,17 +214,22 @@
         <el-table-column 
           prop="cookies" 
           label="Cookies状态" 
-          width="100"
+          width="120"
           align="center"
         >
           <template #default="{ row }">
-            <el-tag 
-              :type="row.cookies ? 'success' : 'info'" 
-              size="small"
-              effect="plain"
+            <el-tooltip
+              :content="row.has_cookies ? '已设置Cookie' : '未设置Cookie'"
+              placement="top"
             >
-              {{ row.cookies ? '已设置' : '未设置' }}
-            </el-tag>
+              <el-tag 
+                :type="row.has_cookies ? 'success' : 'info'" 
+                size="small"
+                effect="dark"
+              >
+                {{ row.has_cookies ? '已设置' : '未设置' }}
+              </el-tag>
+            </el-tooltip>
           </template>
         </el-table-column>
 
@@ -212,21 +248,42 @@
         />
         
         <el-table-column 
-          label="今日使用" 
-          width="120"
+          label="今日使用情况" 
+          width="200"
           align="center"
         >
           <template #default="{ row }">
-            <div class="usage-info">
-              <span class="usage-text">
-                {{ getAccountUsage(row.id).today_text2img }}/10
-              </span>
-              <el-progress 
-                :percentage="getAccountUsage(row.id).today_text2img * 10" 
-                :stroke-width="4"
-                :show-text="false"
-                :color="getUsageColor(getAccountUsage(row.id).today_text2img)"
-              />
+            <div class="usage-details">
+              <div class="usage-item">
+                <span class="usage-label">图片:</span>
+                <span class="usage-value">{{ row.today_usage?.text2img || 0 }}/{{ row.daily_limits?.text2img || 10 }}</span>
+                <el-progress 
+                  :percentage="((row.today_usage?.text2img || 0) / (row.daily_limits?.text2img || 10)) * 100" 
+                  :stroke-width="3"
+                  :show-text="false"
+                  :color="getUsageColor(row.today_usage?.text2img || 0, row.daily_limits?.text2img || 10)"
+                />
+              </div>
+              <div class="usage-item">
+                <span class="usage-label">视频:</span>
+                <span class="usage-value">{{ row.today_usage?.img2video || 0 }}/{{ row.daily_limits?.img2video || 2 }}</span>
+                <el-progress 
+                  :percentage="((row.today_usage?.img2video || 0) / (row.daily_limits?.img2video || 2)) * 100" 
+                  :stroke-width="3"
+                  :show-text="false"
+                  :color="getUsageColor(row.today_usage?.img2video || 0, row.daily_limits?.img2video || 2)"
+                />
+              </div>
+              <div class="usage-item">
+                <span class="usage-label">数字人:</span>
+                <span class="usage-value">{{ row.today_usage?.digital_human || 0 }}/{{ row.daily_limits?.digital_human || 1 }}</span>
+                <el-progress 
+                  :percentage="((row.today_usage?.digital_human || 0) / (row.daily_limits?.digital_human || 1)) * 100" 
+                  :stroke-width="3"
+                  :show-text="false"
+                  :color="getUsageColor(row.today_usage?.digital_human || 0, row.daily_limits?.digital_human || 1)"
+                />
+              </div>
             </div>
           </template>
         </el-table-column>
@@ -238,38 +295,49 @@
         >
           <template #default="{ row }">
             <el-tag 
-              :type="getAccountUsage(row.id).status === 'available' ? 'success' : 'danger'"
+              :type="getAccountStatus(row) === 'available' ? 'success' : 'danger'"
               size="small"
             >
-              {{ getAccountUsage(row.id).status === 'available' ? '可用' : '已满' }}
+              {{ getAccountStatus(row) === 'available' ? '可用' : '已满' }}
             </el-tag>
           </template>
         </el-table-column>
         
         <el-table-column 
           label="操作" 
-          width="120" 
+          width="180" 
           fixed="right"
           align="center"
         >
           <template #default="{ row }">
-            <el-popconfirm
-              :title="`确定删除账号 ${row.account} 吗？`"
-              @confirm="deleteAccount(row.id)"
-              confirm-button-text="删除"
-              cancel-button-text="取消"
-              confirm-button-type="danger"
-            >
-              <template #reference>
-                <el-button 
-                  type="danger" 
-                  size="small" 
-                  text
-                >
-                  删除
-                </el-button>
-              </template>
-            </el-popconfirm>
+            <div class="action-buttons">
+              <el-button 
+                type="primary" 
+                size="small" 
+                text
+                @click="getCookie(row.id)"
+                :loading="cookieLoading[row.id]"
+              >
+                获取Cookie
+              </el-button>
+              <el-popconfirm
+                :title="`确定删除账号 ${row.account} 吗？`"
+                @confirm="deleteAccount(row.id)"
+                confirm-button-text="删除"
+                cancel-button-text="取消"
+                confirm-button-type="danger"
+              >
+                <template #reference>
+                  <el-button 
+                    type="danger" 
+                    size="small" 
+                    text
+                  >
+                    删除
+                  </el-button>
+                </template>
+              </el-popconfirm>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -375,7 +443,11 @@ import {
   Hide,
   DocumentAdd,
   Warning,
-  DataBoard
+  DataBoard,
+  Picture,
+  VideoPlay,
+  Avatar,
+  Key
 } from '@element-plus/icons-vue'
 import { accountAPI } from '../utils/api'
 
@@ -392,7 +464,11 @@ export default {
     Hide,
     DocumentAdd,
     Warning,
-    DataBoard
+    DataBoard,
+    Picture,
+    VideoPlay,
+    Avatar,
+    Key
   },
   setup() {
     // 响应式数据
@@ -415,6 +491,69 @@ export default {
         total_remaining: 0
       }
     })
+
+    // 多选相关
+    const selectedAccounts = ref([])
+    
+    // 处理选择变化
+    const handleSelectionChange = (selection) => {
+      selectedAccounts.value = selection
+    }
+    
+    // Cookie获取状态
+    const cookieLoading = ref({})
+    const batchCookieLoading = ref(false)
+    
+    // 获取单个账号Cookie
+    const getCookie = async (accountId) => {
+      try {
+        // 设置加载状态
+        cookieLoading.value[accountId] = true
+        
+        const response = await accountAPI.getCookie(accountId)
+        if (response.data.success) {
+          ElMessage.success(response.data.message)
+        } else {
+          ElMessage.error(response.data.message)
+        }
+      } catch (error) {
+        console.error('获取Cookie失败:', error)
+        ElMessage.error('获取Cookie失败')
+      } finally {
+        // 延迟一会儿再清除加载状态，让用户有时间看到加载效果
+        setTimeout(() => {
+          cookieLoading.value[accountId] = false
+        }, 1000)
+      }
+    }
+    
+    // 批量获取Cookie
+    const batchGetCookie = async () => {
+      if (selectedAccounts.value.length === 0) {
+        ElMessage.warning('请选择要获取Cookie的账号')
+        return
+      }
+      
+      try {
+        batchCookieLoading.value = true
+        
+        const accountIds = selectedAccounts.value.map(account => account.id)
+        const response = await accountAPI.batchGetCookie(accountIds)
+        
+        if (response.data.success) {
+          ElMessage.success(response.data.message)
+        } else {
+          ElMessage.error(response.data.message)
+        }
+      } catch (error) {
+        console.error('批量获取Cookie失败:', error)
+        ElMessage.error('批量获取Cookie失败')
+      } finally {
+        setTimeout(() => {
+          batchCookieLoading.value = false
+        }, 1000)
+      }
+    }
 
     // 计算属性
     const lastUpdateTime = computed(() => {
@@ -581,11 +720,24 @@ export default {
     }
 
     // 获取使用情况颜色
-    const getUsageColor = (usage) => {
-      if (usage >= 10) return '#f56c6c'  // 红色 - 已满
-      if (usage >= 7) return '#e6a23c'   // 橙色 - 接近上限
-      if (usage >= 4) return '#409eff'   // 蓝色 - 中等使用
-      return '#67c23a'                   // 绿色 - 使用较少
+    const getUsageColor = (usage, limit) => {
+      const percentage = (usage / limit) * 100
+      if (percentage >= 100) return '#f56c6c'  // 红色 - 已满
+      if (percentage >= 80) return '#e6a23c'   // 橙色 - 接近上限
+      if (percentage >= 50) return '#409eff'   // 蓝色 - 中等使用
+      return '#67c23a'                         // 绿色 - 使用较少
+    }
+
+    // 获取账号状态
+    const getAccountStatus = (account) => {
+      // 如果任何一种类型达到限制，账号就视为已满
+      if (!account.today_usage || !account.daily_limits) return 'available'
+      
+      const textImgFull = (account.today_usage.text2img || 0) >= (account.daily_limits.text2img || 10)
+      const videoFull = (account.today_usage.img2video || 0) >= (account.daily_limits.img2video || 2)
+      const digitalHumanFull = (account.today_usage.digital_human || 0) >= (account.daily_limits.digital_human || 1)
+      
+      return (textImgFull || videoFull || digitalHumanFull) ? 'limit_reached' : 'available'
     }
 
     // 生命周期
@@ -620,7 +772,14 @@ export default {
       fetchUsageStats,
       refreshAll,
       getAccountUsage,
-      getUsageColor
+      getUsageColor,
+      getAccountStatus,
+      selectedAccounts,
+      handleSelectionChange,
+      cookieLoading,
+      batchCookieLoading,
+      getCookie,
+      batchGetCookie,
     }
   }
 }
@@ -718,6 +877,21 @@ export default {
   box-shadow: var(--shadow-md);
 }
 
+.cookie-btn {
+  background: var(--success-gradient);
+  border: none;
+  color: white;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  transition: var(--transition);
+  box-shadow: var(--shadow-sm);
+}
+
+.cookie-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
 .danger-btn {
   background: var(--danger-gradient);
   border: none;
@@ -740,8 +914,32 @@ export default {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+@media (min-width: 1200px) {
+  .stats-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+@media (max-width: 1199px) and (min-width: 992px) {
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 991px) and (min-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .stat-card {
@@ -797,6 +995,11 @@ export default {
 .stat-card.warning .stat-icon {
   background: rgba(230, 162, 60, 0.1);
   color: #e6a23c;
+}
+
+.stat-card.danger .stat-icon {
+  background: rgba(245, 108, 108, 0.1);
+  color: #f56c6c;
 }
 
 .stat-icon {
@@ -1039,17 +1242,36 @@ export default {
 }
 
 /* 使用情况样式 */
-.usage-info {
+.usage-details {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
+  gap: 6px;
+  padding: 4px 0;
 }
 
-.usage-text {
+.usage-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 12px;
+}
+
+.usage-label {
+  font-weight: 500;
+  color: var(--el-text-color-regular);
+  min-width: 40px;
+  text-align: right;
+}
+
+.usage-value {
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--el-text-color-primary);
+  min-width: 30px;
+}
+
+.usage-item .el-progress {
+  flex: 1;
+  min-width: 60px;
 }
 
 /* 响应式设计 */
@@ -1075,5 +1297,31 @@ export default {
   .add-dialog {
     width: 95% !important;
   }
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.action-buttons .el-button {
+  margin: 0;
+}
+
+/* 获取Cookie按钮样式 */
+.el-button.el-button--text.el-button--primary {
+  font-weight: 500;
+}
+
+/* 批量获取Cookie按钮样式 */
+.cookie-btn {
+  background-color: #67c23a;
+  border-color: #67c23a;
+}
+
+.cookie-btn:hover {
+  background-color: #85ce61;
+  border-color: #85ce61;
 }
 </style>

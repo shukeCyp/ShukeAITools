@@ -28,8 +28,8 @@ def get_text2img_tasks():
         
         print("获取文生图任务列表，页码: {}, 每页数量: {}, 状态: {}".format(page, page_size, status))
         
-        # 构建查询
-        query = JimengText2ImgTask.select()
+        # 构建查询 - 过滤掉空任务
+        query = JimengText2ImgTask.select().where(JimengText2ImgTask.is_empty_task == False)
         if status is not None:
             query = query.where(JimengText2ImgTask.status == status)
         
@@ -153,46 +153,19 @@ def delete_text2img_task(task_id):
 
 @jimeng_text2img_bp.route('/tasks/<int:task_id>/retry', methods=['POST'])
 def retry_text2img_task(task_id):
-    """重试失败的文生图任务"""
+    """重试文生图任务"""
     try:
-        print("重试文生图任务，任务ID: {}".format(task_id))
-        task = JimengText2ImgTask.get(JimengText2ImgTask.id == task_id)
-        
-        # 检查任务状态，只有失败的任务才能重试
-        if task.status != 3:
-            print("任务状态不是失败状态，无法重试，任务ID: {}, 当前状态: {}".format(task_id, task.status))
-            return jsonify({
-                'success': False,
-                'message': '只有失败的任务才能重试，当前状态: {}'.format(task.get_status_text())
-            }), 400
-        
-        # 重置任务状态为排队中
-        task.status = 0  # 排队中
-        task.update_at = datetime.now()
-        
-        # 清空之前的图片路径，准备重新生成
-        task.image1 = None
-        task.image2 = None
-        task.image3 = None
-        task.image4 = None
-        
+        task = JimengText2ImgTask.get_by_id(task_id)
+        task.status = 0  # 重置为排队状态
         task.save()
         
-        print("任务重试成功，已重新加入队列，任务ID: {}".format(task_id))
-        
+        print("重试文生图任务: {}".format(task_id))
         return jsonify({
             'success': True,
-            'data': {
-                'id': task.id,
-                'status': task.status,
-                'status_text': task.get_status_text(),
-                'update_at': task.update_at.strftime('%Y-%m-%d %H:%M:%S')
-            },
-            'message': '任务已重新加入队列，等待处理'
+            'message': '任务已重新加入队列'
         })
         
     except JimengText2ImgTask.DoesNotExist:
-        print("任务不存在，任务ID: {}".format(task_id))
         return jsonify({
             'success': False,
             'message': '任务不存在'
@@ -204,15 +177,54 @@ def retry_text2img_task(task_id):
             'message': '重试任务失败: {}'.format(str(e))
         }), 500
 
+@jimeng_text2img_bp.route('/tasks/batch-retry', methods=['POST'])
+def batch_retry_text2img_tasks():
+    """批量重试失败的文生图任务"""
+    try:
+        data = request.get_json()
+        task_ids = data.get('task_ids', [])
+        
+        if task_ids:
+            # 如果提供了特定的任务ID列表，只重试这些任务
+            retry_count = JimengText2ImgTask.update(status=0).where(
+                JimengText2ImgTask.id.in_(task_ids),
+                JimengText2ImgTask.status == 3,  # 只重试失败的任务
+                JimengText2ImgTask.is_empty_task == False  # 排除空任务
+            ).execute()
+        else:
+            # 如果没有提供任务ID，重试所有失败的任务
+            retry_count = JimengText2ImgTask.update(status=0).where(
+                JimengText2ImgTask.status == 3,  # 只重试失败的任务
+                JimengText2ImgTask.is_empty_task == False  # 排除空任务
+            ).execute()
+        
+        print(f"批量重试文生图任务: {retry_count}个")
+        return jsonify({
+            'success': True,
+            'message': f'已重新加入队列 {retry_count} 个任务',
+            'data': {
+                'retry_count': retry_count
+            }
+        })
+        
+    except Exception as e:
+        print(f"批量重试文生图任务失败: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'批量重试失败: {str(e)}'
+        }), 500
+
 @jimeng_text2img_bp.route('/stats', methods=['GET'])
 def get_text2img_stats():
     """获取文生图任务统计信息"""
     try:
-        total_tasks = JimengText2ImgTask.select().count()
-        queued_tasks = JimengText2ImgTask.select().where(JimengText2ImgTask.status == 0).count()  # 排队中
-        processing_tasks = JimengText2ImgTask.select().where(JimengText2ImgTask.status == 1).count()  # 生成中
-        completed_tasks = JimengText2ImgTask.select().where(JimengText2ImgTask.status == 2).count()  # 已完成
-        failed_tasks = JimengText2ImgTask.select().where(JimengText2ImgTask.status == 3).count()  # 失败
+        # 统计时过滤掉空任务
+        base_query = JimengText2ImgTask.select().where(JimengText2ImgTask.is_empty_task == False)
+        total_tasks = base_query.count()
+        queued_tasks = base_query.where(JimengText2ImgTask.status == 0).count()  # 排队中
+        processing_tasks = base_query.where(JimengText2ImgTask.status == 1).count()  # 生成中
+        completed_tasks = base_query.where(JimengText2ImgTask.status == 2).count()  # 已完成
+        failed_tasks = base_query.where(JimengText2ImgTask.status == 3).count()  # 失败
         
         print("获取任务统计 - 总数:{}, 排队:{}, 处理中:{}, 已完成:{}, 失败:{}".format(
             total_tasks, queued_tasks, processing_tasks, completed_tasks, failed_tasks))

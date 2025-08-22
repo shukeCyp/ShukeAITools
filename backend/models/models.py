@@ -55,6 +55,9 @@ class JimengText2ImgTask(BaseModel):
     image3 = CharField(max_length=500, null=True)
     image4 = CharField(max_length=500, null=True)
     
+    # 标记字段
+    is_empty_task = BooleanField(default=False)  # 是否为空任务（账号使用记录）
+    
     # 时间戳
     create_at = DateTimeField(default=datetime.now)
     update_at = DateTimeField(default=datetime.now)
@@ -118,6 +121,9 @@ class JimengImg2VideoTask(BaseModel):
     # 输入图片和输出视频
     image_path = CharField(max_length=500, null=True)  # 输入图片路径
     video_url = CharField(max_length=500, null=True)  # 生成的视频URL
+    
+    # 标记字段
+    is_empty_task = BooleanField(default=False)  # 是否为空任务（账号使用记录）
     
     # 时间戳
     create_at = DateTimeField(default=datetime.now)

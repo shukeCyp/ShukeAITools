@@ -165,16 +165,16 @@
             </template>
           </el-table-column>
           
-          <el-table-column label="任务信息" min-width="200">
+          <el-table-column label="任务信息" min-width="300">
             <template #default="{ row }">
               <div v-if="row.status === 'active'" class="task-info-cell">
                 <div class="task-main-info">
                   <span class="task-id">任务 #{{ row.task_id }}</span>
                   <el-tag size="small" class="platform-tag">{{ row.platform }}</el-tag>
+                  <el-tag size="small" type="success" v-if="row.task_type">{{ row.task_type }}</el-tag>
                 </div>
-                <div class="task-details">
-                  <span class="task-type">{{ row.task_type }}</span>
-                  <span class="task-prompt" :title="row.prompt">{{ truncateText(row.prompt, 50) }}</span>
+                <div class="task-details" v-if="row.prompt">
+                  <span class="task-prompt" :title="row.prompt">{{ truncateText(row.prompt, 80) }}</span>
                 </div>
               </div>
               <div v-else-if="row.status === 'idle'" class="idle-info">
@@ -183,29 +183,6 @@
               <div v-else class="inactive-info">
                 <span class="inactive-text">线程未启动</span>
               </div>
-            </template>
-          </el-table-column>
-          
-          <el-table-column label="进度" width="150" align="center">
-            <template #default="{ row }">
-              <div v-if="row.status === 'active'" class="progress-cell">
-                <el-progress 
-                  :percentage="row.progress" 
-                  :stroke-width="6"
-                  :show-text="true"
-                  :color="getProgressColor(row.progress)"
-                />
-              </div>
-              <span v-else class="no-progress">-</span>
-            </template>
-          </el-table-column>
-          
-          <el-table-column label="运行时间" width="120" align="center">
-            <template #default="{ row }">
-              <span v-if="row.status === 'active'" class="runtime">
-                {{ formatRuntime(row.start_time) }}
-              </span>
-              <span v-else class="no-runtime">-</span>
             </template>
           </el-table-column>
           
@@ -849,7 +826,7 @@ export default {
 
 /* 任务信息单元格 */
 .task-info-cell {
-  padding: 4px 0;
+  padding: 8px 0;
 }
 
 .task-main-info {
@@ -857,11 +834,12 @@ export default {
   align-items: center;
   gap: 8px;
   margin-bottom: 6px;
+  flex-wrap: wrap;
 }
 
 .task-id {
   font-weight: 600;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-primary);
   font-family: 'Monaco', 'Menlo', monospace;
 }
@@ -874,41 +852,34 @@ export default {
 }
 
 .task-details {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.task-type {
-  font-size: 12px;
-  color: var(--text-secondary);
-  font-weight: 500;
+  margin-top: 4px;
 }
 
 .task-prompt {
-  font-size: 12px;
-  color: var(--text-muted);
-  line-height: 1.4;
-  max-width: 300px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  max-width: 100%;
   word-break: break-word;
+  display: block;
+  padding-left: 4px;
 }
 
 /* 空闲和未启动状态 */
 .idle-info, .inactive-info {
   text-align: center;
-  padding: 8px 0;
+  padding: 12px 0;
+  color: var(--text-muted);
 }
 
 .idle-text {
   color: #e6a23c;
   font-weight: 500;
-  font-size: 13px;
 }
 
 .inactive-text {
   color: var(--text-muted);
   font-weight: 500;
-  font-size: 13px;
 }
 
 /* 进度单元格 */

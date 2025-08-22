@@ -16,13 +16,14 @@ from datetime import datetime
 from backend.core.database import init_database
 from backend.core.middleware import before_request, after_request
 from backend.core.global_task_manager import global_task_manager
-from backend.models.models import JimengAccount, JimengText2ImgTask
+from backend.models.models import JimengAccount, JimengText2ImgTask, JimengImg2VideoTask
 from backend.utils.config_util import ConfigUtil
 
 # 导入路由蓝图
 from backend.api.v1.common_routes import common_bp
 from backend.api.v1.accounts_routes import jimeng_accounts_bp
 from backend.api.v1.text2img_routes import jimeng_text2img_bp
+from backend.api.v1.img2video_routes import jimeng_img2video_bp
 from backend.api.v1.config_routes import config_bp
 from backend.api.v1.task_manager_routes import task_manager_bp
 
@@ -40,10 +41,50 @@ init_database()
 # 初始化默认配置
 ConfigUtil.init_default_configs()
 
+def reset_processing_tasks():
+    """重置所有生成中的任务为排队状态"""
+    try:
+        print("检查并重置生成中的任务...")
+        
+        # 重置文生图任务
+        text2img_reset_count = 0
+        processing_text2img_tasks = JimengText2ImgTask.select().where(
+            (JimengText2ImgTask.status == 1) &  # 生成中
+            (JimengText2ImgTask.is_empty_task == False)  # 非空任务
+        )
+        
+        for task in processing_text2img_tasks:
+            task.update_status(0)  # 重置为排队状态
+            text2img_reset_count += 1
+        
+        # 重置图生视频任务
+        img2video_reset_count = 0
+        processing_img2video_tasks = JimengImg2VideoTask.select().where(
+            (JimengImg2VideoTask.status == 1) &  # 生成中
+            (JimengImg2VideoTask.is_empty_task == False)  # 非空任务
+        )
+        
+        for task in processing_img2video_tasks:
+            task.update_status(0)  # 重置为排队状态
+            img2video_reset_count += 1
+        
+        total_reset = text2img_reset_count + img2video_reset_count
+        if total_reset > 0:
+            print(f"重置了 {text2img_reset_count} 个文生图任务和 {img2video_reset_count} 个图生视频任务为排队状态")
+        else:
+            print("没有需要重置的生成中任务")
+            
+    except Exception as e:
+        print(f"重置生成中任务失败: {str(e)}")
+
+# 在启动任务管理器之前重置任务状态
+reset_processing_tasks()
+
 # 注册蓝图路由
 app.register_blueprint(common_bp)
 app.register_blueprint(jimeng_accounts_bp)
 app.register_blueprint(jimeng_text2img_bp)
+app.register_blueprint(jimeng_img2video_bp)
 app.register_blueprint(config_bp)
 app.register_blueprint(task_manager_bp)
 
@@ -52,10 +93,10 @@ global_task_manager.start()
 print("全局任务管理器已启动")
 
 if __name__ == '__main__':
-    print("🚀 舒克AI工具集后端服务启动中...")
-    print("✅ 数据库连接成功")
-    print("🌐 API服务运行在: http://localhost:8888")
-    print("📋 可用路由:")
+    print("舒克AI工具集后端服务启动中...")
+    print("数据库连接成功")
+    print("API服务运行在: http://localhost:8888")
+    print("可用路由:")
     for rule in app.url_map.iter_rules():
         if rule.endpoint != 'static':
             methods = ','.join(rule.methods - {'HEAD', 'OPTIONS'})

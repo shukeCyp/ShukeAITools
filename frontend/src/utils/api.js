@@ -50,6 +50,12 @@ export const accountAPI = {
   // 获取账号使用统计
   getUsageStats: () => api.get('/jimeng/accounts/usage-stats'),
   
+  // 获取单个账号的Cookie
+  getCookie: (accountId) => api.post(`/jimeng/accounts/${accountId}/get-cookie`),
+  
+  // 批量获取账号Cookie
+  batchGetCookie: (accountIds) => api.post('/jimeng/accounts/batch-get-cookie', { account_ids: accountIds }),
+  
   // 健康检查
   healthCheck: () => api.get('/health')
 }
@@ -80,32 +86,47 @@ export const text2imgAPI = {
   // 重试失败任务
   retryTask: (taskId) => api.post(`/jimeng/text2img/tasks/${taskId}/retry`),
   
+  // 批量重试失败任务
+  batchRetryTasks: (taskIds = []) => api.post('/jimeng/text2img/tasks/batch-retry', { task_ids: taskIds }),
+  
   // 批量下载图片
   batchDownload: (taskIds) => api.post('/jimeng/text2img/tasks/batch-download', { task_ids: taskIds })
 }
 
-// 图生视频任务相关API
+// 即梦图生视频任务相关API
 export const img2videoAPI = {
   // 获取任务列表
   getTasks: (params = {}) => {
     const query = new URLSearchParams(params).toString()
-    return api.get(`/img2video/tasks${query ? '?' + query : ''}`)
+    return api.get(`/jimeng/img2video/tasks${query ? '?' + query : ''}`)
   },
   
   // 创建新任务
-  createTask: (taskData) => api.post('/img2video/tasks', taskData),
-  
-  // 更新任务
-  updateTask: (taskId, updateData) => api.put(`/img2video/tasks/${taskId}`, updateData),
+  createTask: (taskData) => api.post('/jimeng/img2video/tasks', taskData),
   
   // 删除任务
-  deleteTask: (taskId) => api.delete(`/img2video/tasks/${taskId}`),
+  deleteTask: (taskId) => api.delete(`/jimeng/img2video/tasks/${taskId}`),
+  
+  // 重试任务
+  retryTask: (taskId) => api.post(`/jimeng/img2video/tasks/${taskId}/retry`),
+  
+  // 批量重试失败任务
+  batchRetryTasks: (taskIds = []) => api.post('/jimeng/img2video/tasks/batch-retry', { task_ids: taskIds }),
   
   // 批量删除任务
-  batchDeleteTasks: (taskIds) => api.delete('/img2video/tasks/batch', { task_ids: taskIds }),
+  batchDeleteTasks: (taskIds) => api.post('/jimeng/img2video/tasks/batch-delete', { task_ids: taskIds }),
   
   // 获取统计信息
-  getStats: () => api.get('/img2video/stats')
+  getStats: () => api.get('/jimeng/img2video/stats'),
+  
+  // 批量下载视频
+  batchDownload: (taskIds) => api.post('/jimeng/img2video/tasks/batch-download', { task_ids: taskIds }),
+  
+  // 从文件夹导入图片任务
+  importFolder: () => api.post('/jimeng/img2video/tasks/import-folder'),
+  
+  // 从Excel导入任务
+  importExcel: () => api.post('/jimeng/img2video/tasks/import-excel')
 }
 
 // 配置管理相关API

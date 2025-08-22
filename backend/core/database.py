@@ -21,8 +21,8 @@ def init_database():
         print("创建数据库目录: {}".format(DATABASE_DIR))
     
     # 导入模型后再创建表
-    from backend.models.models import Config, JimengAccount, JimengText2ImgTask
+    from backend.models.models import Config, JimengAccount, JimengText2ImgTask, JimengImg2VideoTask
     
     with db:
-        db.create_tables([Config, JimengAccount, JimengText2ImgTask])
+        db.create_tables([Config, JimengAccount, JimengText2ImgTask, JimengImg2VideoTask])
         print("数据库初始化完成: {}".format(DATABASE_PATH))

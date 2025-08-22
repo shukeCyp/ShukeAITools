@@ -6,6 +6,7 @@
 import threading
 import time
 import asyncio
+import random
 from datetime import datetime
 from typing import Dict, List
 from enum import Enum
@@ -41,8 +42,13 @@ class JimengTaskManager:
             'error_count': 0
         }
         self._lock = threading.Lock()
-        self.thread_pool = None  # 线程池
+        self.global_executor = None  # 全局线程池引用
         self.active_futures = {}  # 活跃的Future对象
+    
+    def set_global_executor(self, executor):
+        """设置全局线程池"""
+        self.global_executor = executor
+        print(f"{self.platform_name}已设置全局线程池")
     
     def start(self) -> bool:
         """启动即梦任务管理器"""
@@ -50,21 +56,21 @@ class JimengTaskManager:
             print(f"{self.platform_name}任务管理器已经在运行中")
             return False
             
-        print(f"🚀 启动{self.platform_name}任务管理器...")
+        print(f"启动{self.platform_name}任务管理器...")
+        
+        if not self.global_executor:
+            print(f"{self.platform_name}任务管理器启动失败：未设置全局线程池")
+            return False
+        
         self.stop_event.clear()
         self.status = JimengTaskManagerStatus.RUNNING
         self.stats['start_time'] = datetime.now()
-        
-        # 获取配置的线程数并创建线程池
-        max_threads = get_automation_max_threads()
-        self.thread_pool = ThreadPoolExecutor(max_workers=max_threads, thread_name_prefix="JimengWorker")
-        print(f"📊 创建线程池，最大线程数: {max_threads}")
         
         # 启动扫描工作线程
         self.worker_thread = threading.Thread(target=self._worker_loop, daemon=True)
         self.worker_thread.start()
         
-        print(f"✅ {self.platform_name}任务管理器启动成功")
+        print(f"{self.platform_name}任务管理器启动成功")
         return True
     
     def stop(self) -> bool:
@@ -73,15 +79,11 @@ class JimengTaskManager:
             print(f"{self.platform_name}任务管理器已经停止")
             return False
             
-        print(f"🛑 正在停止{self.platform_name}任务管理器...")
+        print(f"正在停止{self.platform_name}任务管理器...")
         self.status = JimengTaskManagerStatus.STOPPED
         self.stop_event.set()
         
-        # 关闭线程池
-        if self.thread_pool:
-            print("🔄 正在关闭线程池...")
-            self.thread_pool.shutdown(wait=True)
-            self.thread_pool = None
+        # 不再关闭线程池，因为使用的是全局线程池
             
         # 清空活跃任务
         with self._lock:
@@ -92,14 +94,14 @@ class JimengTaskManager:
         if self.worker_thread and self.worker_thread.is_alive():
             self.worker_thread.join(timeout=10)
             
-        print(f"✅ {self.platform_name}任务管理器已停止")
+        print(f"{self.platform_name}任务管理器已停止")
         return True
     
     def pause(self) -> bool:
         """暂停即梦任务管理器"""
         if self.status == JimengTaskManagerStatus.RUNNING:
             self.status = JimengTaskManagerStatus.PAUSED
-            print(f"⏸️ {self.platform_name}任务管理器已暂停")
+            print(f"任务管理器已暂停")
             return True
         return False
     
@@ -107,26 +109,29 @@ class JimengTaskManager:
         """恢复即梦任务管理器"""
         if self.status == JimengTaskManagerStatus.PAUSED:
             self.status = JimengTaskManagerStatus.RUNNING
-            print(f"▶️ {self.platform_name}任务管理器已恢复")
+            print(f"任务管理器已恢复")
             return True
         return False
     
     def get_summary(self) -> Dict:
         """获取即梦平台任务汇总"""
         try:
-            pending_count = JimengText2ImgTask.select().where(
+            # 统计时过滤掉空任务
+            base_query = JimengText2ImgTask.select().where(JimengText2ImgTask.is_empty_task == False)
+            
+            pending_count = base_query.where(
                 JimengText2ImgTask.status == 0  # 排队中
             ).count()
             
-            processing_count = JimengText2ImgTask.select().where(
+            processing_count = base_query.where(
                 JimengText2ImgTask.status == 1  # 生成中
             ).count()
             
-            completed_count = JimengText2ImgTask.select().where(
+            completed_count = base_query.where(
                 JimengText2ImgTask.status == 2  # 已完成
             ).count()
             
-            failed_count = JimengText2ImgTask.select().where(
+            failed_count = base_query.where(
                 JimengText2ImgTask.status == 3  # 失败
             ).count()
             
@@ -161,7 +166,7 @@ class JimengTaskManager:
                          if self.stats['start_time'] else 0,
                 'max_threads': max_threads,
                 'active_threads': active_threads,
-                'thread_pool_alive': self.thread_pool is not None and not self.thread_pool._shutdown
+                'thread_pool_alive': self.global_executor is not None and not self.global_executor._shutdown
             }
     
     def get_detailed_tasks(self, status: int = None, page: int = 1, page_size: int = 10) -> Dict:
@@ -208,7 +213,7 @@ class JimengTaskManager:
     
     def _worker_loop(self):
         """工作线程主循环"""
-        print(f"📋 {self.platform_name}任务扫描线程已启动")
+        print(f"{self.platform_name}任务扫描线程已启动")
         
         while not self.stop_event.is_set():
             try:
@@ -230,18 +235,18 @@ class JimengTaskManager:
                 time.sleep(TASK_PROCESSOR_INTERVAL)
                 
             except Exception as e:
-                print(f"❌ {self.platform_name}任务扫描异常: {str(e)}")
+                print(f"{self.platform_name}任务扫描异常: {str(e)}")
                 self.stats['error_count'] += 1
                 self.status = JimengTaskManagerStatus.ERROR
                 time.sleep(TASK_PROCESSOR_ERROR_WAIT)
                 self.status = JimengTaskManagerStatus.RUNNING  # 自动恢复
         
-        print(f"📋 {self.platform_name}任务扫描线程已结束")
+        print(f"{self.platform_name}任务扫描线程已结束")
     
     def _scan_and_process_tasks(self):
         """扫描并处理待处理任务"""
         try:
-            if not self.thread_pool or self.thread_pool._shutdown:
+            if not self.global_executor or self.global_executor._shutdown:
                 return
                 
             # 获取配置的最大线程数
@@ -257,9 +262,10 @@ class JimengTaskManager:
             # 计算可以启动的新任务数量
             available_slots = max_threads - active_count
             
-            # 查找排队中的任务
+            # 查找排队中的任务 - 只扫描非空任务
             pending_tasks = JimengText2ImgTask.select().where(
-                JimengText2ImgTask.status == 0
+                (JimengText2ImgTask.status == 0) & 
+                (JimengText2ImgTask.is_empty_task == False)
             ).order_by(JimengText2ImgTask.create_at).limit(available_slots)
             
             for task in pending_tasks:
@@ -274,10 +280,22 @@ class JimengTaskManager:
             print(f"{self.platform_name}扫描任务失败: {str(e)}")
     
     def _submit_task_to_pool(self, task):
-        """提交任务到线程池"""
+        """提交任务到全局线程池"""
         try:
-            # 提交任务到线程池
-            future = self.thread_pool.submit(self._process_single_task, task)
+            if not self.global_executor:
+                print(f"无法提交任务：全局线程池未设置")
+                return
+                
+            # 通过全局任务管理器提交任务，以便正确跟踪线程状态
+            from backend.core.global_task_manager import global_task_manager
+            future = global_task_manager.submit_task(
+                self.platform_name,
+                self._process_single_task,
+                task,
+                task_id=task.id,
+                task_type='文生图',
+                prompt=task.prompt
+            )
             
             # 记录处理信息
             with self._lock:
@@ -292,7 +310,7 @@ class JimengTaskManager:
             # 添加完成回调
             future.add_done_callback(lambda f: self._on_task_completed(task.id, f))
             
-            print(f"🎯 提交{self.platform_name}任务到线程池，任务ID: {task.id}")
+            print(f"提交{self.platform_name}任务到线程池，任务ID: {task.id}")
             
         except Exception as e:
             print(f"提交{self.platform_name}任务到线程池失败，错误: {str(e)}")
@@ -309,7 +327,7 @@ class JimengTaskManager:
                 if task_id in self.active_futures:
                     del self.active_futures[task_id]
                     
-            print(f"📋 {self.platform_name}任务执行完成，任务ID: {task_id}")
+            print(f"{self.platform_name}任务执行完成，任务ID: {task_id}")
             
         except Exception as e:
             print(f"处理{self.platform_name}任务完成回调失败: {str(e)}")
@@ -322,7 +340,7 @@ class JimengTaskManager:
                 if task.id in self.processing_tasks:
                     self.processing_tasks[task.id]['status'] = 'processing'
             
-            print(f"🔄 开始处理{self.platform_name}任务，ID: {task.id}")
+            print(f"开始处理{self.platform_name}任务，ID: {task.id}")
             
             # 更新任务状态为处理中
             task.status = 1
@@ -344,16 +362,20 @@ class JimengTaskManager:
                 task.update_at = datetime.now()
                 task.save()
                 
-                print(f"✅ {self.platform_name}任务完成，ID: {task.id}")
+                print(f"{self.platform_name}任务完成，ID: {task.id}")
                 with self._lock:
                     self.stats['successful'] += 1
             else:
-                # 任务失败
+                # 任务失败，根据错误类型决定是否创建空任务记录账号使用情况
+                if 'account_id' in result and result.get('should_create_empty_task', False):
+                    print(f"创建空任务记录账号 {result['account_id']} 的使用情况")
+                    self._create_empty_task_record(result['account_id'], task)
+                
                 task.status = 3  # 失败
                 task.update_at = datetime.now()
                 task.save()
                 
-                print(f"❌ {self.platform_name}任务失败，ID: {task.id}，原因: {result.get('error', '未知错误')}")
+                print(f"{self.platform_name}任务失败，ID: {task.id}，原因: {result.get('error', '未知错误')}")
                 with self._lock:
                     self.stats['failed'] += 1
             
@@ -361,8 +383,16 @@ class JimengTaskManager:
                 self.stats['total_processed'] += 1
             
         except Exception as e:
-            print(f"❌ 处理{self.platform_name}任务异常，ID: {task.id}，错误: {str(e)}")
+            print(f"处理{self.platform_name}任务异常，ID: {task.id}，错误: {str(e)}")
             try:
+                # 异常情况下也创建空任务记录（如果有账号信息）
+                try:
+                    available_account = self._get_available_account('text2img')
+                    if available_account:
+                        self._create_empty_task_record(available_account.id, task)
+                except:
+                    pass
+                
                 task.status = 3
                 task.update_at = datetime.now()
                 task.save()
@@ -383,23 +413,23 @@ class JimengTaskManager:
             Dict: 执行结果
         """
         
-        print(f"🎯 开始执行文生图任务，任务ID: {task.id}")
-        print(f"📝 任务参数: prompt='{task.prompt}', model='{task.model}', ratio='{task.ratio}', quality='{task.quality}'")
+        print(f"开始执行文生图任务，任务ID: {task.id}")
+        print(f"任务参数: prompt='{task.prompt}', model='{task.model}', ratio='{task.ratio}', quality='{task.quality}'")
         
         client = None
         try:
             # 获取可用账号
             available_account = self._get_available_account('text2img')
             if not available_account:
-                return {'success': False, 'error': '没有可用的即梦账号或账号使用次数已达上限'}
+                return {'success': False, 'error': '没有可用的即梦账号或账号使用次数已达上限', 'account_id': None}
             
-            print(f"📧 使用账号: {available_account.account}")
+            print(f"使用账号: {available_account.account}")
             
             # 获取浏览器隐藏配置
             headless = get_hide_window()
             
             # 直接调用生成图片函数
-            image_urls = asyncio.run(text2image(
+            result = asyncio.run(text2image(
                 prompt=task.prompt,
                 username=available_account.account,
                 password=available_account.password,
@@ -409,28 +439,37 @@ class JimengTaskManager:
                 headless=headless
             ))
             
-            if image_urls and len(image_urls) > 0:
+            if result["code"] == 200 and result["data"] and len(result["data"]) > 0:
                 # 更新账号使用次数
                 self._update_account_usage(available_account.id, 'text2img')
                 
                 return {
                     'success': True, 
-                    'images': image_urls,
+                    'images': result["data"],
                     'account_id': available_account.id
                 }
             else:
-                return {'success': False, 'error': '即梦平台图片生成失败'}
+                error_msg = result.get("message", "即梦平台图片生成失败")
+                error_code = result.get("code", 500)
+                
+                # 如果是603（任务ID等待超时）或604（等待超时或未能获取URL），需要创建空任务记录账号使用
+                if error_code in [603, 604]:
+                    print(f"错误码 {error_code}，创建空任务记录账号使用情况")
+                    # 这里需要创建一个空任务来记录账号使用
+                    # 由于这是在_execute_text2img_task中，调用方会处理空任务的创建
+                
+                return {'success': False, 'error': error_msg, 'account_id': available_account.id, 'should_create_empty_task': error_code in [603, 604]}
                 
         except Exception as e:
-            print(f"❌ 即梦任务执行异常: {str(e)}")
-            return {'success': False, 'error': f'即梦任务执行异常: {str(e)}'}
+            print(f"即梦任务执行异常: {str(e)}")
+            return {'success': False, 'error': f'任务执行异常: {str(e)}'}
         finally:
             # 确保浏览器关闭
             if client:
                 try:
                     asyncio.run(client.close())
                 except Exception as e:
-                    print(f"⚠️ 关闭浏览器异常: {str(e)}")
+                    print(f"关闭浏览器异常: {str(e)}")
                     pass
     
     def _get_available_account(self, task_type='text2img'):
@@ -453,7 +492,7 @@ class JimengTaskManager:
             # 查询所有账号
             accounts = list(JimengAccount.select())
             if not accounts:
-                print("❌ 没有配置的即梦账号")
+                print("没有配置的即梦账号")
                 return None
             
             # 根据任务类型设置每日限制
@@ -465,12 +504,12 @@ class JimengTaskManager:
             
             daily_limit = daily_limits.get(task_type, 10)
             
-            # 查找今日使用次数最少且未达上限的账号
-            best_account = None
+            # 查找今日使用次数最少且未达上限的账号，在相同使用次数中随机选择
+            available_accounts = []
             min_usage = float('inf')
             
             for account in accounts:
-                # 统计今日该账号的指定类型任务使用次数
+                # 统计今日该账号的指定类型任务使用次数（包括空任务）
                 if task_type == 'text2img':
                     # 统计文生图任务
                     today_usage = JimengText2ImgTask.select().where(
@@ -479,14 +518,13 @@ class JimengTaskManager:
                         (JimengText2ImgTask.create_at >= today)
                     ).count()
                 elif task_type == 'img2video':
-                    # 统计图生视频任务（需要根据实际的视频任务表来统计）
-                    # 这里假设有JimengImg2VideoTask表
-                    today_usage = 0  # 暂时设为0，需要根据实际表结构调整
-                    # today_usage = JimengImg2VideoTask.select().where(
-                    #     (JimengImg2VideoTask.account_id == account.id) &
-                    #     (JimengImg2VideoTask.status.in_([1, 2])) &
-                    #     (JimengImg2VideoTask.create_at >= today)
-                    # ).count()
+                    # 统计图生视频任务
+                    from backend.models.models import JimengImg2VideoTask
+                    today_usage = JimengImg2VideoTask.select().where(
+                        (JimengImg2VideoTask.account_id == account.id) &
+                        (JimengImg2VideoTask.status.in_([1, 2])) &  # 处理中或已完成
+                        (JimengImg2VideoTask.create_at >= today)
+                    ).count()
                 elif task_type == 'digital_human':
                     # 统计数字人任务（需要根据实际的数字人任务表来统计）
                     # 这里假设有JimengDigitalHumanTask表
@@ -499,23 +537,50 @@ class JimengTaskManager:
                 else:
                     today_usage = 0
                 
-                print(f"📊 账号 {account.account} 今日{task_type}已使用: {today_usage}/{daily_limit} 次")
+                print(f"账号 {account.account} 今日{task_type}已使用: {today_usage}/{daily_limit} 次")
                 
                 # 检查是否还有可用次数
-                if today_usage < daily_limit and today_usage < min_usage:
-                    min_usage = today_usage
-                    best_account = account
+                if today_usage < daily_limit:
+                    if today_usage < min_usage:
+                        # 发现更少使用次数的账号，重置列表
+                        min_usage = today_usage
+                        available_accounts = [account]
+                    elif today_usage == min_usage:
+                        # 使用次数相同，加入候选列表
+                        available_accounts.append(account)
             
-            if best_account:
-                print(f"✅ 选择账号: {best_account.account} (今日{task_type}已使用: {min_usage}/{daily_limit})")
-                return best_account
+            if available_accounts:
+                # 在使用次数最少的账号中随机选择
+                selected_account = random.choice(available_accounts)
+                print(f"随机选择账号: {selected_account.account} (今日{task_type}已使用: {min_usage}/{daily_limit})")
+                return selected_account
             else:
-                print(f"❌ 所有账号今日{task_type}使用次数已达上限")
+                print(f"所有账号今日{task_type}使用次数已达上限")
                 return None
                 
         except Exception as e:
-            print(f"❌ 获取可用账号失败: {str(e)}")
+            print(f"获取可用账号失败: {str(e)}")
             return None
+    
+    def _create_empty_task_record(self, account_id, original_task):
+        """创建空任务记录，用于标记账号已使用"""
+        try:
+            empty_task = JimengText2ImgTask.create(
+                prompt=original_task.prompt,
+                model=original_task.model,
+                ratio=original_task.ratio,
+                quality=original_task.quality,
+                status=3,  # 失败状态
+                account_id=account_id,
+                image1=None,
+                image2=None,
+                image3=None,
+                image4=None,
+                is_empty_task=True  # 标记为空任务
+            )
+            print(f"创建空任务记录 {empty_task.id}，账号ID: {account_id}")
+        except Exception as e:
+            print(f"创建空任务记录失败: {str(e)}")
     
     def _update_account_usage(self, account_id: int, task_type: str):
         """
@@ -526,11 +591,11 @@ class JimengTaskManager:
             task_type: 任务类型 ('text2img', 'img2video', 'digital_human')
         """
         try:
-            print(f"📝 更新账号 {account_id} 的 {task_type} 使用记录")
+            print(f"更新账号 {account_id} 的 {task_type} 使用记录")
             # 这里可以添加更详细的使用记录统计
             # 目前主要通过任务表来统计使用次数
         except Exception as e:
-            print(f"❌ 更新账号使用记录失败: {str(e)}")
+            print(f"更新账号使用记录失败: {str(e)}")
     
 # 已删除_login_and_generate方法，现在直接使用text2image函数
 

@@ -13,30 +13,6 @@ from colorama import Fore, Style, init
 # 初始化colorama
 init()
 
-async def check_playwright_browsers():
-    """检查Playwright浏览器是否已安装，如果没有则安装"""
-    try:
-        print(f"{Fore.YELLOW}检查Playwright浏览器是否已安装...{Style.RESET_ALL}")
-        result = subprocess.run(
-            ["playwright", "install", "chromium"], 
-            capture_output=True, 
-            text=True,
-            check=False
-        )
-        
-        if result.returncode == 0:
-            print(f"{Fore.GREEN}Playwright浏览器已正确安装{Style.RESET_ALL}")
-        else:
-            print(f"{Fore.YELLOW}正在安装Playwright浏览器...{Style.RESET_ALL}")
-            subprocess.run(["playwright", "install"], check=True)
-            print(f"{Fore.GREEN}Playwright浏览器安装完成{Style.RESET_ALL}")
-            
-    except Exception as e:
-        print(f"{Fore.RED}安装Playwright浏览器时出错: {str(e)}{Style.RESET_ALL}")
-        print(f"{Fore.YELLOW}请手动运行: playwright install{Style.RESET_ALL}")
-        return False
-    
-    return True
 def get_browser_config():
     """获取固定的浏览器配置"""
     print(f"{Fore.YELLOW}使用默认浏览器配置...{Style.RESET_ALL}")
@@ -66,7 +42,11 @@ async def image2video(image_path, prompt, username, password, model="Video 3.0",
         headless: 是否无头模式运行
         
     返回:
-        str: 成功时返回视频URL，失败时返回None
+        dict: {
+            "code": 200/601/602/603/604,
+            "data": 视频URL或None,
+            "message": 状态信息
+        }
     """
     print(f"{Fore.GREEN}开始自动生成图片到视频...{Style.RESET_ALL}")
     print(f"{Fore.CYAN}提示词: {Style.RESET_ALL}{prompt}")
@@ -78,10 +58,6 @@ async def image2video(image_path, prompt, username, password, model="Video 3.0",
     page = None
     
     try:
-        # 检查浏览器
-        if not await check_playwright_browsers():
-            return None
-            
         # 初始化浏览器
         print(f"{Fore.YELLOW}正在启动浏览器...{Style.RESET_ALL}")
         config = get_browser_config()
@@ -178,7 +154,11 @@ async def image2video(image_path, prompt, username, password, model="Video 3.0",
             print(f"{Fore.GREEN}登录成功！{Style.RESET_ALL}")
         else:
             print(f"{Fore.RED}登录可能失败，当前URL: {current_url}{Style.RESET_ALL}")
-            return None
+            return {
+                "code": 602,
+                "data": None,
+                "message": "登录失败，无法找到登录节点或页面跳转异常"
+            }
         
         # 跳转到AI工具生成页面
         print(f"{Fore.YELLOW}正在跳转到AI工具生成页面...{Style.RESET_ALL}")
@@ -244,86 +224,90 @@ async def image2video(image_path, prompt, username, password, model="Video 3.0",
         
         # 选择AI Video选项
         print(f"{Fore.YELLOW}选择AI Video选项...{Style.RESET_ALL}")
-        await page.click('span.lv-select-view-value:has-text("AI Video")')
+        await page.click('span[class*="select-option-label-content"]:has-text("AI Video")')
         await asyncio.sleep(2)
-        # 上传图片
-        print(f"{Fore.YELLOW}上传图片...{Style.RESET_ALL}")
+
+        # 选择视频模型
+        print(f"{Fore.YELLOW}选择视频模型...{Style.RESET_ALL}")
         
-        # 查找上传按钮 - 使用更通用的选择器，因为类名中的随机字符串会变化
-        upload_selector = 'div[class*="reference-upload-"] input[type="file"]'
-        await page.wait_for_selector(upload_selector, timeout=10000)
+        # 点击视频模型选择下拉框（第二个下拉框）
+        video_model_selectors = await page.query_selector_all('div.lv-select[role="combobox"]:not([class*="type-select-"])')
+        if len(video_model_selectors) >= 1:
+            await video_model_selectors[0].click()
+            await asyncio.sleep(1)
+            
+            # 等待下拉菜单出现
+            await page.wait_for_selector('div.lv-select-popup-inner[role="listbox"]', timeout=5000)
+            await asyncio.sleep(1)
+            
+            # 根据模型参数选择对应的视频模型
+            try:
+                if "Video 3.0" in model or model == "Video 3.0":
+                    # 选择Video 3.0模型
+                    await page.click('li[role="option"] span:has-text("Video 3.0")')
+                    print(f"{Fore.GREEN}已选择视频模型: Video 3.0{Style.RESET_ALL}")
+                elif "Video S2.0 Pro" in model or model == "Video S2.0 Pro":
+                    # 选择Video S2.0 Pro模型
+                    await page.click('li[role="option"] span:has-text("Video S2.0 Pro")')
+                    print(f"{Fore.GREEN}已选择视频模型: Video S2.0 Pro{Style.RESET_ALL}")
+                else:
+                    # 默认选择第一个可用模型
+                    await page.click('li[role="option"]:first-child')
+                    print(f"{Fore.YELLOW}使用默认视频模型{Style.RESET_ALL}")
+            except Exception as e:
+                print(f"{Fore.YELLOW}选择视频模型时出错: {str(e)}，使用默认选项{Style.RESET_ALL}")
+                await page.click('li[role="option"]:first-child')
+            
+            await asyncio.sleep(2)
+        
+        # 选择时长
+        print(f"{Fore.YELLOW}选择时长: {second}s...{Style.RESET_ALL}")
+        
+        # 点击时长选择下拉框（第四个下拉框，跳过分辨率按钮）
+        duration_selectors = await page.query_selector_all('div.lv-select[role="combobox"]:not([class*="type-select-"])')
+        if len(duration_selectors) >= 2:
+            await duration_selectors[1].click()  # 第二个非类型选择的下拉框就是时长选择
+            await asyncio.sleep(1)
+            
+            # 等待时长选择弹窗出现
+            await page.wait_for_selector('div.lv-select-popup-inner[role="listbox"]', timeout=5000)
+            await asyncio.sleep(1)
+            
+            # 根据second参数选择对应的时长
+            try:
+                if second == 5:
+                    # 选择5s选项
+                    await page.click('li[role="option"] span:has-text("5s")')
+                    print(f"{Fore.GREEN}已选择时长: 5s{Style.RESET_ALL}")
+                elif second == 10:
+                    # 选择10s选项
+                    await page.click('li[role="option"] span:has-text("10s")')
+                    print(f"{Fore.GREEN}已选择时长: 10s{Style.RESET_ALL}")
+                else:
+                    # 默认选择5s
+                    await page.click('li[role="option"] span:has-text("5s")')
+                    print(f"{Fore.YELLOW}使用默认时长: 5s{Style.RESET_ALL}")
+            except Exception as e:
+                print(f"{Fore.YELLOW}选择时长时出错: {str(e)}，使用默认选项{Style.RESET_ALL}")
+                await page.click('li[role="option"]:first-child')
+            
+            await asyncio.sleep(2)
+        # 上传图片
+        # 上传图片
+        print(f"{Fore.YELLOW}正在上传图片...{Style.RESET_ALL}")
+        
+        # 查找文件上传输入框
+        upload_selector = 'input[type="file"][accept*="image"]'
+        await page.wait_for_selector(upload_selector, timeout=10000, state='attached')
         
         # 上传图片文件
         await page.set_input_files(upload_selector, image_path)
         print(f"{Fore.GREEN}图片上传成功: {image_path}{Style.RESET_ALL}")
         await asyncio.sleep(3)
-
         # 输入提示词
         print(f"{Fore.YELLOW}输入提示词...{Style.RESET_ALL}")
-        await page.fill('textarea.lv-textarea[placeholder="Describe the image you\'re imagining"]', prompt)
+        await page.fill('textarea.lv-textarea[placeholder="Describe the scene and motion you\'d like to generate"]', prompt)
         await asyncio.sleep(2)
-        
-        # 选择模型
-        print(f"{Fore.YELLOW}选择模型: {model}...{Style.RESET_ALL}")
-        await page.click('div.lv-select[role="combobox"]:not([class*="type-select-"])')
-        await asyncio.sleep(1)
-        
-        # 等待下拉菜单完全加载
-        await page.wait_for_selector('div.lv-select-popup-inner[role="listbox"]', timeout=5000)
-        await asyncio.sleep(1)
-        
-        # 查找并点击对应的模型选项
-        try:
-            option_elements = await page.query_selector_all('li[role="option"] [class*="option-label-"]')
-            model_option_found = False
-            
-            for element in option_elements:
-                text_content = await element.text_content()
-                if model in text_content:
-                    await element.click()
-                    model_option_found = True
-                    print(f"{Fore.GREEN}已选择模型: {model}{Style.RESET_ALL}")
-                    break
-            
-            if not model_option_found:
-                raise Exception("未找到模型选项")
-                
-        except Exception as e:
-            print(f"{Fore.YELLOW}未找到指定模型 {model}，尝试通用选择方式: {str(e)}{Style.RESET_ALL}")
-            await page.click(f'span[class*="select-option-label-content"]:has-text("{model}")')
-        
-        await asyncio.sleep(1)
-        # 选择时长
-        print(f"{Fore.YELLOW}选择时长: {second}s...{Style.RESET_ALL}")
-        await page.click('div.lv-select-view span.lv-select-view-value')
-        await asyncio.sleep(1)
-        
-        # 等待下拉菜单完全加载
-        await page.wait_for_selector('div.lv-select-popup-inner[role="listbox"]', timeout=5000)
-        await asyncio.sleep(1)
-        
-        # 查找并点击对应的时长选项
-        try:
-            option_elements = await page.query_selector_all('li[role="option"] span.select-option-label-content-m_W__T')
-            duration_option_found = False
-            
-            for element in option_elements:
-                text_content = await element.text_content()
-                if f"{second}s" in text_content:
-                    await element.click()
-                    duration_option_found = True
-                    print(f"{Fore.GREEN}已选择时长: {second}s{Style.RESET_ALL}")
-                    break
-            
-            if not duration_option_found:
-                raise Exception("未找到时长选项")
-                
-        except Exception as e:
-            print(f"{Fore.YELLOW}未找到指定时长 {second}s，尝试通用选择方式: {str(e)}{Style.RESET_ALL}")
-            await page.click(f'span.select-option-label-content-m_W__T:has-text("{second}s")')
-        
-        await asyncio.sleep(1)
-        
         # 点击生成按钮
         print(f"{Fore.YELLOW}等待生成按钮可用并点击...{Style.RESET_ALL}")
         await page.wait_for_selector('button[class^="lv-btn lv-btn-primary"][class*="submit-button-"]:not(.lv-btn-disabled)', timeout=60000)
@@ -343,7 +327,11 @@ async def image2video(image_path, prompt, username, password, model="Video 3.0",
         
         if not task_id:
             print(f"{Fore.RED}未能获取到任务ID，生成可能失败{Style.RESET_ALL}")
-            return None
+            return {
+                "code": 603,
+                "data": None,
+                "message": "任务ID等待超时"
+            }
             
         # 等待视频生成完成
         print(f"{Fore.YELLOW}已获取任务ID，等待视频生成完成...{Style.RESET_ALL}")
@@ -360,15 +348,50 @@ async def image2video(image_path, prompt, username, password, model="Video 3.0",
         if video_url:
             print(f"{Fore.GREEN}视频生成成功！总共用时 {time.time() - start_time:.1f} 秒{Style.RESET_ALL}")
             print(f"{Fore.GREEN}视频URL: {video_url}{Style.RESET_ALL}")
+            return {
+                "code": 200,
+                "data": video_url,
+                "message": "视频生成成功"
+            }
         else:
             print(f"{Fore.YELLOW}等待超时或未能获取视频URL，已等待 {time.time() - start_time:.1f} 秒{Style.RESET_ALL}")
             print(f"{Fore.YELLOW}任务ID: {task_id or '未获取'}{Style.RESET_ALL}")
+            return {
+                "code": 604,
+                "data": None,
+                "message": "等待超时或未能获取视频URL"
+            }
         
-        return video_url
-        
+    except asyncio.TimeoutError as e:
+        print(f"{Fore.RED}Playwright等待超时: {str(e)}{Style.RESET_ALL}")
+        return {
+            "code": 601,
+            "data": None,
+            "message": f"Playwright等待超时: {str(e)}"
+        }
     except Exception as e:
-        print(f"{Fore.RED}生成视频时出错: {str(e)}{Style.RESET_ALL}")
-        return None
+        error_msg = str(e)
+        print(f"{Fore.RED}生成视频时出错: {error_msg}{Style.RESET_ALL}")
+        
+        # 根据错误信息判断错误类型
+        if "selector" in error_msg.lower() or "element" in error_msg.lower() or "not found" in error_msg.lower():
+            return {
+                "code": 602,
+                "data": None,
+                "message": f"找不到页面节点: {error_msg}"
+            }
+        elif "timeout" in error_msg.lower():
+            return {
+                "code": 601,
+                "data": None,
+                "message": f"操作超时: {error_msg}"
+            }
+        else:
+            return {
+                "code": 500,
+                "data": None,
+                "message": f"未知错误: {error_msg}"
+            }
     
     finally:
         # 关闭浏览器
@@ -389,13 +412,13 @@ if __name__ == "__main__":
         prompt = "dance"
         model = "Video 3.0"
         second = 10
-        image_path = "/Users/chaiyapeng/Downloads/已经扩图修复.png"
-        video_url = await image2video(image_path, prompt, username, password, model, second, headless=False)
+        image_path = "/Users/chaiyapeng/Desktop/IMG_1546.jpg"
+        result = await image2video(image_path, prompt, username, password, model, second, headless=False)
         
-        if video_url:
-            print(f"{Fore.GREEN}生成成功，视频链接: {video_url}{Style.RESET_ALL}")
+        if result["code"] == 200:
+            print(f"{Fore.GREEN}生成成功，视频链接: {result['data']}{Style.RESET_ALL}")
         else:
-            print(f"{Fore.RED}生成失败{Style.RESET_ALL}")
+            print(f"{Fore.RED}生成失败: {result['message']}{Style.RESET_ALL}")
     
     # 运行测试
     asyncio.run(test())

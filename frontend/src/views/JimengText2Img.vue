@@ -118,6 +118,15 @@
               <el-icon v-if="!batchDownloadLoading"><Download /></el-icon>
               {{ batchDownloadLoading ? '请选择文件夹...' : `下载选中 (${selectedCompletedTasks.length})` }}
             </el-button>
+            <el-button 
+              type="warning" 
+              @click="batchRetryFailedTasks"
+              :loading="batchRetryLoading"
+              class="batch-retry-btn"
+            >
+              <el-icon><RefreshRight /></el-icon>
+              批量重试失败任务
+            </el-button>
             <el-popconfirm
               title="确定要删除选中的任务吗？"
               @confirm="batchDeleteTasks"
@@ -853,7 +862,7 @@ export default {
           if (task.result_image_url) {
             if (typeof task.result_image_url === 'string' && task.result_image_url.includes(',')) {
               return task.result_image_url.split(',').map(u => u.trim()).filter(u => u)
-            }
+      }
             return task.result_image_url ? [task.result_image_url] : []
           }
           return []
@@ -896,6 +905,48 @@ export default {
         ElMessage.error(error.response?.data?.message || '批量下载失败')
       } finally {
         batchDownloadLoading.value = false
+      }
+    }
+
+    // 批量重试状态
+    const batchRetryLoading = ref(false)
+
+    // 批量重试失败任务
+    const batchRetryFailedTasks = async () => {
+      try {
+        batchRetryLoading.value = true
+        
+        // 获取当前选中的失败任务
+        const failedTaskIds = selectedTasks.value
+          .filter(task => task.status === 3)
+          .map(task => task.id)
+        
+        let response
+        if (failedTaskIds.length > 0) {
+          // 如果有选中的失败任务，只重试这些任务
+          response = await text2imgAPI.batchRetryTasks(failedTaskIds)
+          if (response.data.success) {
+            ElMessage.success(`已重新加入队列 ${response.data.data.retry_count} 个任务`)
+          } else {
+            ElMessage.error(response.data.message || '批量重试失败')
+          }
+        } else {
+          // 如果没有选中的失败任务，重试所有失败任务
+          response = await text2imgAPI.batchRetryTasks()
+          if (response.data.success) {
+            ElMessage.success(`已重新加入队列 ${response.data.data.retry_count} 个任务`)
+          } else {
+            ElMessage.error(response.data.message || '批量重试失败')
+          }
+        }
+        
+        // 刷新任务列表
+        refreshTasks()
+      } catch (error) {
+        console.error('批量重试失败:', error)
+        ElMessage.error(error.response?.data?.message || '批量重试失败')
+      } finally {
+        batchRetryLoading.value = false
       }
     }
 
@@ -956,7 +1007,9 @@ export default {
       getImageUrls,
       selectedCompletedTasks,
       batchDownloadImages,
-      batchDownloadLoading
+      batchDownloadLoading,
+      batchRetryFailedTasks,
+      batchRetryLoading
     }
   }
 }
@@ -1073,6 +1126,16 @@ export default {
 .batch-download-btn:hover {
   background-color: #66b1ff;
   border-color: #66b1ff;
+}
+
+.batch-retry-btn {
+  background-color: #E6A23C;
+  border-color: #E6A23C;
+}
+
+.batch-retry-btn:hover {
+  background-color: #ebb563;
+  border-color: #ebb563;
 }
 
 .batch-delete-btn {
