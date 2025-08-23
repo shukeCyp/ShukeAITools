@@ -211,6 +211,13 @@ def batch_delete_img2video_tasks():
 def import_folder_tasks():
     """从文件夹导入图片任务"""
     try:
+        # 获取请求数据
+        data = request.get_json()
+        model = data.get('model', 'Video 3.0')  # 默认为Video 3.0
+        second = data.get('second', 5)  # 默认为5秒
+        
+        print(f"导入文件夹任务，模型: {model}, 时长: {second}秒")
+        
         def select_folder_and_import():
             try:
                 # 调用原生文件夹选择对话框
@@ -269,8 +276,8 @@ def import_folder_tasks():
                     try:
                         task = JimengImg2VideoTask.create(
                             prompt='',  # 文件夹导入时提示词为空
-                            model='Video 3.0',
-                            second=5,
+                            model=model,  # 使用传入的模型参数
+                            second=second,  # 使用传入的时长参数
                             image_path=image_path,
                             status=0
                         )
@@ -278,7 +285,7 @@ def import_folder_tasks():
                     except Exception as e:
                         print(f"创建任务失败 {image_path}: {str(e)}")
                 
-                print(f"成功创建 {created_count} 个图生视频任务")
+                print(f"成功创建 {created_count} 个图生视频任务，模型: {model}, 时长: {second}秒")
                 
             except Exception as e:
                 print(f"文件夹导入失败: {str(e)}")

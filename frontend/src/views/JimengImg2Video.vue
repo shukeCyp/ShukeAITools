@@ -10,16 +10,16 @@
           <h1 class="page-title">即梦图生视频</h1>
         </div>
         <div class="status-section">
+          <!-- 导入文件夹按钮 -->
           <el-button 
             type="primary" 
-            size="large"
-            @click="importFromFolder"
+            @click="showImportFolderDialog"
             :loading="importFolderLoading"
-            class="import-btn"
           >
-            <el-icon><FolderOpened /></el-icon>
-            导入图片文件夹
+            <el-icon><Folder /></el-icon>
+            导入文件夹
           </el-button>
+          
           <el-button 
             type="success" 
             size="large"
@@ -305,6 +305,37 @@
         </video>
               </div>
     </el-dialog>
+
+    <!-- 导入文件夹设置对话框 -->
+    <el-dialog
+      v-model="importFolderDialogVisible"
+      title="导入文件夹设置"
+      width="400px"
+      destroy-on-close
+    >
+      <el-form :model="importFolderForm" label-width="100px">
+        <el-form-item label="视频模型">
+          <el-select v-model="importFolderForm.model" placeholder="请选择视频模型">
+            <el-option label="Video 3.0" value="Video 3.0" />
+            <el-option label="Video S2.0 Pro" value="Video S2.0 Pro" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="视频时长">
+          <el-select v-model="importFolderForm.second" placeholder="请选择视频时长">
+            <el-option label="5秒" :value="5" />
+            <el-option label="10秒" :value="10" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="importFolderDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="importFromFolder" :loading="importFolderLoading">
+            确认
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -322,9 +353,11 @@ import {
   CircleCheckFilled,
   CircleCloseFilled,
   Refresh,
-  RefreshRight
+  RefreshRight,
+  Folder
 } from '@element-plus/icons-vue'
 import { img2videoAPI } from '@/utils/api'
+import * as ElementPlus from 'element-plus'
 
 // 响应式数据
 const loading = ref(false)
@@ -358,6 +391,13 @@ const imagePreviewVisible = ref(false)
 const previewImageUrl = ref('')
 const videoPreviewVisible = ref(false)
 const previewVideoUrl = ref('')
+
+// 导入文件夹对话框状态
+const importFolderDialogVisible = ref(false)
+const importFolderForm = reactive({
+  model: 'Video 3.0',
+  second: 5
+})
 
 // 计算属性
 const selectedCompletedTasks = computed(() => {
@@ -414,11 +454,62 @@ const loadStats = async () => {
 
 const importFromFolder = async () => {
   try {
+    // 首先询问用户选择模型和时长
+    const model = await ElMessageBox.confirm(
+      '请选择视频模型',
+      '导入文件夹设置',
+      {
+        confirmButtonText: 'Video 3.0',
+        cancelButtonText: 'Video S2.0 Pro',
+        distinguishCancelAndClose: true,
+        type: 'info'
+      }
+    ).then(
+      () => 'Video 3.0',  // 确认按钮返回Video 3.0
+      (action) => action === 'cancel' ? 'Video S2.0 Pro' : null  // 取消按钮返回Video S2.0 Pro，关闭返回null
+    )
+    
+    // 如果用户关闭了对话框，则取消操作
+    if (!model) return
+    
+    // 根据选择的模型，询问用户选择时长
+    let second = 5
+    if (model === 'Video 3.0') {
+      const result = await ElMessageBox.confirm(
+        '请选择视频时长',
+        '导入文件夹设置',
+        {
+          confirmButtonText: '5秒',
+          cancelButtonText: '10秒',
+          distinguishCancelAndClose: true,
+          type: 'info'
+        }
+      ).then(
+        () => 5,  // 确认按钮返回5秒
+        (action) => action === 'cancel' ? 10 : null  // 取消按钮返回10秒，关闭返回null
+      )
+      
+      // 如果用户关闭了对话框，则取消操作
+      if (result === null) return
+      
+      second = result
+    }
+    
+    // 设置表单值
+    importFolderForm.model = model
+    importFolderForm.second = second
+    
+    // 调用API
     importFolderLoading.value = true
-    const response = await img2videoAPI.importFolder()
+    
+    // 使用选择的模型和时长
+    const response = await img2videoAPI.importFolder({
+      model: importFolderForm.model,
+      second: importFolderForm.second
+    })
     
     if (response.data.success) {
-      ElMessage.success(response.data.message || '开始导入文件夹')
+      ElMessage.success(`开始导入文件夹，使用模型: ${importFolderForm.model}，时长: ${importFolderForm.second}秒`)
       // 延迟刷新任务列表
       setTimeout(() => {
         loadTasks()
@@ -664,6 +755,11 @@ const batchRetryFailedTasks = async () => {
   } finally {
     batchRetryLoading.value = false
   }
+}
+
+// 显示导入文件夹对话框
+const showImportFolderDialog = () => {
+  importFromFolder()
 }
 
 // 生命周期

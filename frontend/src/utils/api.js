@@ -123,7 +123,7 @@ export const img2videoAPI = {
   batchDownload: (taskIds) => api.post('/jimeng/img2video/tasks/batch-download', { task_ids: taskIds }),
   
   // 从文件夹导入图片任务
-  importFolder: () => api.post('/jimeng/img2video/tasks/import-folder'),
+  importFolder: (params = {}) => api.post('/jimeng/img2video/tasks/import-folder', params),
   
   // 从Excel导入任务
   importExcel: () => api.post('/jimeng/img2video/tasks/import-excel')
