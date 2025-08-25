@@ -28,7 +28,7 @@ def get_browser_config():
     
     return config
 
-async def image2video(image_path, prompt, username, password, model="Video 3.0", second=5, headless=False):
+async def image2video(image_path, prompt, username, password, model="Video 3.0", second=5, headless=False, cookies=None):
     """
     生成图片到视频
     
@@ -40,6 +40,7 @@ async def image2video(image_path, prompt, username, password, model="Video 3.0",
         model: 使用的模型
         second: 视频时长（秒）
         headless: 是否无头模式运行
+        cookies: 登录后的cookies
         
     返回:
         dict: {
@@ -65,101 +66,122 @@ async def image2video(image_path, prompt, username, password, model="Video 3.0",
         playwright = await async_playwright().start()
         browser = await playwright.chromium.launch(headless=headless)
         context = await browser.new_context(**config)
-        page = await context.new_page()
         
-        print(f"{Fore.GREEN}浏览器已启动{Style.RESET_ALL}")
-        
-        # 登录即梦平台
-        print(f"{Fore.GREEN}开始登录即梦平台...{Style.RESET_ALL}")
-        print(f"{Fore.CYAN}账号: {Style.RESET_ALL}{username}")
-        
-        await page.goto('https://dreamina.capcut.com/en-us', timeout=60000)
-        await asyncio.sleep(2)
-        
-        # 点击语言切换按钮
-        print(f"{Fore.YELLOW}点击语言切换按钮...{Style.RESET_ALL}")
-        await page.click('button.dreamina-header-secondary-button')
-        await asyncio.sleep(1)
-        
-        # 点击切换为英文
-        print(f"{Fore.YELLOW}切换为英文...{Style.RESET_ALL}")
-        await page.click('div.language-item:has-text("English")')
-        await asyncio.sleep(2)
-        
-        # 检查并关闭可能出现的弹窗
-        try:
-            print(f"{Fore.YELLOW}检查是否有弹窗需要关闭...{Style.RESET_ALL}")
-            close_button = await page.query_selector('img.close-icon')
-            if close_button:
-                print(f"{Fore.YELLOW}关闭弹窗...{Style.RESET_ALL}")
-                await close_button.click()
-                await asyncio.sleep(1)
-        except Exception as e:
-            print(f"{Fore.YELLOW}没有发现需要关闭的弹窗: {str(e)}{Style.RESET_ALL}")
-        
-        # 点击登录按钮
-        print(f"{Fore.YELLOW}点击登录按钮...{Style.RESET_ALL}")
-        await page.click('#loginButton')
-        await asyncio.sleep(2)
-        
-        # 等待登录页面加载
-        await page.wait_for_selector('.lv-checkbox-mask', timeout=60000)
-        await asyncio.sleep(2)
-        
-        # 勾选同意条款复选框
-        print(f"{Fore.YELLOW}勾选同意条款...{Style.RESET_ALL}")
-        await page.click('.lv-checkbox-mask')
-        await asyncio.sleep(2)
-        
-        # 点击登录按钮
-        await page.click('div[class^="login-button-"]:has-text("Sign in")')
-        await asyncio.sleep(2)
-        
-        # 点击使用邮箱登录
-        print(f"{Fore.YELLOW}选择邮箱登录方式...{Style.RESET_ALL}")
-        await page.click('span.lv_new_third_part_sign_in_expand-label:has-text("Continue with Email")')
-        await asyncio.sleep(2)
-        
-        # 输入账号密码
-        print(f"{Fore.YELLOW}输入账号密码...{Style.RESET_ALL}")
-        await page.fill('input[placeholder="Enter email"]', username)
-        await asyncio.sleep(2)
-        await page.fill('input[type="password"]', password)
-        await asyncio.sleep(2)
-        
-        # 点击登录
-        print(f"{Fore.YELLOW}点击登录按钮...{Style.RESET_ALL}")
-        await page.click('.lv_new_sign_in_panel_wide-sign-in-button')
-        await asyncio.sleep(2)
-        
-        # 等待登录完成
-        print(f"{Fore.YELLOW}等待登录完成...{Style.RESET_ALL}")
-        await page.wait_for_load_state('networkidle', timeout=60000)
-        await asyncio.sleep(2)
-        
-        # 检查是否有确认按钮，如果有则点击
-        print(f"{Fore.YELLOW}检查是否需要确认...{Style.RESET_ALL}")
-        try:
-            confirm_button = await page.query_selector('button:has-text("Confirm")')
-            if confirm_button:
-                print(f"{Fore.GREEN}检测到确认按钮，点击确认...{Style.RESET_ALL}")
-                await confirm_button.click()
-                await asyncio.sleep(2)
-        except Exception as e:
-            print(f"{Fore.YELLOW}没有确认按钮，跳过: {str(e)}{Style.RESET_ALL}")
-        
-        # 验证登录是否成功
-        current_url = page.url
-        if "dreamina.capcut.com" in current_url and "login" not in current_url:
-            print(f"{Fore.GREEN}登录成功！{Style.RESET_ALL}")
+        if cookies:
+            # 处理cookies字符串格式
+            # 将cookies字符串转换为字典列表格式
+            cookie_pairs = cookies.split('; ')
+            cookie_list = []
+            for pair in cookie_pairs:
+                if '=' in pair:
+                    name, value = pair.split('=', 1)
+                    cookie_list.append({
+                        'name': name.strip(),
+                        'value': value.strip(),
+                        'domain': '.capcut.com',
+                        'path': '/'
+                    })
+            cookies = cookie_list
+            
+            await context.add_cookies(cookies)
+            page = await context.new_page()
+            print(f"{Fore.GREEN}已加载cookies{Style.RESET_ALL}")
         else:
-            print(f"{Fore.RED}登录可能失败，当前URL: {current_url}{Style.RESET_ALL}")
-            return {
-                "code": 602,
-                "data": None,
-                "message": "登录失败，无法找到登录节点或页面跳转异常"
-            }
-        
+            page = await context.new_page()
+            print(f"{Fore.YELLOW}未提供cookies，将进行登录...{Style.RESET_ALL}")
+            print(f"{Fore.GREEN}浏览器已启动{Style.RESET_ALL}")
+            
+            # 登录即梦平台
+            print(f"{Fore.GREEN}开始登录即梦平台...{Style.RESET_ALL}")
+            print(f"{Fore.CYAN}账号: {Style.RESET_ALL}{username}")
+            
+            await page.goto('https://dreamina.capcut.com/en-us', timeout=60000)
+            await asyncio.sleep(2)
+            
+            # 点击语言切换按钮
+            print(f"{Fore.YELLOW}点击语言切换按钮...{Style.RESET_ALL}")
+            await page.click('button.dreamina-header-secondary-button')
+            await asyncio.sleep(1)
+            
+            # 点击切换为英文
+            print(f"{Fore.YELLOW}切换为英文...{Style.RESET_ALL}")
+            await page.click('div.language-item:has-text("English")')
+            await asyncio.sleep(2)
+            
+            # 检查并关闭可能出现的弹窗
+            try:
+                print(f"{Fore.YELLOW}检查是否有弹窗需要关闭...{Style.RESET_ALL}")
+                close_button = await page.query_selector('img.close-icon')
+                if close_button:
+                    print(f"{Fore.YELLOW}关闭弹窗...{Style.RESET_ALL}")
+                    await close_button.click()
+                    await asyncio.sleep(1)
+            except Exception as e:
+                print(f"{Fore.YELLOW}没有发现需要关闭的弹窗: {str(e)}{Style.RESET_ALL}")
+            
+            # 点击登录按钮
+            print(f"{Fore.YELLOW}点击登录按钮...{Style.RESET_ALL}")
+            await page.click('#loginButton')
+            await asyncio.sleep(2)
+            
+            # 等待登录页面加载
+            await page.wait_for_selector('.lv-checkbox-mask', timeout=60000)
+            await asyncio.sleep(2)
+            
+            # 勾选同意条款复选框
+            print(f"{Fore.YELLOW}勾选同意条款...{Style.RESET_ALL}")
+            await page.click('.lv-checkbox-mask')
+            await asyncio.sleep(2)
+            
+            # 点击登录按钮
+            await page.click('div[class^="login-button-"]:has-text("Sign in")')
+            await asyncio.sleep(2)
+            
+            # 点击使用邮箱登录
+            print(f"{Fore.YELLOW}选择邮箱登录方式...{Style.RESET_ALL}")
+            await page.click('span.lv_new_third_part_sign_in_expand-label:has-text("Continue with Email")')
+            await asyncio.sleep(2)
+            
+            # 输入账号密码
+            print(f"{Fore.YELLOW}输入账号密码...{Style.RESET_ALL}")
+            await page.fill('input[placeholder="Enter email"]', username)
+            await asyncio.sleep(2)
+            await page.fill('input[type="password"]', password)
+            await asyncio.sleep(2)
+            
+            # 点击登录
+            print(f"{Fore.YELLOW}点击登录按钮...{Style.RESET_ALL}")
+            await page.click('.lv_new_sign_in_panel_wide-sign-in-button')
+            await asyncio.sleep(2)
+            
+            # 等待登录完成
+            print(f"{Fore.YELLOW}等待登录完成...{Style.RESET_ALL}")
+            await page.wait_for_load_state('networkidle', timeout=60000)
+            await asyncio.sleep(2)
+            
+            # 检查是否有确认按钮，如果有则点击
+            print(f"{Fore.YELLOW}检查是否需要确认...{Style.RESET_ALL}")
+            try:
+                confirm_button = await page.query_selector('button:has-text("Confirm")')
+                if confirm_button:
+                    print(f"{Fore.GREEN}检测到确认按钮，点击确认...{Style.RESET_ALL}")
+                    await confirm_button.click()
+                    await asyncio.sleep(2)
+            except Exception as e:
+                print(f"{Fore.YELLOW}没有确认按钮，跳过: {str(e)}{Style.RESET_ALL}")
+            
+            # 验证登录是否成功
+            current_url = page.url
+            if "dreamina.capcut.com" in current_url and "login" not in current_url:
+                print(f"{Fore.GREEN}登录成功！{Style.RESET_ALL}")
+            else:
+                print(f"{Fore.RED}登录可能失败，当前URL: {current_url}{Style.RESET_ALL}")
+                return {
+                    "code": 602,
+                    "data": None,
+                    "message": "登录失败，无法找到登录节点或页面跳转异常"
+                }
+            
         # 跳转到AI工具生成页面
         print(f"{Fore.YELLOW}正在跳转到AI工具生成页面...{Style.RESET_ALL}")
         await page.goto('https://dreamina.capcut.com/ai-tool/generate')
@@ -243,7 +265,6 @@ async def image2video(image_path, prompt, username, password, model="Video 3.0",
             # 根据模型参数选择对应的视频模型
             try:
                 if "Video 3.0" in model or model == "Video 3.0":
-                    # 选择Video 3.0模型
                     await page.click('li[role="option"] span:has-text("Video 3.0")')
                     print(f"{Fore.GREEN}已选择视频模型: Video 3.0{Style.RESET_ALL}")
                 elif "Video S2.0 Pro" in model or model == "Video S2.0 Pro":

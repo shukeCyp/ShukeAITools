@@ -362,6 +362,140 @@ def batch_get_account_cookie():
             'message': f'批量获取Cookie失败: {str(e)}'
         }), 500
 
+@jimeng_accounts_bp.route('/update-all-cookies', methods=['POST'])
+def update_all_cookies():
+    """更新所有账号的Cookie"""
+    try:
+        # 获取所有账号
+        accounts = list(JimengAccount.select())
+        
+        if not accounts:
+            return jsonify({
+                'success': False,
+                'message': '没有找到任何账号'
+            }), 404
+        
+        # 启动批量更新Cookie的后台任务
+        import threading
+        
+        def batch_update_cookies():
+            """批量更新Cookie的后台任务"""
+            import time
+            
+            for account in accounts:
+                # 检查线程池是否有空位
+                while True:
+                    active_threads = len(global_task_manager.active_tasks)
+                    max_threads = global_task_manager.max_threads
+                    
+                    if active_threads < max_threads:
+                        # 有空位，提交任务
+                        global_task_manager.submit_task(
+                            platform_name="即梦账号",
+                            task_callable=_process_cookie_task,
+                            task_id=account.id,
+                            account_id=account.id,
+                            account_email=account.account,
+                            task_type="获取Cookie",
+                            prompt=f"获取账号 {account.account} 的Cookie"
+                        )
+                        print(f"已提交账号 {account.account} 的Cookie获取任务")
+                        break
+                    else:
+                        # 线程池满了，等待一会再检查
+                        print(f"线程池已满，等待空位提交账号 {account.account} 的任务...")
+                        time.sleep(2)
+                
+                # 稍微延迟一下，避免过快提交
+                time.sleep(0.5)
+            
+            print(f"所有账号Cookie更新任务已成功提交完成，共 {len(accounts)} 个账号")
+        
+        # 启动后台线程
+        update_thread = threading.Thread(target=batch_update_cookies, daemon=True)
+        update_thread.start()
+        
+        print(f"开始批量更新所有账号Cookie，账号数量: {len(accounts)}")
+        return jsonify({
+            'success': True,
+            'message': f'正在批量更新 {len(accounts)} 个账号的Cookie，任务将智能调度到线程池中...'
+        })
+        
+    except Exception as e:
+        print(f"更新所有账号Cookie异常: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'更新所有账号Cookie失败: {str(e)}'
+        }), 500
+
+@jimeng_accounts_bp.route('/get-uncookied-accounts-cookie', methods=['POST'])
+def get_uncookied_accounts_cookie():
+    """获取所有未设置Cookie账号的Cookie"""
+    try:
+        # 获取所有未设置Cookie的账号
+        uncookied_accounts = list(JimengAccount.select().where(
+            (JimengAccount.cookies.is_null()) | (JimengAccount.cookies == '')
+        ))
+        
+        if not uncookied_accounts:
+            return jsonify({
+                'success': False,
+                'message': '没有找到未设置Cookie的账号'
+            }), 404
+        
+        # 启动批量获取Cookie的后台任务
+        import threading
+        
+        def batch_get_uncookied_accounts():
+            """批量获取未设置Cookie账号的后台任务"""
+            import time
+            
+            for account in uncookied_accounts:
+                # 检查线程池是否有空位
+                while True:
+                    active_threads = len(global_task_manager.active_tasks)
+                    max_threads = global_task_manager.max_threads
+                    
+                    if active_threads < max_threads:
+                        # 有空位，提交任务
+                        global_task_manager.submit_task(
+                            platform_name="即梦账号",
+                            task_callable=_process_cookie_task,
+                            task_id=account.id,
+                            account_id=account.id,
+                            account_email=account.account,
+                            task_type="获取Cookie",
+                            prompt=f"获取账号 {account.account} 的Cookie"
+                        )
+                        print(f"已提交未设置Cookie账号 {account.account} 的获取任务")
+                        break
+                    else:
+                        # 线程池满了，等待一会再检查
+                        print(f"线程池已满，等待空位提交账号 {account.account} 的任务...")
+                        time.sleep(2)
+                
+                # 稍微延迟一下，避免过快提交
+                time.sleep(0.5)
+            
+            print(f"所有未设置Cookie账号的获取任务已成功提交完成，共 {len(uncookied_accounts)} 个账号")
+        
+        # 启动后台线程
+        update_thread = threading.Thread(target=batch_get_uncookied_accounts, daemon=True)
+        update_thread.start()
+        
+        print(f"开始批量获取未设置Cookie账号的Cookie，账号数量: {len(uncookied_accounts)}")
+        return jsonify({
+            'success': True,
+            'message': f'正在获取 {len(uncookied_accounts)} 个未设置Cookie账号的Cookie，任务将智能调度到线程池中...'
+        })
+        
+    except Exception as e:
+        print(f"获取未设置Cookie账号异常: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'获取未设置Cookie账号失败: {str(e)}'
+        }), 500
+
 def _process_cookie_task(account_id, account_email):
     """处理获取Cookie的任务"""
     try:

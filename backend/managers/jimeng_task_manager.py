@@ -436,7 +436,8 @@ class JimengTaskManager:
                 model=task.model,
                 aspect_ratio=task.ratio,  # 使用ratio字段作为aspect_ratio
                 quality=task.quality,
-                headless=headless
+                headless=headless,
+                cookies=available_account.cookies
             ))
             
             if result["code"] == 200 and result["data"] and len(result["data"]) > 0:

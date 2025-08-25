@@ -56,6 +56,12 @@ export const accountAPI = {
   // 批量获取账号Cookie
   batchGetCookie: (accountIds) => api.post('/jimeng/accounts/batch-get-cookie', { account_ids: accountIds }),
   
+  // 更新全部账号Cookie
+  updateAllCookies: () => api.post('/jimeng/accounts/update-all-cookies'),
+  
+  // 获取未设置Cookie账号的Cookie
+  getUncookiedAccountsCookie: () => api.post('/jimeng/accounts/get-uncookied-accounts-cookie'),
+  
   // 健康检查
   healthCheck: () => api.get('/health')
 }

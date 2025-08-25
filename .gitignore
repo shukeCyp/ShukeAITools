@@ -215,3 +215,4 @@ backend/logs/
 *.log
 .claude/
 .DS_Store
+.idea/

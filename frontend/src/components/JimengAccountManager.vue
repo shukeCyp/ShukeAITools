@@ -36,6 +36,26 @@
           <el-icon><Key /></el-icon>
           获取选中Cookie
         </el-button>
+        <el-button 
+          type="warning" 
+          @click="updateAllCookies"
+          :loading="updateAllCookiesLoading"
+          size="large"
+          class="update-all-btn"
+        >
+          <el-icon><RefreshRight /></el-icon>
+          更新全部Cookie
+        </el-button>
+        <el-button 
+          type="info" 
+          @click="getUncookiedAccountsCookie"
+          :loading="getUncookiedLoading"
+          size="large"
+          class="uncookied-btn"
+        >
+          <el-icon><Key /></el-icon>
+          获取未设置Cookie
+        </el-button>
         <el-popconfirm
           title="确定要清空所有即梦账号吗？此操作不可恢复！"
           @confirm="clearAllAccounts"
@@ -68,24 +88,6 @@
           <div class="stat-content">
             <div class="stat-value">{{ accounts.length }}</div>
             <div class="stat-label">总账号数</div>
-          </div>
-        </div>
-        <div class="stat-card success">
-          <div class="stat-icon">
-            <el-icon size="24"><Clock /></el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ lastUpdateTime }}</div>
-            <div class="stat-label">最近更新</div>
-          </div>
-        </div>
-        <div class="stat-card info">
-          <div class="stat-icon">
-            <el-icon size="24"><DataBoard /></el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ usageStats.summary?.available_accounts }}</div>
-            <div class="stat-label">可用账号</div>
           </div>
         </div>
         
@@ -124,6 +126,23 @@
       </div>
     </div>
 
+    <!-- 筛选和操作栏 -->
+    <div class="filter-section" v-if="!loading">
+      <div class="filter-left">
+        <el-select
+          v-model="cookieStatusFilter"
+          placeholder="选择Cookie状态"
+          clearable
+          style="width: 200px"
+          @change="handleFilterChange"
+        >
+          <el-option label="全部" value=""></el-option>
+          <el-option label="已设置" value="true"></el-option>
+          <el-option label="未设置" value="false"></el-option>
+        </el-select>
+      </div>
+    </div>
+
     <!-- 状态提示 -->
     <div class="status-section" v-if="statusMessage">
       <el-alert
@@ -140,7 +159,7 @@
     <div class="account-table-container">
       <!-- 空状态 -->
       <el-empty 
-        v-if="accounts.length === 0 && !loading" 
+        v-if="filteredAccounts.length === 0 && !loading" 
         description="暂无即梦账号数据"
         class="empty-state"
       >
@@ -156,11 +175,11 @@
       <!-- 账号表格 -->
       <el-table 
         v-else
-        :data="paginatedAccounts" 
+        :data="filteredPaginatedAccounts" 
         stripe 
         v-loading="loading"
         class="account-table"
-        :default-sort="{ prop: 'updated_at', order: 'descending' }"
+        :default-sort="{ prop: 'id', order: 'ascending' }"
         @selection-change="handleSelectionChange"
       >
         <el-table-column 
@@ -189,29 +208,6 @@
         </el-table-column>
         
         <el-table-column 
-          prop="password" 
-          label="密码" 
-          width="120"
-          align="center"
-        >
-          <template #default="{ row }">
-            <div class="password-cell">
-              <span v-if="!showPassword[row.id]" class="masked-password">
-                {{ maskPassword(row.password) }}
-              </span>
-              <span v-else class="real-password">{{ row.password }}</span>
-              <el-button
-                :icon="showPassword[row.id] ? Hide : View"
-                size="small"
-                text
-                @click="togglePassword(row.id)"
-                class="password-toggle"
-              />
-            </div>
-          </template>
-        </el-table-column>
-
-        <el-table-column 
           prop="cookies" 
           label="Cookies状态" 
           width="120"
@@ -232,20 +228,6 @@
             </el-tooltip>
           </template>
         </el-table-column>
-
-        <el-table-column 
-          prop="created_at" 
-          label="创建时间" 
-          width="160"
-          sortable
-        />
-        
-        <el-table-column 
-          prop="updated_at" 
-          label="更新时间" 
-          width="160"
-          sortable
-        />
         
         <el-table-column 
           label="今日使用情况" 
@@ -343,13 +325,15 @@
       </el-table>
 
       <!-- 分页 -->
-      <div class="pagination-container" v-if="accounts.length > pageSize">
+      <div class="pagination-container" v-if="filteredAccounts.length > 0">
         <el-pagination
           :current-page="currentPage"
           :page-size="pageSize"
-          :total="accounts.length"
-          layout="total, prev, pager, next, jumper"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="filteredAccounts.length"
+          layout="total, sizes, prev, pager, next, jumper"
           @current-change="handlePageChange"
+          @size-change="handleSizeChange"
         />
       </div>
     </div>
@@ -431,23 +415,22 @@
 
 <script>
 import { ref, computed, onMounted, onActivated } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   Plus, 
   Refresh, 
   Delete, 
   User,
-  Clock,
   Message,
   View,
   Hide,
   DocumentAdd,
   Warning,
-  DataBoard,
   Picture,
   VideoPlay,
   Avatar,
-  Key
+  Key,
+  RefreshRight
 } from '@element-plus/icons-vue'
 import { accountAPI } from '../utils/api'
 
@@ -458,17 +441,16 @@ export default {
     Refresh,
     Delete,
     User,
-    Clock,
     Message,
     View,
     Hide,
     DocumentAdd,
     Warning,
-    DataBoard,
     Picture,
     VideoPlay,
     Avatar,
-    Key
+    Key,
+    RefreshRight
   },
   setup() {
     // 响应式数据
@@ -503,6 +485,8 @@ export default {
     // Cookie获取状态
     const cookieLoading = ref({})
     const batchCookieLoading = ref(false)
+    const updateAllCookiesLoading = ref(false)
+    const getUncookiedLoading = ref(false)
     
     // 获取单个账号Cookie
     const getCookie = async (accountId) => {
@@ -554,16 +538,61 @@ export default {
         }, 1000)
       }
     }
+    
+    // 更新所有账号Cookie
+    const updateAllCookies = async () => {
+      try {
+        await ElMessageBox.confirm('确认更新所有账号的Cookie？这可能需要较长时间，系统将智能调度任务到线程池中。', '确认操作', {
+          confirmButtonText: '确认',
+          cancelButtonText: '取消',
+          type: 'warning'
+        })
+        
+        updateAllCookiesLoading.value = true
+        const response = await accountAPI.updateAllCookies()
+        
+        if (response.data.success) {
+          ElMessage.success(response.data.message)
+          // 延迟刷新账号列表
+          setTimeout(() => {
+            refreshAll()
+          }, 3000)
+        } else {
+          ElMessage.error(response.data.message || '更新所有账号Cookie失败')
+        }
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('更新所有账号Cookie失败:', error)
+          ElMessage.error('更新所有账号Cookie失败')
+        }
+      } finally {
+        updateAllCookiesLoading.value = false
+      }
+    }
+
+    // 获取未设置Cookie的账号
+    const getUncookiedAccountsCookie = async () => {
+      try {
+        getUncookiedLoading.value = true
+        const response = await accountAPI.getUncookiedAccountsCookie()
+        if (response.data.success) {
+          ElMessage.success(response.data.message)
+          // 延迟刷新账号列表
+          setTimeout(() => {
+            refreshAll()
+          }, 3000)
+        } else {
+          ElMessage.error(response.data.message || '获取未设置Cookie失败')
+        }
+      } catch (error) {
+        console.error('获取未设置Cookie失败:', error)
+        ElMessage.error('获取未设置Cookie失败')
+      } finally {
+        getUncookiedLoading.value = false
+      }
+    }
 
     // 计算属性
-    const lastUpdateTime = computed(() => {
-      if (accounts.value.length === 0) return '无'
-      const latest = accounts.value.reduce((latest, account) => {
-        return new Date(account.updated_at) > new Date(latest.updated_at) ? account : latest
-      })
-      return latest.updated_at
-    })
-
     const paginatedAccounts = computed(() => {
       const start = (currentPage.value - 1) * pageSize.value
       const end = start + pageSize.value
@@ -686,6 +715,16 @@ export default {
     const handlePageChange = (page) => {
       currentPage.value = page
     }
+    
+    // 处理每页显示数量变化
+    const handleSizeChange = (size) => {
+      pageSize.value = size
+      // 如果当前页超出了新的页数范围，重置为第一页
+      const maxPage = Math.ceil(filteredAccounts.value.length / size)
+      if (currentPage.value > maxPage) {
+        currentPage.value = 1
+      }
+    }
 
     // 获取使用统计
     const fetchUsageStats = async () => {
@@ -744,6 +783,31 @@ export default {
     onMounted(refreshAll)
     onActivated(refreshAll)
 
+    // Cookie状态筛选
+    const cookieStatusFilter = ref('')
+    
+    // 处理筛选变化
+    const handleFilterChange = () => {
+      currentPage.value = 1 // 重置到第一页
+    }
+    
+    // 筛选后的账号列表
+    const filteredAccounts = computed(() => {
+      if (!cookieStatusFilter.value) {
+        return accounts.value
+      }
+      
+      const hasFilter = cookieStatusFilter.value === 'true'
+      return accounts.value.filter(account => account.has_cookies === hasFilter)
+    })
+
+    // 筛选并分页后的账号列表
+    const filteredPaginatedAccounts = computed(() => {
+      const start = (currentPage.value - 1) * pageSize.value
+      const end = start + pageSize.value
+      return filteredAccounts.value.slice(start, end)
+    })
+
     return {
       accounts,
       loading,
@@ -756,8 +820,10 @@ export default {
       currentPage,
       pageSize,
       usageStats,
-      lastUpdateTime,
       paginatedAccounts,
+      filteredAccounts,
+      filteredPaginatedAccounts,
+      cookieStatusFilter,
       fetchAccounts,
       refreshAccounts,
       addAccounts,
@@ -769,6 +835,8 @@ export default {
       clearStatus,
       resetAddForm,
       handlePageChange,
+      handleSizeChange,
+      handleFilterChange,
       fetchUsageStats,
       refreshAll,
       getAccountUsage,
@@ -780,6 +848,10 @@ export default {
       batchCookieLoading,
       getCookie,
       batchGetCookie,
+      updateAllCookiesLoading,
+      updateAllCookies,
+      getUncookiedLoading,
+      getUncookiedAccountsCookie,
     }
   }
 }
@@ -888,6 +960,38 @@ export default {
 }
 
 .cookie-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.update-all-btn {
+  background: linear-gradient(135deg, #e6a23c, #f0b90b);
+  border: none;
+  color: white;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  transition: var(--transition);
+  box-shadow: var(--shadow-sm);
+}
+
+.update-all-btn:hover {
+  background: linear-gradient(135deg, #ebb563, #f3c73f);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.uncookied-btn {
+  background: linear-gradient(135deg, #409eff, #67c23a);
+  border: none;
+  color: white;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  transition: var(--transition);
+  box-shadow: var(--shadow-sm);
+}
+
+.uncookied-btn:hover {
+  background: linear-gradient(135deg, #66b1ff, #85ce61);
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
@@ -1034,6 +1138,28 @@ export default {
   font-size: 14px;
   color: var(--text-secondary);
   margin: 0;
+}
+
+/* 筛选和操作栏 */
+.filter-section {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.filter-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.filter-left .el-select {
+  width: 200px;
 }
 
 /* 状态提示 */

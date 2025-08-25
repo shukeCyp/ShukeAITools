@@ -294,7 +294,8 @@ class JimengImg2VideoTaskManager:
                 password=account.password,
                 model=task.model,
                 second=task.second,
-                headless=headless
+                headless=headless,
+                cookies=account.cookies
             ))
             
             # 更新账号使用记录
