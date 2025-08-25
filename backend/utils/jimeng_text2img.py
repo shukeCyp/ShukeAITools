@@ -268,13 +268,55 @@ async def text2image(prompt, username, password, model="Image 3.1", aspect_ratio
         
         # 选择比例
         print(f"{Fore.YELLOW}选择比例: {aspect_ratio}...{Style.RESET_ALL}")
-        await page.click('button.lv-btn.lv-btn-secondary.lv-btn-size-default.lv-btn-shape-square:has([class*="button-text-"])')
-        await asyncio.sleep(1)
         
-        # 在弹出的比例选择框中选择对应比例
-        await page.click(f'span[class^="label-"]:has-text("{aspect_ratio}")')
-        await asyncio.sleep(1)
+        # 重试机制，最多尝试3次
+        max_retries = 3
+        ratio_selected = False
         
+        for attempt in range(max_retries):
+            try:
+                print(f"{Fore.YELLOW}第 {attempt + 1} 次尝试选择比例...{Style.RESET_ALL}")
+                
+                # 点击比例选择按钮
+                await page.click('button.lv-btn.lv-btn-secondary.lv-btn-size-default.lv-btn-shape-square:has([class*="button-text-"])')
+                await asyncio.sleep(1)
+                
+                # 在弹出的比例选择框中选择对应比例
+                await page.click(f'span[class^="label-"]:has-text("{aspect_ratio}")')
+                await asyncio.sleep(1)
+
+                # 关闭选择
+                await page.click('button.lv-btn.lv-btn-secondary.lv-btn-size-default.lv-btn-shape-square:has([class*="button-text-"])')
+                await asyncio.sleep(1)
+                
+                # 检查是否选择成功 - 查找按钮中是否包含目标比例
+                button_element = await page.query_selector('button.lv-btn.lv-btn-secondary.lv-btn-size-default.lv-btn-shape-square:has([class*="button-text-"])')
+                if button_element:
+                    button_text = await button_element.text_content()
+                    if aspect_ratio in button_text:
+                        print(f"{Fore.GREEN}比例选择成功: {aspect_ratio}{Style.RESET_ALL}")
+                        ratio_selected = True
+                        break
+                    else:
+                        print(f"{Fore.YELLOW}比例选择失败，当前显示: {button_text}，期望: {aspect_ratio}{Style.RESET_ALL}")
+                else:
+                    print(f"{Fore.YELLOW}未找到比例按钮元素{Style.RESET_ALL}")
+                    
+            except Exception as e:
+                print(f"{Fore.YELLOW}第 {attempt + 1} 次选择比例时出错: {str(e)}{Style.RESET_ALL}")
+                
+            await asyncio.sleep(1)
+        
+        # 如果3次尝试都失败，返回错误
+        if not ratio_selected:
+            print(f"{Fore.RED}比例选择失败，已尝试 {max_retries} 次{Style.RESET_ALL}")
+            return {
+                "code": 602,
+                "data": None,
+                "message": f"比例选择失败，已尝试 {max_retries} 次"
+            }
+        
+
         # 点击生成按钮
         print(f"{Fore.YELLOW}等待生成按钮可用并点击...{Style.RESET_ALL}")
         await page.wait_for_selector('button[class^="lv-btn lv-btn-primary"][class*="submit-button-"]:not(.lv-btn-disabled)', timeout=60000)

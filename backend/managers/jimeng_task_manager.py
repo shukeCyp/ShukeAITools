@@ -370,10 +370,13 @@ class JimengTaskManager:
                 if 'account_id' in result and result.get('should_create_empty_task', False):
                     print(f"创建空任务记录账号 {result['account_id']} 的使用情况")
                     self._create_empty_task_record(result['account_id'], task)
-                
-                task.status = 3  # 失败
-                task.update_at = datetime.now()
-                task.save()
+                    task.status = 3  # 失败
+                    task.update_at = datetime.now()
+                    task.save()
+                else:
+                    task.status = 0  # 排队
+                    task.update_at = datetime.now()
+                    task.save()
                 
                 print(f"{self.platform_name}任务失败，ID: {task.id}，原因: {result.get('error', '未知错误')}")
                 with self._lock:
@@ -433,9 +436,9 @@ class JimengTaskManager:
                 prompt=task.prompt,
                 username=available_account.account,
                 password=available_account.password,
-                model=task.model or "Image 3.1",
-                aspect_ratio=task.ratio or "1:1",  # 使用ratio字段作为aspect_ratio
-                quality=task.quality or "1K",
+                model=task.model,
+                aspect_ratio=task.ratio,  # 使用ratio字段作为aspect_ratio
+                quality=task.quality,
                 headless=headless
             ))
             
