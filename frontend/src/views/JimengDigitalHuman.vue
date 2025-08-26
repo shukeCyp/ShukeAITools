@@ -71,8 +71,8 @@
             <div class="stat-label">失败</div>
           </div>
         </div>
-      </div>
-    </div>
+          </div>
+        </div>
 
     <!-- 任务管理 -->
     <div class="task-management">
@@ -138,8 +138,8 @@
               </el-button>
             </template>
           </el-popconfirm>
-        </div>
-      </div>
+            </div>
+            </div>
 
       <!-- 任务表格 -->
       <div class="task-table-container">
@@ -165,7 +165,7 @@
                 <el-tooltip :content="getImageFileName(row.image_path)" placement="top">
                   <span class="file-name">{{ truncateFileName(getImageFileName(row.image_path), 25) }}</span>
                 </el-tooltip>
-              </div>
+          </div>
             </template>
           </el-table-column>
 
@@ -176,7 +176,7 @@
                 <el-tooltip :content="getAudioFileName(row.audio_path)" placement="top">
                   <span class="file-name">{{ truncateFileName(getAudioFileName(row.audio_path), 25) }}</span>
                 </el-tooltip>
-              </div>
+            </div>
             </template>
           </el-table-column>
 
@@ -236,11 +236,11 @@
                     </el-button>
                   </template>
                 </el-popconfirm>
-              </div>
+            </div>
             </template>
           </el-table-column>
         </el-table>
-      </div>
+          </div>
 
       <!-- 分页 -->
       <div class="pagination-container">
@@ -253,8 +253,8 @@
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
         />
-      </div>
-    </div>
+            </div>
+            </div>
 
     <!-- 创建任务对话框 -->
     <el-dialog
@@ -270,7 +270,7 @@
           <div class="panel-header">
             <h4><el-icon><View /></el-icon> 文件预览</h4>
           </div>
-          
+
           <!-- 图片预览 -->
           <div class="preview-section">
             <div class="preview-item">
@@ -281,7 +281,7 @@
                   <el-icon><CircleCheck /></el-icon>
                   已上传
                 </el-tag>
-              </div>
+            </div>
               
               <div class="preview-content">
                 <div v-if="imageFileList.length > 0" class="image-preview-container">
@@ -309,7 +309,7 @@
                   <el-icon><CircleCheck /></el-icon>
                   已上传
                 </el-tag>
-              </div>
+            </div>
               
               <div class="preview-content">
                 <div v-if="audioFileList.length > 0" class="audio-preview-container">
@@ -334,14 +334,14 @@
                 </div>
               </div>
             </div>
+            </div>
           </div>
-        </div>
 
         <!-- 右侧上传区域 -->
         <div class="upload-panel">
           <div class="panel-header">
             <h4><el-icon><UploadFilled /></el-icon> 文件上传</h4>
-          </div>
+            </div>
           
           <!-- 图片上传 -->
           <div class="upload-section">
@@ -364,14 +364,14 @@
               <el-icon class="upload-icon"><UploadFilled /></el-icon>
               <div class="upload-text">
                 将图片拖到此处，或<em>点击上传</em>
-              </div>
+          </div>
               <template #tip>
                 <div class="upload-tip">
                   支持 JPG、PNG 格式，文件大小不超过 10MB
                 </div>
               </template>
             </el-upload>
-          </div>
+        </div>
 
           <!-- 音频上传 -->
           <div class="upload-section">
@@ -394,15 +394,15 @@
               <el-icon class="upload-icon"><UploadFilled /></el-icon>
               <div class="upload-text">
                 将音频拖到此处，或<em>点击上传</em>
-              </div>
+          </div>
               <template #tip>
                 <div class="upload-tip">
                   支持 MP3、WAV、M4A 格式，时长不超过 15 秒
-                </div>
+        </div>
               </template>
             </el-upload>
-          </div>
-        </div>
+      </div>
+    </div>
       </div>
 
       <template #footer>
@@ -459,7 +459,7 @@ import {
   DataAnalysis,
   Calendar,
   UploadFilled,
-  Avatar,
+  Avatar, 
   Document,
   VideoPlay,
   Download,
@@ -1726,7 +1726,7 @@ export default {
     gap: 16px;
     padding: 20px 24px;
   }
-
+  
   .page-title {
     font-size: 28px;
   }
@@ -1738,7 +1738,7 @@ export default {
   .task-management {
     padding: 24px;
   }
-
+  
   .toolbar-actions {
     flex-direction: column;
     gap: 12px;

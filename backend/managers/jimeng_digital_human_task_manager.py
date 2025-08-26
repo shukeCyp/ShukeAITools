@@ -52,6 +52,11 @@ class JimengDigitalHumanTaskManager:
         """任务处理循环"""
         print("数字人任务扫描线程已启动")
         
+        # 初始延迟，等待数据库操作完全稳定
+        print("数字人任务扫描线程等待数据库稳定...")
+        time.sleep(5.0)
+        print("数字人任务开始扫描任务...")
+        
         while self.is_running:
             try:
                 # 扫描待处理任务

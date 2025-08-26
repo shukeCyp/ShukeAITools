@@ -39,58 +39,84 @@ app.after_request(after_request)
 # 初始化数据库
 init_database()
 
+# 等待数据库初始化完全完成
+time.sleep(0.5)
+
 # 初始化默认配置
 ConfigUtil.init_default_configs()
 
 def reset_processing_tasks():
     """重置所有生成中的任务为排队状态"""
-    try:
-        print("检查并重置生成中的任务...")
-        
-        # 重置文生图任务
-        text2img_reset_count = 0
-        processing_text2img_tasks = JimengText2ImgTask.select().where(
-            (JimengText2ImgTask.status == 1) &  # 生成中
-            (JimengText2ImgTask.is_empty_task == False)  # 非空任务
-        )
-        
-        for task in processing_text2img_tasks:
-            task.update_status(0)  # 重置为排队状态
-            text2img_reset_count += 1
-        
-        # 重置图生视频任务
-        img2video_reset_count = 0
-        processing_img2video_tasks = JimengImg2VideoTask.select().where(
-            (JimengImg2VideoTask.status == 1) &  # 生成中
-            (JimengImg2VideoTask.is_empty_task == False)  # 非空任务
-        )
-        
-        for task in processing_img2video_tasks:
-            task.update_status(0)  # 重置为排队状态
-            img2video_reset_count += 1
-        
-        # 重置数字人任务
-        digital_human_reset_count = 0
-        processing_digital_human_tasks = JimengDigitalHumanTask.select().where(
-            (JimengDigitalHumanTask.status == 1) &  # 生成中
-            (JimengDigitalHumanTask.is_empty_task == False)  # 非空任务
-        )
-        
-        for task in processing_digital_human_tasks:
-            task.update_status(0)  # 重置为排队状态
-            digital_human_reset_count += 1
-        
-        total_reset = text2img_reset_count + img2video_reset_count + digital_human_reset_count
-        if total_reset > 0:
-            print(f"重置了 {text2img_reset_count} 个文生图任务, {img2video_reset_count} 个图生视频任务和 {digital_human_reset_count} 个数字人任务为排队状态")
-        else:
-            print("没有需要重置的生成中任务")
+    max_retries = 3
+    retry_delay = 1
+    
+    for attempt in range(max_retries):
+        try:
+            print("检查并重置生成中的任务...")
             
-    except Exception as e:
-        print(f"重置生成中任务失败: {str(e)}")
+            # 重置文生图任务
+            text2img_reset_count = 0
+            processing_text2img_tasks = JimengText2ImgTask.select().where(
+                (JimengText2ImgTask.status == 1) &  # 生成中
+                (JimengText2ImgTask.is_empty_task == False)  # 非空任务
+            )
+            
+            for task in processing_text2img_tasks:
+                task.update_status(0)  # 重置为排队状态
+                text2img_reset_count += 1
+            
+            # 重置图生视频任务
+            img2video_reset_count = 0
+            processing_img2video_tasks = JimengImg2VideoTask.select().where(
+                (JimengImg2VideoTask.status == 1) &  # 生成中
+                (JimengImg2VideoTask.is_empty_task == False)  # 非空任务
+            )
+            
+            for task in processing_img2video_tasks:
+                task.update_status(0)  # 重置为排队状态
+                img2video_reset_count += 1
+            
+            # 重置数字人任务
+            digital_human_reset_count = 0
+            processing_digital_human_tasks = JimengDigitalHumanTask.select().where(
+                (JimengDigitalHumanTask.status == 1) &  # 生成中
+                (JimengDigitalHumanTask.is_empty_task == False)  # 非空任务
+            )
+            
+            for task in processing_digital_human_tasks:
+                task.update_status(0)  # 重置为排队状态
+                digital_human_reset_count += 1
+            
+            total_reset = text2img_reset_count + img2video_reset_count + digital_human_reset_count
+            if total_reset > 0:
+                print(f"重置了 {text2img_reset_count} 个文生图任务, {img2video_reset_count} 个图生视频任务和 {digital_human_reset_count} 个数字人任务为排队状态")
+            else:
+                print("没有需要重置的生成中任务")
+            
+            return  # 成功完成，退出重试循环
+                
+        except Exception as e:
+            if "database is locked" in str(e) and attempt < max_retries - 1:
+                print(f"数据库被锁定，重置任务第 {attempt + 1} 次重试，等待 {retry_delay} 秒...")
+                time.sleep(retry_delay)
+                retry_delay *= 2
+                continue
+            else:
+                print(f"重置生成中任务失败: {str(e)}")
+                if attempt < max_retries - 1:
+                    print(f"第 {attempt + 1} 次重试，等待 {retry_delay} 秒...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                    continue
+                else:
+                    print("重置任务失败，但继续启动服务...")
+                    break
 
 # 在启动任务管理器之前重置任务状态
 reset_processing_tasks()
+
+# 等待任务重置完成
+time.sleep(1.0)
 
 # 注册蓝图路由
 app.register_blueprint(common_bp)
@@ -100,6 +126,9 @@ app.register_blueprint(jimeng_img2video_bp)
 app.register_blueprint(jimeng_digital_human_bp)
 app.register_blueprint(config_bp)
 app.register_blueprint(task_manager_bp)
+
+# 等待路由注册完成
+time.sleep(0.5)
 
 # 启动全局任务管理器
 global_task_manager.start()

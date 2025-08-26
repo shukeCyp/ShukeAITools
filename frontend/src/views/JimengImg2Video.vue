@@ -38,47 +38,47 @@
 
     <!-- 统计概览 -->
     <div class="stats-overview">
-      <div class="stats-grid">
+        <div class="stats-grid">
         <div class="stat-card total">
-          <div class="stat-icon">
-            <el-icon size="24"><Document /></el-icon>
-          </div>
+            <div class="stat-icon">
+              <el-icon size="24"><Document /></el-icon>
+            </div>
           <div class="stat-content">
             <div class="stat-value">{{ stats.total_tasks || 0 }}</div>
             <div class="stat-label">总任务</div>
+            </div>
           </div>
-        </div>
         <div class="stat-card pending">
           <div class="stat-icon">
-            <el-icon size="24"><Clock /></el-icon>
-          </div>
+              <el-icon size="24"><Clock /></el-icon>
+            </div>
           <div class="stat-content">
             <div class="stat-value">{{ stats.pending_tasks || 0 }}</div>
             <div class="stat-label">排队中</div>
+            </div>
           </div>
-        </div>
         <div class="stat-card processing">
           <div class="stat-icon">
-            <el-icon size="24"><Loading /></el-icon>
-          </div>
+              <el-icon size="24"><Loading /></el-icon>
+            </div>
           <div class="stat-content">
             <div class="stat-value">{{ stats.processing_tasks || 0 }}</div>
             <div class="stat-label">生成中</div>
+            </div>
           </div>
-        </div>
         <div class="stat-card completed">
           <div class="stat-icon">
             <el-icon size="24"><CircleCheckFilled /></el-icon>
-          </div>
+            </div>
           <div class="stat-content">
             <div class="stat-value">{{ stats.completed_tasks || 0 }}</div>
             <div class="stat-label">已完成</div>
+            </div>
           </div>
-        </div>
         <div class="stat-card failed">
           <div class="stat-icon">
             <el-icon size="24"><CircleCloseFilled /></el-icon>
-          </div>
+            </div>
           <div class="stat-content">
             <div class="stat-value">{{ stats.failed_tasks || 0 }}</div>
             <div class="stat-label">失败</div>
@@ -351,7 +351,7 @@
             确认
           </el-button>
         </span>
-      </template>
+            </template>
     </el-dialog>
   </div>
 </template>

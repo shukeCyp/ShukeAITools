@@ -116,6 +116,11 @@ class JimengImg2VideoTaskManager:
     
     def _scan_and_process_tasks(self):
         """扫描并处理任务的线程函数"""
+        # 初始延迟，等待数据库操作完全稳定
+        print("即梦图生视频任务扫描线程等待数据库稳定...")
+        time.sleep(5.0)
+        print("即梦图生视频任务开始扫描任务...")
+        
         while self.running:
             try:
                 # 获取排队中的任务

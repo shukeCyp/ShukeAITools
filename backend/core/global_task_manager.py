@@ -76,6 +76,10 @@ class GlobalTaskManager:
         self.global_executor = ThreadPoolExecutor(max_workers=self.max_threads, thread_name_prefix="GlobalWorker")
         print(f"创建全局线程池，最大线程数: {self.max_threads}")
         
+        # 等待一段时间确保数据库操作完全完成
+        time.sleep(2.0)
+        print("开始启动平台任务管理器...")
+        
         # 启动所有平台任务管理器（不再让它们创建自己的线程池）
         success_count = 0
         for platform_name, manager in self.platform_managers.items():
@@ -83,6 +87,9 @@ class GlobalTaskManager:
                 # 传递全局线程池给各个平台管理器
                 if hasattr(manager, 'set_global_executor'):
                     manager.set_global_executor(self.global_executor)
+                
+                # 在启动每个管理器之间添加小延迟
+                time.sleep(0.5)
                 
                 if manager.start():
                     success_count += 1

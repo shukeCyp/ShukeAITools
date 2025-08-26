@@ -215,6 +215,11 @@ class JimengTaskManager:
         """工作线程主循环"""
         print(f"{self.platform_name}任务扫描线程已启动")
         
+        # 初始延迟，等待数据库操作完全稳定
+        print(f"{self.platform_name}任务扫描线程等待数据库稳定...")
+        time.sleep(5.0)
+        print(f"{self.platform_name}开始扫描任务...")
+        
         while not self.stop_event.is_set():
             try:
                 # 更新扫描时间
