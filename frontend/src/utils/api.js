@@ -226,4 +226,22 @@ export const taskManagerAPI = {
   health: () => api.get('/task-manager/health')
 }
 
+// 提示词相关API
+export const promptAPI = {
+  // 搜索提示词
+  searchPrompts: (platform = 'jimeng', query = '', page = 1, perPage = 20) => 
+    api.get('/prompt/search', { 
+      params: { platform, query, page, per_page: perPage } 
+    }),
+  
+  // 获取可用平台列表
+  getPlatforms: () => api.get('/prompt/platforms'),
+  
+  // 获取提示词详情
+  getPromptDetail: (platform, name) => api.get(`/prompt/detail/${platform}/${name}`),
+  
+  // 获取统计信息
+  getStats: () => api.get('/prompt/stats')
+}
+
 export default api

@@ -27,6 +27,7 @@ from backend.api.v1.img2video_routes import jimeng_img2video_bp
 from backend.api.v1.digital_human_routes import jimeng_digital_human_bp
 from backend.api.v1.config_routes import config_bp
 from backend.api.v1.task_manager_routes import task_manager_bp
+from backend.api.v1.prompt_routes import prompt_bp
 
 # 创建Flask应用
 app = Flask(__name__)
@@ -126,6 +127,7 @@ app.register_blueprint(jimeng_img2video_bp)
 app.register_blueprint(jimeng_digital_human_bp)
 app.register_blueprint(config_bp)
 app.register_blueprint(task_manager_bp)
+app.register_blueprint(prompt_bp)
 
 # 等待路由注册完成
 time.sleep(0.5)

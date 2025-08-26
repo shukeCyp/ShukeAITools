@@ -43,6 +43,11 @@
               <span>任务管理器</span>
             </el-menu-item>
             
+            <el-menu-item index="prompt-manager">
+              <el-icon><Collection /></el-icon>
+              <span>提示词</span>
+            </el-menu-item>
+            
             <!-- 即梦国际版 -->
             <el-sub-menu index="jimeng">
               <template #title>
@@ -196,6 +201,11 @@
               <TaskManager />
             </div>
 
+            <!-- 提示词管理 -->
+            <div v-if="activeMenu === 'prompt-manager'" class="page-content">
+              <PromptManager />
+            </div>
+
             <!-- 基础配置 -->
             <div v-if="activeMenu === 'base-config'" class="page-content">
               <BaseConfig />
@@ -236,7 +246,8 @@ import {
   VideoPlay,
   Avatar,
   Setting,
-  Monitor
+  Monitor,
+  Collection
 } from '@element-plus/icons-vue'
 import AccountConfiguration from './views/AccountConfiguration.vue'
 import JimengPlatform from './views/JimengPlatform.vue'
@@ -246,6 +257,7 @@ import BaseConfig from './views/BaseConfig.vue'
 import JimengImg2Video from './views/JimengImg2Video.vue'
 import JimengDigitalHuman from './views/JimengDigitalHuman.vue'
 import TaskManager from './views/TaskManager.vue'
+import PromptManager from './views/PromptManager.vue'
 import { accountAPI } from './utils/api'
 
 export default {
@@ -258,6 +270,7 @@ export default {
     JimengImg2Video,
     JimengDigitalHuman,
     TaskManager,
+    PromptManager,
     BaseConfig,
     Tools,
     Connection,
@@ -272,7 +285,8 @@ export default {
     VideoPlay,
     Avatar,
     Setting,
-    Monitor
+    Monitor,
+    Collection
   },
   setup() {
     const activeMenu = ref('home')
