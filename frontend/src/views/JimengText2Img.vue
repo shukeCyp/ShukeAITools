@@ -128,6 +128,21 @@
               批量重试失败任务
             </el-button>
             <el-popconfirm
+              title="确定要删除今日前的所有任务吗？此操作不可恢复！"
+              @confirm="deleteTasksBeforeToday"
+            >
+              <template #reference>
+                <el-button 
+                  type="danger" 
+                  :loading="deleteBeforeTodayLoading"
+                  class="delete-before-today-btn"
+                >
+                  <el-icon><Delete /></el-icon>
+                  删除今日前任务
+                </el-button>
+              </template>
+            </el-popconfirm>
+            <el-popconfirm
               title="确定要删除选中的任务吗？"
               @confirm="batchDeleteTasks"
             >
@@ -950,6 +965,27 @@ export default {
       }
     }
 
+    // 删除今日前任务
+    const deleteBeforeTodayLoading = ref(false)
+
+    const deleteTasksBeforeToday = async () => {
+      deleteBeforeTodayLoading.value = true
+      try {
+        const response = await text2imgAPI.deleteTasksBeforeToday()
+        if (response.data.success) {
+          ElMessage.success(response.data.message)
+          refreshTasks()
+        } else {
+          ElMessage.error(response.data.message)
+        }
+      } catch (error) {
+        console.error('删除今日前任务失败:', error)
+        ElMessage.error(error.response?.data?.message || '删除今日前任务失败')
+      } finally {
+        deleteBeforeTodayLoading.value = false
+      }
+    }
+
     // 生命周期
     onMounted(() => {
       refreshTasks()
@@ -1009,7 +1045,9 @@ export default {
       batchDownloadImages,
       batchDownloadLoading,
       batchRetryFailedTasks,
-      batchRetryLoading
+      batchRetryLoading,
+      deleteTasksBeforeToday,
+      deleteBeforeTodayLoading
     }
   }
 }
@@ -1144,6 +1182,16 @@ export default {
 }
 
 .batch-delete-btn:hover {
+  background-color: #f78989;
+  border-color: #f78989;
+}
+
+.delete-before-today-btn {
+  background-color: #F56C6C;
+  border-color: #F56C6C;
+}
+
+.delete-before-today-btn:hover {
   background-color: #f78989;
   border-color: #f78989;
 }

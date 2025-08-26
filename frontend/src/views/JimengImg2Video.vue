@@ -13,8 +13,10 @@
           <!-- 导入文件夹按钮 -->
           <el-button 
             type="primary" 
+            size="large"
             @click="showImportFolderDialog"
             :loading="importFolderLoading"
+            class="import-btn"
           >
             <el-icon><Folder /></el-icon>
             导入文件夹
@@ -36,47 +38,47 @@
 
     <!-- 统计概览 -->
     <div class="stats-overview">
-        <div class="stats-grid">
+      <div class="stats-grid">
         <div class="stat-card total">
-            <div class="stat-icon">
-              <el-icon size="24"><Document /></el-icon>
-            </div>
+          <div class="stat-icon">
+            <el-icon size="24"><Document /></el-icon>
+          </div>
           <div class="stat-content">
             <div class="stat-value">{{ stats.total_tasks || 0 }}</div>
             <div class="stat-label">总任务</div>
-            </div>
           </div>
+        </div>
         <div class="stat-card pending">
           <div class="stat-icon">
-              <el-icon size="24"><Clock /></el-icon>
-            </div>
+            <el-icon size="24"><Clock /></el-icon>
+          </div>
           <div class="stat-content">
             <div class="stat-value">{{ stats.pending_tasks || 0 }}</div>
             <div class="stat-label">排队中</div>
-            </div>
           </div>
+        </div>
         <div class="stat-card processing">
           <div class="stat-icon">
-              <el-icon size="24"><Loading /></el-icon>
-            </div>
+            <el-icon size="24"><Loading /></el-icon>
+          </div>
           <div class="stat-content">
             <div class="stat-value">{{ stats.processing_tasks || 0 }}</div>
             <div class="stat-label">生成中</div>
-            </div>
           </div>
+        </div>
         <div class="stat-card completed">
           <div class="stat-icon">
             <el-icon size="24"><CircleCheckFilled /></el-icon>
-            </div>
+          </div>
           <div class="stat-content">
             <div class="stat-value">{{ stats.completed_tasks || 0 }}</div>
             <div class="stat-label">已完成</div>
-            </div>
           </div>
+        </div>
         <div class="stat-card failed">
           <div class="stat-icon">
             <el-icon size="24"><CircleCloseFilled /></el-icon>
-            </div>
+          </div>
           <div class="stat-content">
             <div class="stat-value">{{ stats.failed_tasks || 0 }}</div>
             <div class="stat-label">失败</div>
@@ -121,6 +123,21 @@
             <el-icon><RefreshRight /></el-icon>
             批量重试失败任务
           </el-button>
+          <el-popconfirm
+            title="确定要删除今日前的所有任务吗？此操作不可恢复！"
+            @confirm="deleteTasksBeforeToday"
+          >
+            <template #reference>
+              <el-button 
+                type="danger" 
+                :loading="deleteBeforeTodayLoading"
+                class="delete-before-today-btn"
+              >
+                <el-icon><Delete /></el-icon>
+                删除今日前任务
+              </el-button>
+            </template>
+          </el-popconfirm>
           <!-- 批量操作按钮 -->
           <el-button 
             type="danger" 
@@ -385,6 +402,9 @@ const batchDownloadLoading = ref(false)
 
 // 批量重试状态
 const batchRetryLoading = ref(false)
+
+// 删除今日前任务状态
+const deleteBeforeTodayLoading = ref(false)
 
 // 预览相关状态
 const imagePreviewVisible = ref(false)
@@ -757,6 +777,26 @@ const batchRetryFailedTasks = async () => {
   }
 }
 
+// 删除今日前的所有任务
+const deleteTasksBeforeToday = async () => {
+  try {
+    deleteBeforeTodayLoading.value = true
+    const response = await img2videoAPI.deleteTasksBeforeToday()
+    if (response.data.success) {
+      ElMessage.success(response.data.message || '今日前的任务已删除')
+      await loadTasks()
+      await loadStats()
+    } else {
+      ElMessage.error(response.data.message || '删除今日前任务失败')
+    }
+  } catch (error) {
+    console.error('删除今日前任务失败:', error)
+    ElMessage.error(error.response?.data?.message || '删除今日前任务失败')
+  } finally {
+    deleteBeforeTodayLoading.value = false
+  }
+}
+
 // 显示导入文件夹对话框
 const showImportFolderDialog = () => {
   importFromFolder()
@@ -875,14 +915,31 @@ onUnmounted(() => {
 .status-section {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
 .import-btn {
-  font-size: 16px;
-  padding: 12px 20px;
+  background: var(--primary-gradient);
+  border: none;
+  color: white;
   border-radius: var(--radius-md);
   font-weight: 600;
+  padding: 12px 24px;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.import-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.import-btn.el-button--success {
+  background: var(--success-gradient);
+}
+
+.import-btn.el-button--success:hover {
+  background: var(--success-gradient);
 }
 
 /* 统计概览 */
@@ -895,6 +952,24 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 24px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.stats-grid::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--secondary-gradient);
+  opacity: 0.02;
+  z-index: -1;
 }
 
 .stat-card {
@@ -1020,6 +1095,21 @@ onUnmounted(() => {
 
 .refresh-btn {
   padding: 8px 16px;
+}
+
+.refresh-btn:hover {
+  background-color: #ebb563;
+  border-color: #ebb563;
+}
+
+.delete-before-today-btn {
+  background-color: #F56C6C;
+  border-color: #F56C6C;
+}
+
+.delete-before-today-btn:hover {
+  background-color: #f78989;
+  border-color: #f78989;
 }
 
 /* 任务表格 */

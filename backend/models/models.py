@@ -147,3 +147,28 @@ class JimengImg2VideoTask(BaseModel):
         self.status = status
         self.update_at = datetime.now()
         self.save()
+
+class JimengDigitalHumanTask(BaseModel):
+    """即梦数字人任务"""
+    # 基本字段
+    image_path = CharField(max_length=500)  # 图片路径
+    audio_path = CharField(max_length=500)  # 音频路径
+    
+    # 状态字段 - 使用数字状态码
+    # 0: 排队中, 1: 生成中, 2: 已完成, 3: 失败
+    status = IntegerField(default=0)
+    
+    # 关联账号
+    account_id = IntegerField(null=True)  # 使用的账号ID
+    
+    # 时间字段
+    create_at = DateTimeField(default=datetime.now)  # 创建时间
+    start_time = DateTimeField(null=True)  # 开始处理时间
+    
+    # 结果字段
+    video_url = TextField(null=True)  # 生成的视频URL
+
+    is_empty_task = BooleanField(default=False)  # 是否为空任务（账号使用记录）
+    
+    class Meta:
+        table_name = 'jimeng_digital_human_tasks'

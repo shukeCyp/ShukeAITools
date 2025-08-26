@@ -20,9 +20,27 @@ def init_database():
         os.makedirs(DATABASE_DIR)
         print("创建数据库目录: {}".format(DATABASE_DIR))
     
-    # 导入模型后再创建表
-    from backend.models.models import Config, JimengAccount, JimengText2ImgTask, JimengImg2VideoTask
+    # 导入模型
+    from backend.models.models import Config, JimengAccount, JimengText2ImgTask, JimengImg2VideoTask, JimengDigitalHumanTask
+    
+    # 定义所有模型类
+    models = [Config, JimengAccount, JimengText2ImgTask, JimengImg2VideoTask, JimengDigitalHumanTask]
     
     with db:
-        db.create_tables([Config, JimengAccount, JimengText2ImgTask, JimengImg2VideoTask])
+        # 检查并创建缺失的表
+        created_tables = []
+        for model in models:
+            table_name = model._meta.table_name
+            if not db.table_exists(table_name):
+                db.create_tables([model])
+                created_tables.append(table_name)
+                print(f"创建缺失的表: {table_name}")
+            else:
+                print(f"表已存在: {table_name}")
+        
+        if created_tables:
+            print(f"成功创建 {len(created_tables)} 个缺失的表: {', '.join(created_tables)}")
+        else:
+            print("所有表都已存在，无需创建")
+        
         print("数据库初始化完成: {}".format(DATABASE_PATH))

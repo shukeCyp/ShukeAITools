@@ -605,3 +605,48 @@ def get_img2video_stats():
     except Exception as e:
         print(f"获取图生视频统计失败: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500 
+
+@jimeng_img2video_bp.route('/tasks/delete-before-today', methods=['DELETE'])
+def delete_tasks_before_today():
+    """删除今日前的所有图生视频任务"""
+    try:
+        from datetime import datetime, timedelta
+        import pytz
+        
+        # 获取今日开始时间（凌晨0点）
+        beijing_tz = pytz.timezone('Asia/Shanghai')
+        today_start = datetime.now(beijing_tz).replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # 查询今日前的任务
+        before_today_tasks = JimengImg2VideoTask.select().where(
+            JimengImg2VideoTask.create_at < today_start
+        )
+        
+        count = before_today_tasks.count()
+        
+        if count == 0:
+            return jsonify({
+                'success': True,
+                'message': '没有今日前的任务需要删除',
+                'data': {'deleted_count': 0}
+            })
+        
+        # 删除任务
+        deleted_count = JimengImg2VideoTask.delete().where(
+            JimengImg2VideoTask.create_at < today_start
+        ).execute()
+        
+        print(f"删除了 {deleted_count} 个今日前的图生视频任务")
+        
+        return jsonify({
+            'success': True,
+            'message': f'成功删除 {deleted_count} 个今日前的任务',
+            'data': {'deleted_count': deleted_count}
+        })
+        
+    except Exception as e:
+        print(f"删除今日前任务失败: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'删除今日前任务失败: {str(e)}'
+        }), 500 

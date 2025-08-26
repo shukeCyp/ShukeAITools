@@ -96,7 +96,10 @@ export const text2imgAPI = {
   batchRetryTasks: (taskIds = []) => api.post('/jimeng/text2img/tasks/batch-retry', { task_ids: taskIds }),
   
   // 批量下载图片
-  batchDownload: (taskIds) => api.post('/jimeng/text2img/tasks/batch-download', { task_ids: taskIds })
+  batchDownload: (taskIds) => api.post('/jimeng/text2img/tasks/batch-download', { task_ids: taskIds }),
+
+  // 删除今日前任务
+  deleteTasksBeforeToday: () => api.delete('/jimeng/text2img/tasks/delete-before-today')
 }
 
 // 即梦图生视频任务相关API
@@ -132,7 +135,44 @@ export const img2videoAPI = {
   importFolder: (params = {}) => api.post('/jimeng/img2video/tasks/import-folder', params),
   
   // 从Excel导入任务
-  importExcel: () => api.post('/jimeng/img2video/tasks/import-excel')
+  importExcel: () => api.post('/jimeng/img2video/tasks/import-excel'),
+  
+  // 删除今日前任务
+  deleteTasksBeforeToday: () => api.delete('/jimeng/img2video/tasks/delete-before-today')
+}
+
+// 即梦数字人任务相关API
+export const digitalHumanAPI = {
+  // 获取任务列表
+  getTasks: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return api.get(`/jimeng/digital-human/tasks${query ? '?' + query : ''}`)
+  },
+  
+  // 创建新任务
+  createTask: (formData) => api.post('/jimeng/digital-human/tasks', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  }),
+  
+  // 删除任务
+  deleteTask: (taskId) => api.delete(`/jimeng/digital-human/tasks/${taskId}`),
+  
+  // 重试任务
+  retryTask: (taskId) => api.post(`/jimeng/digital-human/tasks/${taskId}/retry`),
+  
+  // 批量重试失败任务
+  batchRetryTasks: (taskIds = []) => api.post('/jimeng/digital-human/tasks/batch-retry', { task_ids: taskIds }),
+  
+  // 批量删除任务
+  batchDeleteTasks: (taskIds) => api.post('/jimeng/digital-human/tasks/batch-delete', { task_ids: taskIds }),
+  
+  // 获取统计信息
+  getStats: () => api.get('/jimeng/digital-human/stats'),
+
+  // 删除今日前任务
+  deleteTasksBeforeToday: () => api.delete('/jimeng/digital-human/tasks/delete-before-today')
 }
 
 // 配置管理相关API

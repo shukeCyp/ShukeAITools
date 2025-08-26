@@ -12,27 +12,30 @@ jimeng_accounts_bp = Blueprint('jimeng_accounts', __name__, url_prefix='/api/jim
 @jimeng_accounts_bp.route('', methods=['GET'])
 def get_accounts():
     """获取所有账号"""
-    print("获取即梦账号列表")
     try:
-        accounts = list(JimengAccount.select())
+        accounts = JimengAccount.select()
         data = []
         today = date.today()
         
         for account in accounts:
-            # 统计今日图片生成使用次数 - 不过滤空任务
+            # 计算今日文生图使用次数
             text2img_usage = JimengText2ImgTask.select().where(
                 (JimengText2ImgTask.account_id == account.id) &
                 (JimengText2ImgTask.create_at >= today)
             ).count()
             
-            # 统计今日视频生成使用次数 - 不过滤空任务
+            # 计算今日图生视频使用次数
             img2video_usage = JimengImg2VideoTask.select().where(
                 (JimengImg2VideoTask.account_id == account.id) &
                 (JimengImg2VideoTask.create_at >= today)
             ).count()
             
-            # 数字人暂时设为0
-            digital_human_usage = 0
+            # 计算今日数字人使用次数
+            from backend.models.models import JimengDigitalHumanTask
+            digital_human_usage = JimengDigitalHumanTask.select().where(
+                (JimengDigitalHumanTask.account_id == account.id) &
+                (JimengDigitalHumanTask.create_at >= today)
+            ).count()
             
             data.append({
                 'id': account.id,
