@@ -518,11 +518,11 @@ class JimengTaskManager:
                 # 统计今日该账号的指定类型任务使用次数（包括空任务）
                 if task_type == 'text2img':
                     # 统计文生图任务
-                today_usage = JimengText2ImgTask.select().where(
-                    (JimengText2ImgTask.account_id == account.id) &
-                    (JimengText2ImgTask.status.in_([1, 2])) &  # 处理中或已完成
-                    (JimengText2ImgTask.create_at >= today)
-                ).count()
+                    today_usage = JimengText2ImgTask.select().where(
+                        (JimengText2ImgTask.account_id == account.id) &
+                        (JimengText2ImgTask.status.in_([1, 2])) &  # 处理中或已完成
+                        (JimengText2ImgTask.create_at >= today)
+                    ).count()
                 elif task_type == 'img2video':
                     # 统计图生视频任务
                     from backend.models.models import JimengImg2VideoTask
@@ -549,7 +549,7 @@ class JimengTaskManager:
                 if today_usage < daily_limit:
                     if today_usage < min_usage:
                         # 发现更少使用次数的账号，重置列表
-                    min_usage = today_usage
+                        min_usage = today_usage
                         available_accounts = [account]
                     elif today_usage == min_usage:
                         # 使用次数相同，加入候选列表
