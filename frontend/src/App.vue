@@ -68,6 +68,18 @@
               </el-menu-item>
             </el-sub-menu>
             
+            <!-- 清影平台 -->
+            <el-sub-menu index="qingying">
+              <template #title>
+                <el-icon><VideoCamera /></el-icon>
+                <span>智谱清影</span>
+              </template>
+              <el-menu-item index="qingying-img2video">
+                <el-icon><VideoPlay /></el-icon>
+                <span>图生视频</span>
+              </el-menu-item>
+            </el-sub-menu>
+            
             <!-- 账号配置 -->
             <el-sub-menu index="accounts">
               <template #title>
@@ -77,6 +89,10 @@
               <el-menu-item index="jimeng-accounts">
                 <el-icon><UserFilled /></el-icon>
                 <span>即梦账号</span>
+              </el-menu-item>
+              <el-menu-item index="qingying-accounts">
+                <el-icon><UserFilled /></el-icon>
+                <span>清影账号</span>
               </el-menu-item>
             </el-sub-menu>
             
@@ -191,9 +207,18 @@
               <JimengDigitalHuman />
             </div>
 
+            <!-- 清影平台功能页面 -->
+            <div v-if="activeMenu === 'qingying-img2video'" class="page-content">
+              <QingyingImg2Video />
+            </div>
+
             <!-- 账号配置页面 -->
             <div v-if="activeMenu === 'jimeng-accounts'" class="page-content">
               <JimengAccountManager />
+            </div>
+
+            <div v-if="activeMenu === 'qingying-accounts'" class="page-content">
+              <QingyingAccountManager />
             </div>
 
             <!-- 任务管理器 -->
@@ -247,15 +272,18 @@ import {
   Avatar,
   Setting,
   Monitor,
-  Collection
+  Collection,
+  VideoCamera
 } from '@element-plus/icons-vue'
 import AccountConfiguration from './views/AccountConfiguration.vue'
 import JimengPlatform from './views/JimengPlatform.vue'
 import JimengAccountManager from './components/JimengAccountManager.vue'
+import QingyingAccountManager from './components/QingyingAccountManager.vue'
 import JimengText2Img from './views/JimengText2Img.vue'
 import BaseConfig from './views/BaseConfig.vue'
 import JimengImg2Video from './views/JimengImg2Video.vue'
 import JimengDigitalHuman from './views/JimengDigitalHuman.vue'
+import QingyingImg2Video from './views/QingyingImg2Video.vue'
 import TaskManager from './views/TaskManager.vue'
 import PromptManager from './views/PromptManager.vue'
 import { accountAPI } from './utils/api'
@@ -266,9 +294,11 @@ export default {
     AccountConfiguration,
     JimengPlatform,
     JimengAccountManager,
+    QingyingAccountManager,
     JimengText2Img,
     JimengImg2Video,
     JimengDigitalHuman,
+    QingyingImg2Video,
     TaskManager,
     PromptManager,
     BaseConfig,
@@ -286,7 +316,8 @@ export default {
     Avatar,
     Setting,
     Monitor,
-    Collection
+    Collection,
+    VideoCamera
   },
   setup() {
     const activeMenu = ref('home')

@@ -123,8 +123,8 @@
             <div class="stat-label">数字人已用/总量</div>
           </div>
         </div>
-      </div>
-    </div>
+          </div>
+          </div>
 
     <!-- 筛选和操作栏 -->
     <div class="filter-section" v-if="!loading">
@@ -206,7 +206,7 @@
             </div>
           </template>
         </el-table-column>
-        
+
         <el-table-column 
           prop="cookies" 
           label="Cookies状态" 
@@ -218,17 +218,17 @@
               :content="row.has_cookies ? '已设置Cookie' : '未设置Cookie'"
               placement="top"
             >
-              <el-tag 
+            <el-tag 
                 :type="row.has_cookies ? 'success' : 'info'" 
-                size="small"
+              size="small"
                 effect="dark"
-              >
+            >
                 {{ row.has_cookies ? '已设置' : '未设置' }}
-              </el-tag>
+            </el-tag>
             </el-tooltip>
           </template>
         </el-table-column>
-        
+
         <el-table-column 
           label="今日使用情况" 
           width="200"
@@ -239,10 +239,10 @@
               <div class="usage-item">
                 <span class="usage-label">图片:</span>
                 <span class="usage-value">{{ row.today_usage?.text2img || 0 }}/{{ row.daily_limits?.text2img || 10 }}</span>
-                <el-progress 
+              <el-progress 
                   :percentage="((row.today_usage?.text2img || 0) / (row.daily_limits?.text2img || 10)) * 100" 
                   :stroke-width="3"
-                  :show-text="false"
+                :show-text="false"
                   :color="getUsageColor(row.today_usage?.text2img || 0, row.daily_limits?.text2img || 10)"
                 />
               </div>
@@ -264,7 +264,7 @@
                   :stroke-width="3"
                   :show-text="false"
                   :color="getUsageColor(row.today_usage?.digital_human || 0, row.daily_limits?.digital_human || 1)"
-                />
+              />
               </div>
             </div>
           </template>
@@ -302,23 +302,23 @@
               >
                 获取Cookie
               </el-button>
-              <el-popconfirm
-                :title="`确定删除账号 ${row.account} 吗？`"
-                @confirm="deleteAccount(row.id)"
-                confirm-button-text="删除"
-                cancel-button-text="取消"
-                confirm-button-type="danger"
-              >
-                <template #reference>
-                  <el-button 
-                    type="danger" 
-                    size="small" 
-                    text
-                  >
-                    删除
-                  </el-button>
-                </template>
-              </el-popconfirm>
+            <el-popconfirm
+              :title="`确定删除账号 ${row.account} 吗？`"
+              @confirm="deleteAccount(row.id)"
+              confirm-button-text="删除"
+              cancel-button-text="取消"
+              confirm-button-type="danger"
+            >
+              <template #reference>
+                <el-button 
+                  type="danger" 
+                  size="small" 
+                  text
+                >
+                  删除
+                </el-button>
+              </template>
+            </el-popconfirm>
             </div>
           </template>
         </el-table-column>
@@ -866,11 +866,12 @@ export default {
 
 /* 页面头部 */
 .page-header {
+  max-width: 1200px;
+  margin: 0 auto 24px auto;
   background: var(--bg-primary);
   padding: 24px;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
-  margin-bottom: 24px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;

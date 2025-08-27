@@ -105,7 +105,7 @@
               @click="showBatchAddDialog = true"
             class="batch-add-btn"
             >
-            <el-icon><DocumentAdd /></el-icon>
+            <el-icon><Document /></el-icon>
               批量添加
             </el-button>
             <el-button 
@@ -436,7 +436,7 @@
             :loading="batchAddLoading"
             class="confirm-btn"
           >
-            <el-icon><DocumentAdd /></el-icon>
+                            <el-icon><Document /></el-icon>
             批量创建
           </el-button>
         </div>
@@ -496,7 +496,6 @@ import { ElMessage } from 'element-plus'
 import {
   EditPen,
   Plus,
-  DocumentAdd,
   Document,
   Clock,
   Loading,
@@ -517,7 +516,6 @@ export default {
   components: {
     EditPen,
     Plus,
-    DocumentAdd,
     Document,
     Clock,
     Loading,

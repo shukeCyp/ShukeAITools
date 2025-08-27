@@ -18,7 +18,7 @@
             :loading="importFolderLoading"
             class="import-btn"
           >
-            <el-icon><Folder /></el-icon>
+            <el-icon><FolderOpened /></el-icon>
             导入文件夹
           </el-button>
           
@@ -370,8 +370,7 @@ import {
   CircleCheckFilled,
   CircleCloseFilled,
   Refresh,
-  RefreshRight,
-  Folder
+  RefreshRight
 } from '@element-plus/icons-vue'
 import { img2videoAPI } from '@/utils/api'
 import * as ElementPlus from 'element-plus'

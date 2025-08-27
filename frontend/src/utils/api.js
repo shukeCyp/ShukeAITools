@@ -66,6 +66,30 @@ export const accountAPI = {
   healthCheck: () => api.get('/health')
 }
 
+// 清影账号相关API
+export const qingyingAccountAPI = {
+  // 获取所有账号
+  getAccounts: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return api.get(`/v1/qingying/accounts${query ? '?' + query : ''}`)
+  },
+  
+  // 添加账号（通过浏览器登录）
+  addAccount: () => api.post('/v1/qingying/accounts'),
+  
+  // 删除指定账号
+  deleteAccount: (accountId) => api.delete(`/v1/qingying/accounts/${accountId}`),
+  
+  // 清空所有账号
+  clearAllAccounts: () => api.delete('/v1/qingying/accounts/clear'),
+  
+  // 获取账号使用统计
+  getUsageStats: () => api.get('/v1/qingying/accounts/usage-stats'),
+  
+  // 获取单个账号的Cookie
+  getCookie: (accountId) => api.post(`/v1/qingying/accounts/${accountId}/get-cookie`)
+}
+
 // 文生图任务相关API
 export const text2imgAPI = {
   // 获取任务列表
@@ -224,6 +248,40 @@ export const taskManagerAPI = {
   
   // 健康检查
   health: () => api.get('/task-manager/health')
+}
+
+// 清影图生视频任务相关API
+export const qingyingImg2videoAPI = {
+  // 获取任务列表
+  getTasks: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return api.get(`/v1/qingying/img2video/tasks${query ? '?' + query : ''}`)
+  },
+  
+  // 创建新任务
+  createTask: (formData) => api.post('/v1/qingying/img2video/tasks', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  }),
+  
+  // 删除任务
+  deleteTask: (taskId) => api.delete(`/v1/qingying/img2video/tasks/${taskId}`),
+  
+  // 重试任务
+  retryTask: (taskId) => api.post(`/v1/qingying/img2video/tasks/retry/${taskId}`),
+  
+  // 批量重试失败任务
+  batchRetryTasks: (taskIds = []) => api.post('/v1/qingying/img2video/tasks/batch-retry', { task_ids: taskIds }),
+  
+  // 获取统计信息
+  getStats: () => api.get('/v1/qingying/img2video/tasks/stats'),
+
+  // 导入文件夹
+  importFolder: (params) => api.post('/v1/qingying/img2video/tasks/import-folder', params),
+
+  // 导入Excel
+  importExcel: (params) => api.post('/v1/qingying/img2video/tasks/import-excel', params)
 }
 
 // 提示词相关API
