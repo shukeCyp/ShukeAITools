@@ -5,6 +5,9 @@
 
 import os
 import time
+import platform
+import subprocess
+import threading
 from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify, current_app
 from werkzeug.utils import secure_filename
@@ -376,64 +379,115 @@ def batch_retry_tasks():
 def import_folder_tasks():
     """从文件夹导入图片任务"""
     try:
+        # 获取请求数据
         data = request.get_json()
-        folder_path = data.get('folder_path', '')
         generation_mode = data.get('generation_mode', 'fast')
         frame_rate = data.get('frame_rate', '30')
         resolution = data.get('resolution', '720p')
         duration = data.get('duration', '5s')
         ai_audio = data.get('ai_audio', False)
         
-        if not folder_path or not os.path.exists(folder_path):
-            return jsonify({
-                'success': False,
-                'message': '文件夹路径不存在'
-            }), 400
+        print(f"清影导入文件夹任务，参数: {generation_mode}, {frame_rate}, {resolution}, {duration}, {ai_audio}")
         
-        # 支持的图片格式
-        supported_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'}
-        
-        created_count = 0
-        for filename in os.listdir(folder_path):
-            file_ext = os.path.splitext(filename)[1].lower()
-            if file_ext in supported_extensions:
-                source_path = os.path.join(folder_path, filename)
+        def select_folder_and_import():
+            try:
+                # 调用原生文件夹选择对话框
+                folder_path = None
+                system = platform.system()
                 
-                # 复制文件到tmp目录
-                file_ext = filename.rsplit('.', 1)[1].lower()
-                unique_filename = f"{uuid.uuid4().hex}.{file_ext}"
+                if system == "Darwin":  # macOS
+                    result = subprocess.run([
+                        'osascript', '-e',
+                        'tell application "Finder" to set folder_path to (choose folder with prompt "选择包含图片的文件夹") as string',
+                        '-e',
+                        'return POSIX path of folder_path'
+                    ], capture_output=True, text=True, timeout=60)
+                    
+                    if result.returncode == 0 and result.stdout.strip():
+                        folder_path = result.stdout.strip()
+                        
+                elif system == "Windows":  # Windows
+                    result = subprocess.run([
+                        'powershell', '-Command',
+                        'Add-Type -AssemblyName System.Windows.Forms; $folder = New-Object System.Windows.Forms.FolderBrowserDialog; $folder.Description = "选择包含图片的文件夹"; $folder.ShowNewFolderButton = $true; if ($folder.ShowDialog() -eq "OK") { $folder.SelectedPath } else { "" }'
+                    ], capture_output=True, text=True, timeout=60)
+                    
+                    if result.returncode == 0 and result.stdout.strip():
+                        folder_path = result.stdout.strip()
+                        
+                elif system == "Linux":  # Linux
+                    result = subprocess.run([
+                        'zenity', '--file-selection', '--directory',
+                        '--title=选择包含图片的文件夹'
+                    ], capture_output=True, text=True, timeout=60)
+                    
+                    if result.returncode == 0 and result.stdout.strip():
+                        folder_path = result.stdout.strip()
                 
-                tmp_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'tmp')
-                os.makedirs(tmp_dir, exist_ok=True)
+                if not folder_path:
+                    print("用户取消了文件夹选择")
+                    return
                 
-                dest_path = os.path.join(tmp_dir, unique_filename)
+                print(f"选择的文件夹: {folder_path}")
                 
+                if not os.path.exists(folder_path):
+                    print(f"文件夹不存在: {folder_path}")
+                    return
+                
+                # 支持的图片格式
+                supported_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'}
+                
+                created_count = 0
                 import shutil
-                shutil.copy2(source_path, dest_path)
+                for filename in os.listdir(folder_path):
+                    file_ext = os.path.splitext(filename)[1].lower()
+                    if file_ext in supported_extensions:
+                        source_path = os.path.join(folder_path, filename)
+                        
+                        # 复制文件到tmp目录
+                        file_ext = filename.rsplit('.', 1)[1].lower()
+                        unique_filename = f"{uuid.uuid4().hex}.{file_ext}"
+                        
+                        tmp_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'tmp')
+                        os.makedirs(tmp_dir, exist_ok=True)
+                        
+                        dest_path = os.path.join(tmp_dir, unique_filename)
+                        
+                        shutil.copy2(source_path, dest_path)
+                        
+                        # 创建任务
+                        task = QingyingImage2VideoTask.create(
+                            prompt=f"根据图片 {filename} 生成视频",
+                            generation_mode=generation_mode,
+                            frame_rate=frame_rate,
+                            resolution=resolution,
+                            duration=duration,
+                            ai_audio=ai_audio,
+                            image_path=dest_path,
+                            status=0,
+                            create_at=datetime.now(),
+                            update_at=datetime.now()
+                        )
+                        
+                        # 提交任务到全局任务管理器
+                        if hasattr(global_task_manager, 'qingying_img2video_manager'):
+                            global_task_manager.qingying_img2video_manager.submit_task(task.id)
+                        
+                        created_count += 1
                 
-                # 创建任务
-                task = QingyingImage2VideoTask.create(
-                    prompt=f"根据图片 {filename} 生成视频",
-                    generation_mode=generation_mode,
-                    frame_rate=frame_rate,
-                    resolution=resolution,
-                    duration=duration,
-                    ai_audio=ai_audio,
-                    image_path=dest_path,
-                    status=0,
-                    create_at=datetime.now(),
-                    update_at=datetime.now()
-                )
+                print(f"成功导入 {created_count} 个图片任务")
                 
-                # 提交任务到全局任务管理器
-                if hasattr(global_task_manager, 'qingying_img2video_manager'):
-                    global_task_manager.qingying_img2video_manager.submit_task(task.id)
-                
-                created_count += 1
+            except Exception as e:
+                print(f"处理文件夹失败: {str(e)}")
+        
+        # 在后台线程中执行文件选择和导入
+        thread = threading.Thread(target=select_folder_and_import)
+        thread.daemon = True
+        thread.start()
         
         return jsonify({
             'success': True,
-            'message': f'成功导入 {created_count} 个图片任务'
+            'message': '开始选择文件夹并导入，请在弹出的对话框中选择包含图片的文件夹'
         })
         
     except Exception as e:

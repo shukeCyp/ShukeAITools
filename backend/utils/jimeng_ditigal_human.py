@@ -281,7 +281,7 @@ async def generate_digital_human(image_path, audio_path, username, password, hea
             
         # 等待视频生成完成
         print(f"{Fore.YELLOW}已获取任务ID，等待视频生成完成...{Style.RESET_ALL}")
-        max_wait_time = 600
+        max_wait_time = 3600
         start_time = time.time()
         
         while not video_url and time.time() - start_time < max_wait_time:

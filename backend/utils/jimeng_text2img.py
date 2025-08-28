@@ -381,7 +381,7 @@ async def text2image(prompt, username, password, model="Image 3.1", aspect_ratio
             
         # 等待图片生成完成
         print(f"{Fore.YELLOW}已获取任务ID，等待图片生成完成...{Style.RESET_ALL}")
-        max_wait_time = 300
+        max_wait_time = 3600
         start_time = time.time()
         
         while not image_urls and time.time() - start_time < max_wait_time:

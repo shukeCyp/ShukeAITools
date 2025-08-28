@@ -356,7 +356,7 @@ async def image2video(image_path, prompt, username, password, model="Video 3.0",
             
         # 等待视频生成完成
         print(f"{Fore.YELLOW}已获取任务ID，等待视频生成完成...{Style.RESET_ALL}")
-        max_wait_time = 300
+        max_wait_time = 3600
         start_time = time.time()
         
         while not video_url and time.time() - start_time < max_wait_time:

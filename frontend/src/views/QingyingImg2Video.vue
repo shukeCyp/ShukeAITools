@@ -49,7 +49,7 @@
           <el-button 
             type="primary" 
             size="large"
-            @click="importFromFolder"
+            @click="showImportFolderDialog = true"
             :loading="importFolderLoading"
             class="import-btn"
           >
@@ -395,6 +395,62 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 导入文件夹参数对话框 -->
+    <el-dialog
+      v-model="showImportFolderDialog"
+      title="导入文件夹参数设置"
+      width="500px"
+      :close-on-click-modal="false"
+    >
+      <el-form :model="importFolderForm" ref="importFolderFormRef" label-width="120px">
+        <el-form-item label="生成模式" prop="generation_mode">
+          <el-radio-group v-model="importFolderForm.generation_mode">
+            <el-radio value="fast">速度更快</el-radio>
+            <el-radio value="quality">质量更佳</el-radio>
+          </el-radio-group>
+        </el-form-item>
+
+        <el-form-item label="视频帧率" prop="frame_rate">
+          <el-radio-group v-model="importFolderForm.frame_rate">
+            <el-radio value="30">30 FPS</el-radio>
+            <el-radio value="60">60 FPS</el-radio>
+          </el-radio-group>
+        </el-form-item>
+
+        <el-form-item label="视频分辨率" prop="resolution">
+          <el-radio-group v-model="importFolderForm.resolution">
+            <el-radio value="720p">720P</el-radio>
+            <el-radio value="1080p">1080P</el-radio>
+            <el-radio value="4k">4K</el-radio>
+          </el-radio-group>
+        </el-form-item>
+
+        <el-form-item label="视频时长" prop="duration">
+          <el-radio-group v-model="importFolderForm.duration">
+            <el-radio value="5s">5秒</el-radio>
+            <el-radio value="10s">10秒</el-radio>
+          </el-radio-group>
+        </el-form-item>
+
+        <el-form-item label="AI音效" prop="ai_audio">
+          <el-switch v-model="importFolderForm.ai_audio" />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="showImportFolderDialog = false">取消</el-button>
+          <el-button 
+            type="primary" 
+            @click="confirmImportFolder"
+            :loading="importFolderLoading"
+          >
+            确定并选择文件夹
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -475,6 +531,17 @@ const batchRetryLoading = ref(false)
 const batchDownloadLoading = ref(false)
 const importFolderLoading = ref(false)
 const importExcelLoading = ref(false)
+
+// 导入文件夹相关
+const showImportFolderDialog = ref(false)
+const importFolderFormRef = ref()
+const importFolderForm = reactive({
+  generation_mode: 'fast',
+  frame_rate: '30',
+  resolution: '720p',
+  duration: '5s',
+  ai_audio: false
+})
 
 // 密码遮罩相关
 const showPasswordMask = ref(false)
@@ -762,56 +829,34 @@ const batchDeleteTasks = async () => {
   }
 }
 
-const importFromFolder = async () => {
+const confirmImportFolder = async () => {
   try {
-    // 显示参数选择对话框
-    const { value: params } = await ElMessageBox.prompt(
-      '请输入导入参数（格式：generation_mode,frame_rate,resolution,duration,ai_audio）\n例如：fast,30,720p,5s,false',
-      '导入文件夹参数',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        inputPlaceholder: 'fast,30,720p,5s,false',
-        inputValue: 'fast,30,720p,5s,false'
-      }
-    )
-
-    if (!params) return
-
-    const [generation_mode, frame_rate, resolution, duration, ai_audio] = params.split(',').map(p => p.trim())
-
-    // 调用原生文件夹选择对话框
-    const { ipcRenderer } = window.require ? window.require('electron') : {}
-    if (ipcRenderer) {
-      const result = await ipcRenderer.invoke('show-folder-dialog')
-      if (!result.canceled && result.filePaths.length > 0) {
-        const folderPath = result.filePaths[0]
-        
-        // 调用后端API导入文件夹
-        const response = await qingyingImg2videoAPI.importFolder({
-          folder_path: folderPath,
-          generation_mode,
-          frame_rate,
-          resolution,
-          duration,
-          ai_audio: ai_audio === 'true'
-        })
-        
-        if (response.data.success) {
-          ElMessage.success(response.data.message || '导入成功')
-          await refreshTasks()
-        } else {
-          ElMessage.error(response.data.message || '导入失败')
-        }
-      }
+    importFolderLoading.value = true
+    
+    // 调用后端API导入文件夹（后端会处理文件选择）
+    const response = await qingyingImg2videoAPI.importFolder({
+      generation_mode: importFolderForm.generation_mode,
+      frame_rate: importFolderForm.frame_rate,
+      resolution: importFolderForm.resolution,
+      duration: importFolderForm.duration,
+      ai_audio: importFolderForm.ai_audio
+    })
+    
+    if (response.data.success) {
+      ElMessage.success(response.data.message || '开始导入文件夹')
+      showImportFolderDialog.value = false
+      // 延迟刷新任务列表
+      setTimeout(() => {
+        refreshTasks()
+      }, 2000)
     } else {
-      ElMessage.warning('此功能需要在 Electron 环境中使用')
+      ElMessage.error(response.data.message || '导入文件夹失败')
     }
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error('导入文件夹失败:', error)
-      ElMessage.error('导入文件夹失败')
-    }
+    console.error('导入文件夹失败:', error)
+    ElMessage.error('导入文件夹失败')
+  } finally {
+    importFolderLoading.value = false
   }
 }
 

@@ -738,7 +738,7 @@ async def generate_image_to_video(image_path, prompt="", cookie_string="", headl
                 print(f"{Fore.GREEN}成功获取chat_id: {chat_id}，开始监听生成状态...{Style.RESET_ALL}")
                 
                 # 等待视频生成完成
-                max_wait_time = 1200  # 最大等待5分钟
+                max_wait_time = 3600  # 最大等待1小时
                 start_time = time.time()
                 
                 while time.time() - start_time < max_wait_time:

@@ -216,3 +216,4 @@ backend/logs/
 .claude/
 .DS_Store
 .idea/
+backend/tmp/

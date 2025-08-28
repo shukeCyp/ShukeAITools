@@ -123,6 +123,17 @@
               </el-button>
             </template>
           </el-popconfirm>
+          <el-button 
+            type="success" 
+            @click="batchDownloadVideos" 
+            :disabled="selectedCompletedTasks.length === 0"
+            :loading="batchDownloadLoading"
+            v-if="selectedCompletedTasks.length > 0"
+            class="batch-download-btn"
+          >
+            <el-icon><Download /></el-icon>
+            下载选中 ({{ selectedCompletedTasks.length }})
+          </el-button>
           <el-popconfirm
             title="确定要删除选中的任务吗？"
             @confirm="batchDeleteSelected"
@@ -536,6 +547,9 @@ export default {
 
     // 删除今日前任务相关
     const deleteBeforeTodayLoading = ref(false)
+    
+    // 批量下载相关
+    const batchDownloadLoading = ref(false)
 
     // 状态相关方法
     const getStatusType = (status) => {
@@ -846,6 +860,38 @@ export default {
       }
     }
 
+    // 计算已完成的任务
+    const selectedCompletedTasks = computed(() => {
+      return selectedTasks.value.filter(task => task.status === 2 && task.video_url)
+    })
+
+    // 批量下载视频
+    const batchDownloadVideos = async () => {
+      if (selectedCompletedTasks.value.length === 0) {
+        ElMessage.warning('请先选择已完成的任务')
+        return
+      }
+      
+      try {
+        batchDownloadLoading.value = true
+        
+        // 调用后端API批量下载
+        const taskIds = selectedCompletedTasks.value.map(task => task.id)
+        const response = await digitalHumanAPI.batchDownload(taskIds)
+        
+        if (response.data.success) {
+          ElMessage.success(response.data.message || '开始批量下载，请选择保存文件夹')
+        } else {
+          ElMessage.error(response.data.message || '批量下载失败')
+        }
+      } catch (error) {
+        console.error('批量下载失败:', error)
+        ElMessage.error('批量下载失败')
+      } finally {
+        batchDownloadLoading.value = false
+      }
+    }
+
     // 批量删除选中任务
     const batchDeleteSelected = async () => {
       if (selectedTasks.value.length === 0) {
@@ -989,6 +1035,8 @@ export default {
       audioFileList,
       audioInfo,
       deleteBeforeTodayLoading,
+      batchDownloadLoading,
+      selectedCompletedTasks,
       getStatusType,
       getStatusIcon,
       getStatusText,
@@ -1009,6 +1057,7 @@ export default {
       deleteTask,
       retryTask,
       batchRetryFailedTasks,
+      batchDownloadVideos,
       batchDeleteSelected,
       deleteTasksBeforeToday,
       previewVideo,

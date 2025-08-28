@@ -192,6 +192,9 @@ export const digitalHumanAPI = {
   // 批量删除任务
   batchDeleteTasks: (taskIds) => api.post('/jimeng/digital-human/tasks/batch-delete', { task_ids: taskIds }),
   
+  // 批量下载视频
+  batchDownload: (taskIds) => api.post('/jimeng/digital-human/tasks/batch-download', { task_ids: taskIds }),
+  
   // 获取统计信息
   getStats: () => api.get('/jimeng/digital-human/stats'),
 

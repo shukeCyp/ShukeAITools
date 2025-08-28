@@ -5,6 +5,9 @@
 import os
 import tempfile
 import uuid
+import platform
+import subprocess
+import threading
 from datetime import datetime, date
 from flask import Blueprint, request, jsonify
 from werkzeug.utils import secure_filename
@@ -293,6 +296,119 @@ def batch_delete_tasks():
         return jsonify({
             'success': False,
             'message': f'批量删除失败: {str(e)}'
+        }), 500
+
+@jimeng_digital_human_bp.route('/tasks/batch-download', methods=['POST'])
+def batch_download_videos():
+    """批量下载数字人视频"""
+    try:
+        data = request.get_json()
+        task_ids = data.get('task_ids', [])
+        
+        if not task_ids:
+            return jsonify({
+                'success': False,
+                'message': '请选择要下载的任务'
+            }), 400
+        
+        print(f"数字人批量下载任务，任务ID: {task_ids}")
+        
+        def select_folder_and_download():
+            try:
+                # 调用原生文件夹选择对话框
+                folder_path = None
+                system = platform.system()
+                
+                if system == "Darwin":  # macOS
+                    result = subprocess.run([
+                        'osascript', '-e',
+                        'tell application "Finder" to set folder_path to (choose folder with prompt "选择视频保存文件夹") as string',
+                        '-e',
+                        'return POSIX path of folder_path'
+                    ], capture_output=True, text=True, timeout=60)
+                    
+                    if result.returncode == 0 and result.stdout.strip():
+                        folder_path = result.stdout.strip()
+                        
+                elif system == "Windows":  # Windows
+                    result = subprocess.run([
+                        'powershell', '-Command',
+                        'Add-Type -AssemblyName System.Windows.Forms; $folder = New-Object System.Windows.Forms.FolderBrowserDialog; $folder.Description = "选择视频保存文件夹"; $folder.ShowNewFolderButton = $true; if ($folder.ShowDialog() -eq "OK") { $folder.SelectedPath } else { "" }'
+                    ], capture_output=True, text=True, timeout=60)
+                    
+                    if result.returncode == 0 and result.stdout.strip():
+                        folder_path = result.stdout.strip()
+                        
+                elif system == "Linux":  # Linux
+                    result = subprocess.run([
+                        'zenity', '--file-selection', '--directory',
+                        '--title=选择视频保存文件夹'
+                    ], capture_output=True, text=True, timeout=60)
+                    
+                    if result.returncode == 0 and result.stdout.strip():
+                        folder_path = result.stdout.strip()
+                
+                if not folder_path:
+                    print("用户取消了文件夹选择")
+                    return
+                
+                print(f"选择的保存文件夹: {folder_path}")
+                
+                if not os.path.exists(folder_path):
+                    print(f"文件夹不存在: {folder_path}")
+                    return
+                
+                # 获取要下载的任务
+                tasks = JimengDigitalHumanTask.select().where(
+                    JimengDigitalHumanTask.id.in_(task_ids),
+                    JimengDigitalHumanTask.status == 2,  # 已完成
+                    JimengDigitalHumanTask.video_url.is_null(False)  # 有视频URL
+                )
+                
+                download_count = 0
+                import requests
+                import shutil
+                
+                for task in tasks:
+                    try:
+                        if task.video_url:
+                            # 构造文件名
+                            filename = f"digital_human_task_{task.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4"
+                            file_path = os.path.join(folder_path, filename)
+                            
+                            # 下载视频
+                            response = requests.get(task.video_url, stream=True, timeout=30)
+                            if response.status_code == 200:
+                                with open(file_path, 'wb') as f:
+                                    shutil.copyfileobj(response.raw, f)
+                                print(f"已下载: {filename}")
+                                download_count += 1
+                            else:
+                                print(f"下载失败，任务ID {task.id}: HTTP {response.status_code}")
+                                
+                    except Exception as e:
+                        print(f"下载任务 {task.id} 失败: {str(e)}")
+                
+                print(f"批量下载完成，成功下载 {download_count} 个视频")
+                
+            except Exception as e:
+                print(f"批量下载处理失败: {str(e)}")
+        
+        # 在后台线程中执行文件选择和下载
+        thread = threading.Thread(target=select_folder_and_download)
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'message': '开始选择保存文件夹并下载，请在弹出的对话框中选择保存位置'
+        })
+        
+    except Exception as e:
+        print(f"批量下载数字人视频失败: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'批量下载失败: {str(e)}'
         }), 500
 
 @jimeng_digital_human_bp.route('/tasks/delete-before-today', methods=['DELETE'])
