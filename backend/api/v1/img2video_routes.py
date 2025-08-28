@@ -301,105 +301,98 @@ def import_folder_tasks():
         print(f"导入文件夹失败: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@jimeng_img2video_bp.route('/tasks/import-excel', methods=['POST'])
-def import_excel_tasks():
-    """从Excel文件导入任务"""
+@jimeng_img2video_bp.route('/tasks/batch-add', methods=['POST'])
+def batch_add_tasks():
+    """批量添加图生视频任务"""
     try:
-        def select_file_and_import():
+        # 检查是否有图片文件
+        if 'images' not in request.files:
+            return jsonify({
+                'success': False,
+                'message': '请选择要上传的图片'
+            }), 400
+
+        files = request.files.getlist('images')
+        if not files or all(file.filename == '' for file in files):
+            return jsonify({
+                'success': False,
+                'message': '请选择要上传的图片'
+            }), 400
+
+        # 获取配置参数
+        model = request.form.get('model', 'Video 3.0')
+        second = int(request.form.get('second', 5))
+
+        # 支持的图片格式
+        ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'}
+        
+        def allowed_file(filename):
+            return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+        # 创建临时目录保存上传的图片
+        import uuid
+        from werkzeug.utils import secure_filename
+        
+        tmp_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'tmp', 'batch_upload')
+        os.makedirs(tmp_dir, exist_ok=True)
+
+        created_tasks = []
+        failed_files = []
+
+        for i, file in enumerate(files):
             try:
-                # 调用原生文件选择对话框
-                file_path = None
-                system = platform.system()
-                
-                if system == "Darwin":  # macOS
-                    result = subprocess.run([
-                        'osascript', '-e',
-                        'tell application "Finder" to set file_path to (choose file with prompt "选择Excel文件 (A列:图片路径, B列:提示词)" of type {"xlsx", "xls", "csv"}) as string',
-                        '-e',
-                        'return POSIX path of file_path'
-                    ], capture_output=True, text=True, timeout=60)
-                    
-                    if result.returncode == 0 and result.stdout.strip():
-                        file_path = result.stdout.strip()
-                        
-                elif system == "Windows":  # Windows
-                    result = subprocess.run([
-                        'powershell', '-Command',
-                        'Add-Type -AssemblyName System.Windows.Forms; $file = New-Object System.Windows.Forms.OpenFileDialog; $file.Filter = "Excel文件 (*.xlsx;*.xls;*.csv)|*.xlsx;*.xls;*.csv"; $file.Title = "选择Excel文件 (A列:图片路径, B列:提示词)"; if ($file.ShowDialog() -eq "OK") { $file.FileName } else { "" }'
-                    ], capture_output=True, text=True, timeout=60)
-                    
-                    if result.returncode == 0 and result.stdout.strip():
-                        file_path = result.stdout.strip()
-                        
-                elif system == "Linux":  # Linux
-                    result = subprocess.run([
-                        'zenity', '--file-selection',
-                        '--title=选择Excel文件 (A列:图片路径, B列:提示词)',
-                        '--file-filter=Excel文件 | *.xlsx *.xls *.csv'
-                    ], capture_output=True, text=True, timeout=60)
-                    
-                    if result.returncode == 0 and result.stdout.strip():
-                        file_path = result.stdout.strip()
-                
-                if not file_path:
-                    print("用户取消了文件选择")
-                    return
-                
-                print(f"选择的Excel文件: {file_path}")
-                
-                # 读取Excel文件
-                try:
-                    if file_path.endswith('.csv'):
-                        df = pd.read_csv(file_path, header=None)
-                    else:
-                        df = pd.read_excel(file_path, header=None)
-                    
-                    print(f"Excel文件读取成功，共 {len(df)} 行数据")
-                    
-                    # 创建任务
-                    created_count = 0
-                    for index, row in df.iterrows():
-                        try:
-                            image_path = str(row[0]) if pd.notna(row[0]) else ''
-                            prompt = str(row[1]) if len(row) > 1 and pd.notna(row[1]) else ''
-                            
-                            if not image_path:
-                                continue
-                                
-                            # 检查图片文件是否存在
-                            if not os.path.exists(image_path):
-                                print(f"图片文件不存在，跳过: {image_path}")
-                                continue
-                            
-                            task = JimengImg2VideoTask.create(
-                                prompt=prompt,
-                                model='Video 3.0',
-                                second=5,
-                                image_path=image_path,
-                                status=0
-                            )
-                            created_count += 1
-                            
-                        except Exception as e:
-                            print(f"创建任务失败 第{index+1}行: {str(e)}")
-                    
-                    print(f"成功创建 {created_count} 个图生视频任务")
-                    
-                except Exception as e:
-                    print(f"读取Excel文件失败: {str(e)}")
-                
+                if file.filename == '':
+                    continue
+
+                if not allowed_file(file.filename):
+                    failed_files.append(f"{file.filename}: 不支持的文件格式")
+                    continue
+
+                # 保存上传的图片
+                filename = secure_filename(file.filename)
+                file_ext = filename.rsplit('.', 1)[1].lower()
+                unique_filename = f"{uuid.uuid4().hex}.{file_ext}"
+                file_path = os.path.join(tmp_dir, unique_filename)
+                file.save(file_path)
+
+                # 获取对应的提示词
+                prompt = request.form.get(f'prompts[{i}]', '')
+
+                # 创建任务
+                task = JimengImg2VideoTask.create(
+                    prompt=prompt,
+                    model=model,
+                    second=second,
+                    image_path=file_path,
+                    status=0
+                )
+                created_tasks.append(task.id)
+                print(f"创建图生视频任务: {task.id}, 图片: {filename}, 提示词: {prompt}")
+
             except Exception as e:
-                print(f"Excel导入失败: {str(e)}")
-        
-        # 在后台线程中执行文件选择和导入
-        import_thread = threading.Thread(target=select_file_and_import)
-        import_thread.daemon = True
-        import_thread.start()
-        
-        return jsonify({'success': True, 'message': '正在打开文件选择对话框，请选择Excel文件'})
-        
+                failed_files.append(f"{file.filename}: {str(e)}")
+                print(f"处理文件 {file.filename} 失败: {str(e)}")
+
+        # 构建响应消息
+        message_parts = []
+        if created_tasks:
+            message_parts.append(f"成功创建 {len(created_tasks)} 个任务")
+        if failed_files:
+            message_parts.append(f"失败 {len(failed_files)} 个文件")
+
+        return jsonify({
+            'success': True,
+            'message': ', '.join(message_parts) if message_parts else '没有创建任何任务',
+            'data': {
+                'created_count': len(created_tasks),
+                'failed_count': len(failed_files),
+                'created_task_ids': created_tasks,
+                'failed_files': failed_files
+            }
+        })
+
     except Exception as e:
-        print(f"导入Excel失败: {str(e)}")
+        print(f"批量添加任务失败: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @jimeng_img2video_bp.route('/tasks/batch-download', methods=['POST'])

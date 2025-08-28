@@ -158,8 +158,12 @@ export const img2videoAPI = {
   // 从文件夹导入图片任务
   importFolder: (params = {}) => api.post('/jimeng/img2video/tasks/import-folder', params),
   
-  // 从Excel导入任务
-  importExcel: () => api.post('/jimeng/img2video/tasks/import-excel'),
+  // 批量添加任务
+  batchAddTasks: (formData) => api.post('/jimeng/img2video/tasks/batch-add', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  }),
   
   // 删除今日前任务
   deleteTasksBeforeToday: () => api.delete('/jimeng/img2video/tasks/delete-before-today')
@@ -283,8 +287,15 @@ export const qingyingImg2videoAPI = {
   // 导入文件夹
   importFolder: (params) => api.post('/v1/qingying/img2video/tasks/import-folder', params),
 
-  // 导入Excel
-  importExcel: (params) => api.post('/v1/qingying/img2video/tasks/import-excel', params)
+  // 批量添加任务
+  batchAddTasks: (formData) => api.post('/v1/qingying/img2video/tasks/batch-add', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  }),
+
+  // 批量删除任务
+  batchDeleteTasks: (taskIds) => api.post('/v1/qingying/img2video/tasks/batch-delete', { task_ids: taskIds })
 }
 
 // 提示词相关API

@@ -497,94 +497,143 @@ def import_folder_tasks():
             'message': f'导入失败: {str(e)}'
         }), 500
 
-@qingying_img2video_bp.route('/tasks/import-excel', methods=['POST'])
-def import_excel_tasks():
-    """从Excel导入任务"""
+@qingying_img2video_bp.route('/tasks/batch-add', methods=['POST'])
+def batch_add_tasks():
+    """批量添加图生视频任务"""
     try:
-        data = request.get_json()
-        file_path = data.get('file_path', '')
-        
-        if not file_path or not os.path.exists(file_path):
+        # 检查是否有图片文件
+        if 'images' not in request.files:
             return jsonify({
                 'success': False,
-                'message': 'Excel文件路径不存在'
+                'message': '请选择要上传的图片'
             }), 400
-        
-        import pandas as pd
-        
-        # 读取Excel文件
-        df = pd.read_excel(file_path)
-        
-        if df.empty:
+
+        files = request.files.getlist('images')
+        if not files or all(file.filename == '' for file in files):
             return jsonify({
                 'success': False,
-                'message': 'Excel文件为空'
+                'message': '请选择要上传的图片'
             }), 400
-        
-        # 检查必要的列
-        if df.shape[1] < 2:
-            return jsonify({
-                'success': False,
-                'message': 'Excel文件必须至少有2列（A列：图片路径，B列：提示词）'
-            }), 400
-        
-        created_count = 0
-        for index, row in df.iterrows():
+
+        # 获取配置参数
+        generation_mode = request.form.get('generation_mode', 'fast')
+        frame_rate = request.form.get('frame_rate', '30')
+        resolution = request.form.get('resolution', '720p')
+        duration = request.form.get('duration', '5s')
+        ai_audio = request.form.get('ai_audio', 'false').lower() == 'true'
+
+        # 创建临时目录保存上传的图片
+        tmp_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'tmp', 'qingying_batch_upload')
+        os.makedirs(tmp_dir, exist_ok=True)
+
+        created_tasks = []
+        failed_files = []
+
+        for i, file in enumerate(files):
             try:
-                image_path = str(row.iloc[0]).strip()  # A列：图片路径
-                prompt = str(row.iloc[1]).strip()     # B列：提示词
-                
-                if not image_path or not prompt or image_path == 'nan' or prompt == 'nan':
+                if file.filename == '':
                     continue
-                
-                if not os.path.exists(image_path):
-                    current_app.logger.warning(f"图片文件不存在: {image_path}")
+
+                if not allowed_file(file.filename):
+                    failed_files.append(f"{file.filename}: 不支持的文件格式")
                     continue
-                
-                # 复制文件到tmp目录
-                file_ext = image_path.rsplit('.', 1)[1].lower()
+
+                # 保存上传的图片
+                filename = secure_filename(file.filename)
+                file_ext = filename.rsplit('.', 1)[1].lower()
                 unique_filename = f"{uuid.uuid4().hex}.{file_ext}"
-                
-                tmp_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'tmp')
-                os.makedirs(tmp_dir, exist_ok=True)
-                
-                dest_path = os.path.join(tmp_dir, unique_filename)
-                
-                import shutil
-                shutil.copy2(image_path, dest_path)
-                
+                file_path = os.path.join(tmp_dir, unique_filename)
+                file.save(file_path)
+
+                # 获取对应的提示词
+                prompt = request.form.get(f'prompts[{i}]', '')
+
                 # 创建任务
                 task = QingyingImage2VideoTask.create(
                     prompt=prompt,
-                    generation_mode='fast',
-                    frame_rate='30',
-                    resolution='720p',
-                    duration='5s',
-                    ai_audio=False,
-                    image_path=dest_path,
+                    generation_mode=generation_mode,
+                    frame_rate=frame_rate,
+                    resolution=resolution,
+                    duration=duration,
+                    ai_audio=ai_audio,
+                    image_path=file_path,
                     status=0,
                     create_at=datetime.now(),
                     update_at=datetime.now()
                 )
-                
+
                 # 提交任务到全局任务管理器
                 if hasattr(global_task_manager, 'qingying_img2video_manager'):
                     global_task_manager.qingying_img2video_manager.submit_task(task.id)
-                
-                created_count += 1
-                
+
+                created_tasks.append(task.id)
+                print(f"创建清影图生视频任务: {task.id}, 图片: {filename}, 提示词: {prompt}")
+
             except Exception as e:
-                current_app.logger.warning(f"处理第 {index + 1} 行时出错: {str(e)}")
-                continue
+                failed_files.append(f"{file.filename}: {str(e)}")
+                print(f"处理文件 {file.filename} 失败: {str(e)}")
+
+        # 构建响应消息
+        message_parts = []
+        if created_tasks:
+            message_parts.append(f"成功创建 {len(created_tasks)} 个任务")
+        if failed_files:
+            message_parts.append(f"失败 {len(failed_files)} 个文件")
+
+        return jsonify({
+            'success': True,
+            'message': ', '.join(message_parts) if message_parts else '没有创建任何任务',
+            'data': {
+                'created_count': len(created_tasks),
+                'failed_count': len(failed_files),
+                'created_task_ids': created_tasks,
+                'failed_files': failed_files
+            }
+        })
+
+    except Exception as e:
+        print(f"批量添加任务失败: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@qingying_img2video_bp.route('/tasks/batch-delete', methods=['POST'])
+def batch_delete_tasks():
+    """批量删除任务"""
+    try:
+        data = request.get_json()
+        task_ids = data.get('task_ids', [])
+        
+        if not task_ids:
+            return jsonify({
+                'success': False,
+                'message': '请提供要删除的任务ID列表'
+            }), 400
+        
+        # 删除任务
+        deleted_count = 0
+        for task_id in task_ids:
+            try:
+                task = QingyingImage2VideoTask.get_or_none(QingyingImage2VideoTask.id == task_id)
+                if task:
+                    # 删除图片文件
+                    if task.image_path and os.path.exists(task.image_path):
+                        try:
+                            os.remove(task.image_path)
+                        except Exception as e:
+                            print(f"删除图片文件失败: {e}")
+                    
+                    task.delete_instance()
+                    deleted_count += 1
+            except Exception as e:
+                print(f"删除任务 {task_id} 失败: {str(e)}")
         
         return jsonify({
             'success': True,
-            'message': f'成功导入 {created_count} 个任务'
+            'message': f'成功删除 {deleted_count} 个任务',
+            'data': {
+                'deleted_count': deleted_count
+            }
         })
         
     except Exception as e:
-        current_app.logger.error(f"导入Excel任务失败: {str(e)}")
-        return jsonify({
-            'success': False,
-            'message': f'导入失败: {str(e)}'
-        }), 500 
+        print(f"批量删除任务失败: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500 

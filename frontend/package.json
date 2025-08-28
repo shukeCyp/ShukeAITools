@@ -4,14 +4,15 @@
   "private": true,
   "scripts": {
     "serve": "npx vue-cli-service serve",
-    "build": "npx vue-cli-service build", 
+    "build": "npx vue-cli-service build",
     "dev": "npx vue-cli-service serve --port 9999"
   },
   "dependencies": {
-    "vue": "^3.0.0",
+    "@element-plus/icons-vue": "^2.1.0",
     "axios": "^1.4.0",
     "element-plus": "^2.3.0",
-    "@element-plus/icons-vue": "^2.1.0"
+    "vue": "^3.0.0",
+    "vue-template-compiler": "^2.7.16"
   },
   "devDependencies": {
     "@vue/cli-service": "^5.0.0",

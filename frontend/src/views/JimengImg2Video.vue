@@ -25,12 +25,12 @@
           <el-button 
             type="success" 
             size="large"
-            @click="importFromExcel"
-            :loading="importExcelLoading"
+            @click="showBatchAddDialog"
+            :loading="batchAddLoading"
             class="import-btn"
           >
-            <el-icon><Document /></el-icon>
-            导入Excel表格
+            <el-icon><Plus /></el-icon>
+            批量添加
           </el-button>
         </div>
       </div>
@@ -287,7 +287,7 @@
         <el-pagination
           :current-page="pagination.page"
           :page-size="pagination.page_size"
-          :page-sizes="[10, 20, 50, 100]"
+          :page-sizes="[10, 20, 50, 100, 500, 1000]"
           :total="pagination.total"
           layout="total, sizes, prev, pager, next, jumper"
           @size-change="handleSizeChange"
@@ -353,6 +353,158 @@
         </span>
             </template>
     </el-dialog>
+
+    <!-- 批量添加对话框 -->
+    <el-dialog
+      v-model="batchAddDialogVisible"
+      width="40%"
+      max-width="600px"
+      destroy-on-close
+      :show-close="false"
+      :show-header="false"
+      class="batch-add-dialog"
+      @close="resetBatchAddDialog"
+    >
+      <div 
+        class="batch-add-wrapper"
+        @dragover.prevent="handleDragOver"
+        @dragleave.prevent="handleDragLeave"
+        @drop.prevent="handleDrop"
+        :class="{ 'drag-over': isDragOver }"
+      >
+        <div class="batch-add-scrollable">
+          <input 
+            ref="fileInput"
+            type="file"
+            multiple
+            accept="image/*"
+            style="display: none"
+            @change="handleFileSelect"
+          />
+
+          <!-- 生成设置 -->
+          <div class="generation-settings-compact">
+            <div class="settings-row-compact">
+              <el-form-item label="模型：" class="compact-form-item">
+                <el-radio-group v-model="batchAddForm.model" size="small">
+                  <el-radio value="Video 3.0">Video 3.0</el-radio>
+                  <el-radio value="Video S2.0 Pro">Video S2.0 Pro</el-radio>
+                </el-radio-group>
+              </el-form-item>
+              <el-form-item label="时长：" class="compact-form-item">
+                <el-radio-group v-model="batchAddForm.second" size="small">
+                  <el-radio :value="5">5秒</el-radio>
+                  <el-radio :value="10" v-if="batchAddForm.model === 'Video 3.0'">10秒</el-radio>
+                </el-radio-group>
+              </el-form-item>
+            </div>
+          </div>
+
+          <!-- 拖拽上传区域 -->
+          <div 
+            class="drag-upload-area"
+            v-show="imageTaskList.length === 0"
+            @click="triggerFileInput"
+          >
+            <div class="upload-content">
+              <el-icon size="48" class="upload-icon"><UploadFilled /></el-icon>
+              <div class="upload-text">
+                <p class="primary-text">拖拽图片到此处，或点击选择图片</p>
+                <p class="secondary-text">支持 jpg、png、gif 等格式</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 图片任务列表 -->
+          <div class="image-task-list" v-if="imageTaskList.length > 0">
+            <div class="list-header">
+              <h4>待生成任务 ({{ imageTaskList.length }})</h4>
+              <div class="header-actions">
+                <el-button size="small" @click="clearAllTasks" type="danger">
+                  <el-icon><Delete /></el-icon>
+                  清空
+                </el-button>
+              </div>
+            </div>
+            
+            <div 
+              class="task-pagination-container" 
+              ref="paginationContainer"
+              @touchstart="handleTouchStart"
+              @touchmove="handleTouchMove"
+              @touchend="handleTouchEnd"
+              @wheel="handleWheel"
+            >
+              <div 
+                class="task-pagination-wrapper" 
+                :style="{ transform: `translateY(-${currentPage * 100}%)` }"
+              >
+                <div 
+                  v-for="(task, index) in imageTaskList" 
+                  :key="index"
+                  class="task-page"
+                >
+                  <div class="task-item">
+                    <div class="task-image-container">
+                      <div class="task-image">
+                        <img :src="task.previewUrl" :alt="task.file.name" />
+                      </div>
+                    </div>
+                    <div class="task-content">
+                      <div class="task-prompt-container">
+                        <el-input
+                          v-model="task.prompt"
+                          type="textarea"
+                          :rows="13"
+                          placeholder="请输入提示词（可选）"
+                          maxlength="500"
+                          show-word-limit
+                          class="prompt-textarea"
+                        />
+                        <div class="button-group">
+                          <el-button 
+                            size="small" 
+                            type="primary" 
+                            @click="generateAIPrompt(index)"
+                            class="ai-generate-btn"
+                          >
+                            <el-icon><Magic /></el-icon>
+                            AI生成
+                          </el-button>
+                          <el-button 
+                            size="small" 
+                            type="text" 
+                            @click="removeTask(index)" 
+                            class="delete-text-btn"
+                          >
+                            删除
+                          </el-button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="batchAddDialogVisible = false">取消</el-button>
+          <el-button 
+            type="primary" 
+            @click="submitBatchTasks" 
+            :loading="batchAddLoading"
+            :disabled="imageTaskList.length === 0"
+          >
+            <el-icon><Plus /></el-icon>
+            创建任务 ({{ imageTaskList.length }})
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -370,7 +522,11 @@ import {
   CircleCheckFilled,
   CircleCloseFilled,
   Refresh,
-  RefreshRight
+  RefreshRight,
+  Plus,
+  UploadFilled,
+  Close,
+  MagicStick as Magic
 } from '@element-plus/icons-vue'
 import { img2videoAPI } from '@/utils/api'
 import * as ElementPlus from 'element-plus'
@@ -396,8 +552,16 @@ const pagination = reactive({
 
 // 导入相关状态
 const importFolderLoading = ref(false)
-const importExcelLoading = ref(false)
 const batchDownloadLoading = ref(false)
+
+// 批量添加相关状态
+const batchAddLoading = ref(false)
+const batchAddDialogVisible = ref(false)
+const isDragOver = ref(false)
+const imageTaskList = ref([])
+const fileInput = ref(null)
+const currentPage = ref(0)
+const paginationContainer = ref(null)
 
 // 批量重试状态
 const batchRetryLoading = ref(false)
@@ -414,6 +578,12 @@ const previewVideoUrl = ref('')
 // 导入文件夹对话框状态
 const importFolderDialogVisible = ref(false)
 const importFolderForm = reactive({
+  model: 'Video 3.0',
+  second: 5
+})
+
+// 批量添加表单数据
+const batchAddForm = reactive({
   model: 'Video 3.0',
   second: 5
 })
@@ -545,26 +715,221 @@ const importFromFolder = async () => {
   }
 }
 
-const importFromExcel = async () => {
+// 显示批量添加对话框
+const showBatchAddDialog = () => {
+  batchAddDialogVisible.value = true
+}
+
+// 重置批量添加对话框
+const resetBatchAddDialog = () => {
+  imageTaskList.value = []
+  isDragOver.value = false
+  batchAddForm.model = 'Video 3.0'
+  batchAddForm.second = 5
+  resetPagination()
+}
+
+// 触发文件选择
+const triggerFileInput = () => {
+  fileInput.value?.click()
+}
+
+// 处理文件选择
+const handleFileSelect = (event) => {
+  const files = Array.from(event.target.files || [])
+  addFilesToTaskList(files)
+  // 清空input，允许重复选择同一文件
+  event.target.value = ''
+}
+
+// 处理拖拽悬停
+const handleDragOver = (event) => {
+  event.preventDefault()
+  isDragOver.value = true
+}
+
+// 处理拖拽离开
+const handleDragLeave = (event) => {
+  event.preventDefault()
+  isDragOver.value = false
+}
+
+// 处理拖拽放下
+const handleDrop = (event) => {
+  event.preventDefault()
+  isDragOver.value = false
+  
+  const files = Array.from(event.dataTransfer?.files || [])
+  const imageFiles = files.filter(file => file.type.startsWith('image/'))
+  
+  if (imageFiles.length !== files.length) {
+    ElMessage.warning('只支持图片文件，其他类型文件已被过滤')
+  }
+  
+  if (imageFiles.length > 0) {
+    addFilesToTaskList(imageFiles)
+  }
+}
+
+// 添加文件到任务列表
+const addFilesToTaskList = (files) => {
+  files.forEach(file => {
+    if (!file.type.startsWith('image/')) {
+      return
+    }
+    
+    // 检查是否已存在相同文件
+    const exists = imageTaskList.value.some(task => 
+      task.file.name === file.name && task.file.size === file.size
+    )
+    
+    if (!exists) {
+      const previewUrl = URL.createObjectURL(file)
+      imageTaskList.value.push({
+        file,
+        previewUrl,
+        prompt: ''
+      })
+    }
+  })
+  
+  if (files.length > 0) {
+    ElMessage.success(`已添加 ${files.length} 个图片`)
+  }
+}
+
+// 移除任务
+const removeTask = (index) => {
+  const task = imageTaskList.value[index]
+  if (task.previewUrl) {
+    URL.revokeObjectURL(task.previewUrl)
+  }
+  imageTaskList.value.splice(index, 1)
+}
+
+// 清空所有任务
+const clearAllTasks = () => {
+  imageTaskList.value.forEach(task => {
+    if (task.previewUrl) {
+      URL.revokeObjectURL(task.previewUrl)
+    }
+  })
+  imageTaskList.value = []
+}
+
+// 格式化文件大小
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
+// AI生成提示词
+const generateAIPrompt = (index) => {
+  ElMessage.info('功能正在开发中，敬请期待！')
+}
+
+// 分页滑动相关
+let touchStartY = 0
+let touchEndY = 0
+
+const handleTouchStart = (event) => {
+  touchStartY = event.touches[0].clientY
+}
+
+const handleTouchMove = (event) => {
+  event.preventDefault()
+}
+
+const handleTouchEnd = (event) => {
+  touchEndY = event.changedTouches[0].clientY
+  handleSwipe()
+}
+
+const handleWheel = (event) => {
+  event.preventDefault()
+  if (event.deltaY > 0) {
+    nextPage()
+  } else {
+    prevPage()
+  }
+}
+
+const handleSwipe = () => {
+  const swipeThreshold = 50
+  const diff = touchStartY - touchEndY
+  
+  if (Math.abs(diff) > swipeThreshold) {
+    if (diff > 0) {
+      nextPage()
+    } else {
+      prevPage()
+    }
+  }
+}
+
+const nextPage = () => {
+  if (currentPage.value < imageTaskList.value.length - 1) {
+    currentPage.value++
+  }
+}
+
+const prevPage = () => {
+  if (currentPage.value > 0) {
+    currentPage.value--
+  }
+}
+
+// 重置分页
+const resetPagination = () => {
+  currentPage.value = 0
+}
+
+// 提交批量任务
+const submitBatchTasks = async () => {
+  if (imageTaskList.value.length === 0) {
+    ElMessage.warning('请先添加图片')
+    return
+  }
+
   try {
-    importExcelLoading.value = true
-    const response = await img2videoAPI.importExcel()
+    batchAddLoading.value = true
+    
+    // 创建FormData对象
+    const formData = new FormData()
+    
+    // 添加配置参数
+    formData.append('model', batchAddForm.model)
+    formData.append('second', batchAddForm.second)
+    
+    // 添加所有图片文件和对应的提示词
+    imageTaskList.value.forEach((task, index) => {
+      formData.append('images', task.file)
+      formData.append(`prompts[${index}]`, task.prompt || '')
+    })
+    
+    const response = await img2videoAPI.batchAddTasks(formData)
     
     if (response.data.success) {
-      ElMessage.success(response.data.message || '开始导入Excel')
-      // 延迟刷新任务列表
+      ElMessage.success(`成功创建 ${imageTaskList.value.length} 个任务`)
+      batchAddDialogVisible.value = false
+      resetBatchAddDialog()
+      
+      // 刷新任务列表
       setTimeout(() => {
         loadTasks()
         loadStats()
-      }, 2000)
+      }, 1000)
     } else {
-      ElMessage.error(response.data.message || '导入Excel失败')
+      ElMessage.error(response.data.message || '创建任务失败')
     }
   } catch (error) {
-    console.error('导入Excel失败:', error)
-    ElMessage.error('导入Excel失败')
+    console.error('创建批量任务失败:', error)
+    ElMessage.error('创建任务失败')
   } finally {
-    importExcelLoading.value = false
+    batchAddLoading.value = false
   }
 }
 
@@ -1241,6 +1606,286 @@ onUnmounted(() => {
   min-height: 300px;
 }
 
+/* 批量添加对话框样式 */
+.batch-add-dialog {
+  --el-dialog-padding-primary: 0;
+}
+
+.batch-add-dialog .el-dialog__body {
+  padding: 0;
+  max-height: 70vh;
+  overflow: hidden;
+}
+
+.batch-add-wrapper {
+  position: relative;
+  height: 100%;
+}
+
+.batch-add-wrapper.drag-over {
+  background: rgba(102, 126, 234, 0.05);
+  border: 2px dashed var(--primary-color);
+}
+
+.batch-add-scrollable {
+  padding: 20px;
+  height: 70vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.drag-upload-area {
+  border: 2px dashed var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 48px 24px;
+  text-align: center;
+  background: var(--bg-secondary);
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+}
+
+
+
+.drag-upload-area:hover {
+  border-color: var(--primary-color);
+  background: rgba(102, 126, 234, 0.02);
+}
+
+.drag-upload-area.drag-over {
+  border-color: var(--primary-color);
+  background: rgba(102, 126, 234, 0.05);
+  transform: scale(1.02);
+}
+
+.upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.upload-icon {
+  color: var(--primary-color);
+  opacity: 0.6;
+}
+
+.upload-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.primary-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.secondary-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.image-task-list {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  border: 1px solid var(--border-light);
+}
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.list-header h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.task-items {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.task-item {
+  display: flex;
+  gap: 20px;
+  padding: 12px 12px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
+  transition: var(--transition);
+  width: 95%;
+  min-height: 280px;
+  max-width: 600px;
+  margin: 0 auto;
+  align-items: stretch;
+  box-sizing: border-box;
+}
+
+.task-item:hover {
+  box-shadow: var(--shadow-md);
+  border-color: rgba(102, 126, 234, 0.3);
+}
+
+
+
+.generation-settings-compact {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  border: 1px solid var(--border-light);
+}
+
+.settings-row-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.compact-form-item {
+  margin-bottom: 0;
+}
+
+.compact-form-item .el-form-item__label {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.task-image-container {
+  flex: 1;
+  min-width: 0;
+  max-width: 200px;
+}
+
+.task-image {
+  width: 100%;
+  min-height: 200px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.task-image img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+}
+
+.task-content {
+  flex: 2;
+  display: flex;
+  align-items: stretch;
+  padding: 0 16px;
+  min-width: 0;
+}
+
+.task-prompt-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.prompt-textarea {
+  flex: 1;
+}
+
+.button-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.ai-generate-btn {
+  white-space: nowrap;
+}
+
+.delete-text-btn {
+  color: #f56c6c;
+  white-space: nowrap;
+}
+
+.delete-text-btn:hover {
+  color: #f56c6c;
+  background: rgba(245, 108, 108, 0.1);
+}
+
+/* 分页滑动样式 */
+.task-pagination-container {
+  height: 350px;
+  overflow: hidden;
+  position: relative;
+  touch-action: pan-y;
+}
+
+.task-pagination-wrapper {
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  height: 100%;
+}
+
+.task-page {
+  height: 100%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.generation-settings {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  border: 1px solid var(--border-light);
+}
+
+.generation-settings h4 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.settings-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: center;
+}
+
+.settings-row .el-form-item {
+  margin-bottom: 0;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .jimeng-img2video-page {
@@ -1270,6 +1915,21 @@ onUnmounted(() => {
   
   .toolbar-actions {
     justify-content: center;
+  }
+
+  .settings-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .task-item {
+    flex-direction: column;
+  }
+
+  .task-image {
+    width: 100%;
+    height: 120px;
+    align-self: center;
   }
 }
 </style>
