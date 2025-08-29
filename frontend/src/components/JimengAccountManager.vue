@@ -287,7 +287,7 @@
         
         <el-table-column 
           label="操作" 
-          width="180" 
+          width="240" 
           fixed="right"
           align="center"
         >
@@ -301,6 +301,15 @@
                 :loading="cookieLoading[row.id]"
               >
                 获取Cookie
+              </el-button>
+              <el-button 
+                type="success" 
+                size="small" 
+                text
+                @click="loginAccount(row.id)"
+                :loading="loginLoading[row.id]"
+              >
+                登录
               </el-button>
             <el-popconfirm
               :title="`确定删除账号 ${row.account} 吗？`"
@@ -487,6 +496,32 @@ export default {
     const batchCookieLoading = ref(false)
     const updateAllCookiesLoading = ref(false)
     const getUncookiedLoading = ref(false)
+    
+    // 登录状态
+    const loginLoading = ref({})
+    
+    // 登录单个账号
+    const loginAccount = async (accountId) => {
+      try {
+        // 设置加载状态
+        loginLoading.value[accountId] = true
+        
+        const response = await accountAPI.loginAccount(accountId)
+        if (response.data.success) {
+          ElMessage.success(response.data.message)
+        } else {
+          ElMessage.error(response.data.message)
+        }
+      } catch (error) {
+        console.error('登录账号失败:', error)
+        ElMessage.error('登录账号失败')
+      } finally {
+        // 延迟一会儿再清除加载状态，让用户有时间看到加载效果
+        setTimeout(() => {
+          loginLoading.value[accountId] = false
+        }, 1000)
+      }
+    }
     
     // 获取单个账号Cookie
     const getCookie = async (accountId) => {
@@ -852,6 +887,8 @@ export default {
       updateAllCookies,
       getUncookiedLoading,
       getUncookiedAccountsCookie,
+      loginLoading,
+      loginAccount,
     }
   }
 }
@@ -1473,6 +1510,16 @@ export default {
 /* 获取Cookie按钮样式 */
 .el-button.el-button--text.el-button--primary {
   font-weight: 500;
+}
+
+/* 登录按钮样式 */
+.el-button.el-button--text.el-button--success {
+  font-weight: 500;
+  color: #67c23a;
+}
+
+.el-button.el-button--text.el-button--success:hover {
+  color: #85ce61;
 }
 
 /* 批量获取Cookie按钮样式 */

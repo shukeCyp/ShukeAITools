@@ -3,6 +3,7 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime, date
 from backend.models.models import JimengAccount, JimengText2ImgTask, JimengImg2VideoTask
 from backend.utils.jimeng_account_login import login_and_get_cookie
+from backend.utils.jimeng_login_window import login_and_wait
 from backend.core.global_task_manager import global_task_manager
 import asyncio
 
@@ -280,6 +281,45 @@ def get_account_usage_stats():
             'message': '获取统计失败: {}'.format(str(e))
         }), 500
 
+@jimeng_accounts_bp.route('/<int:account_id>/login', methods=['POST'])
+def login_account(account_id):
+    """登录指定账号（使用jimeng_login_window）"""
+    try:
+        print(f"开始登录账号，账号ID: {account_id}")
+        account = JimengAccount.get_by_id(account_id)
+        
+        # 提交登录任务到全局线程池
+        task_future = global_task_manager.submit_task(
+            platform_name="即梦账号",
+            task_callable=_process_login_task,
+            task_id=account_id,  # 传递task_id参数
+            account_id=account.id,  # 传递account_id参数
+            account_email=account.account,  # 传递account_email参数
+            account_password=account.password,  # 传递account_password参数
+            task_type="登录账号",
+            prompt=f"登录账号 {account.account}"
+        )
+        
+        print(f"登录任务已提交到线程池，账号: {account.account}")
+        return jsonify({
+            'success': True,
+            'message': f'正在登录账号 {account.account}，浏览器窗口已打开...'
+        })
+        
+    except JimengAccount.DoesNotExist:
+        print(f"登录失败：账号不存在，ID: {account_id}")
+        return jsonify({
+            'success': False,
+            'message': '账号不存在'
+        }), 404
+        
+    except Exception as e:
+        print(f"登录异常，ID: {account_id}, 错误: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'登录失败: {str(e)}'
+        }), 500
+
 @jimeng_accounts_bp.route('/<int:account_id>/get-cookie', methods=['POST'])
 def get_account_cookie(account_id):
     """获取指定账号的Cookie"""
@@ -498,6 +538,31 @@ def get_uncookied_accounts_cookie():
             'success': False,
             'message': f'获取未设置Cookie账号失败: {str(e)}'
         }), 500
+
+def _process_login_task(account_id, account_email, account_password):
+    """处理登录任务（使用jimeng_login_window）"""
+    try:
+        print(f"开始登录账号: {account_email}")
+        
+        # 获取账号信息
+        account = JimengAccount.get_by_id(account_id)
+        
+        # 调用登录窗口模块进行登录 (使用asyncio.run执行异步函数)
+        result = asyncio.run(login_and_wait(account.account, account.password, account.cookies))
+        
+        if result["code"] == 200 and result["data"]:
+            # 更新账号的Cookie
+            account.cookies = result["data"]
+            account.updated_at = datetime.now()
+            account.save()
+            print(f"账号 {account.account} 登录成功，Cookie已更新")
+            return True
+        else:
+            print(f"账号 {account.account} 登录失败: {result['message']}")
+            return False
+    except Exception as e:
+        print(f"处理登录任务异常，账号: {account_email}, 错误: {str(e)}")
+        return False
 
 def _process_cookie_task(account_id, account_email):
     """处理获取Cookie的任务"""

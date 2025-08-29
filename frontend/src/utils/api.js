@@ -50,6 +50,9 @@ export const accountAPI = {
   // 获取账号使用统计
   getUsageStats: () => api.get('/jimeng/accounts/usage-stats'),
   
+  // 登录单个账号
+  loginAccount: (accountId) => api.post(`/jimeng/accounts/${accountId}/login`),
+  
   // 获取单个账号的Cookie
   getCookie: (accountId) => api.post(`/jimeng/accounts/${accountId}/get-cookie`),
   

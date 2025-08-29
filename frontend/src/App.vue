@@ -126,72 +126,74 @@
                     <p>基于 Vue 3 + Flask 构建的现代化 AI 工具集成平台</p>
                   </div>
                 
-                <!-- 支持开源区域 -->
-                <div class="support-section">
-                  <div class="support-header">
-                    <div class="support-icon">⭐</div>
-                    <h3>开源不易，支持一下吧</h3>
-                    <p>您的支持就是我持续开发的动力！如果这个项目对您有帮助，请考虑支持一杯咖啡 ☕</p>
+                <!-- 定制化服务区域 -->
+                <div class="services-section">
+                  <div class="services-header">
+                    <div class="services-icon">🚀</div>
+                    <h3>舒克专业定制服务</h3>
+                    <p>专业的AI工具定制开发，为您量身打造专属解决方案 🎯</p>
                   </div>
                   
-                  <div class="qrcode-container">
-                    <div class="qrcode-item" @click="showQRCode('zfb')">
-                      <div class="qrcode-wrapper">
-                        <img src="/zfb_qrcode.jpg" alt="支付宝收款码" class="qrcode-img" />
-                        <div class="qrcode-overlay">
-                          <div class="zoom-icon">🔍</div>
-                          <span>点击查看</span>
-                        </div>
-                      </div>
-                      <div class="qrcode-label">
-                        <div class="payment-icon">💰</div>
-                        <span>支付宝</span>
-                      </div>
+                  <div class="services-container">
+                    <div class="service-item">
+                      <div class="service-icon">⚙️</div>
+                      <h4>定制化脚本</h4>
+                      <p>根据您的需求开发专属自动化脚本</p>
+                      <ul>
+                        <li>数据处理自动化</li>
+                        <li>业务流程脚本</li>
+                        <li>爬虫与数据采集</li>
+                        <li>系统集成方案</li>
+                      </ul>
                     </div>
                     
-                    <div class="qrcode-item" @click="showQRCode('wx')">
-                      <div class="qrcode-wrapper">
-                        <img src="/wx_qrcode.jpg" alt="微信收款码" class="qrcode-img" />
-                        <div class="qrcode-overlay">
-                          <div class="zoom-icon">🔍</div>
-                          <span>点击查看</span>
-                        </div>
-                      </div>
-                      <div class="qrcode-label">
-                        <div class="payment-icon">💬</div>
-                        <span>微信</span>
-                      </div>
+                    <div class="service-item">
+                      <div class="service-icon">🎨</div>
+                      <h4>ComfyUI工作流</h4>
+                      <p>专业的ComfyUI节点开发与工作流定制</p>
+                      <ul>
+                        <li>自定义节点开发</li>
+                        <li>复杂工作流设计</li>
+                        <li>模型整合优化</li>
+                        <li>批量处理方案</li>
+                      </ul>
+                    </div>
+                    
+                    <div class="service-item">
+                      <div class="service-icon">🔗</div>
+                      <h4>扣子工作流</h4>
+                      <p>扣子平台工作流开发与部署服务</p>
+                      <ul>
+                        <li>智能对话流程</li>
+                        <li>知识库集成</li>
+                        <li>API接口开发</li>
+                        <li>多平台部署</li>
+                      </ul>
                     </div>
                   </div>
                   
-                  <div class="support-footer">
-                    <p>💝 感谢每一位支持者，让开源项目走得更远！</p>
-                    <div class="github-link">
+                  <div class="services-footer">
+                    <div class="brand-highlight">
+                      <div class="brand-logo">🏆</div>
+                      <h4>认准舒克</h4>
+                      <p>专业 · 高效 · 可靠</p>
+                    </div>
+                    <div class="contact-info">
+                      <p>💬 需要定制服务？联系我们获取专业方案</p>
                       <el-button 
                         type="primary" 
-                        @click="openGithub"
-                        style="margin-top: 10px;"
+                        size="large"
+                        @click="contactUs"
+                        style="margin-top: 15px;"
                       >
-                        ⭐ 给项目点个 Star
+                        📞 立即咨询
                       </el-button>
                     </div>
                   </div>
                 </div>
               </div>
               
-              <!-- 二维码预览弹窗 -->
-              <el-dialog
-                v-model="qrcodeDialogVisible"
-                :title="qrcodeDialogTitle"
-                width="400px"
-                center
-                :show-close="true"
-              >
-                <div class="qrcode-dialog-content">
-                  <img :src="currentQRCode" :alt="qrcodeDialogTitle" class="dialog-qrcode" />
-                  <p class="dialog-tip">{{ qrcodeDialogTip }}</p>
-                </div>
-              </el-dialog>
+
             </div>
 
             <!-- 即梦国际版功能页面 -->
@@ -251,6 +253,44 @@
         </el-main>
       </el-container>
     </el-container>
+
+    <!-- 联系我们对话框 -->
+    <el-dialog 
+      v-model="contactDialogVisible" 
+      title="联系我们" 
+      width="600px"
+      :close-on-click-modal="false"
+    >
+      <div class="contact-content">
+        <div class="contact-simple">
+          <div class="wechat-info">
+            <div class="contact-item">
+              <el-icon class="contact-icon" color="#67C23A">
+                <ChatDotRound />
+              </el-icon>
+              <div class="contact-text">
+                <div class="contact-label">微信号</div>
+                <div class="contact-value">zhaxinyu--</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="qrcode-section">
+            <div class="qrcode-container">
+              <img src="./assets/vx.png" alt="微信二维码" class="qrcode-image" />
+              <p class="qrcode-text">扫码添加微信好友</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <template #footer>
+        <div class="contact-footer">
+          <el-button @click="contactDialogVisible = false">关闭</el-button>
+          <el-button type="primary" @click="copyContactInfo">复制微信号</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -273,7 +313,9 @@ import {
   Setting,
   Monitor,
   Collection,
-  VideoCamera
+  VideoCamera,
+  Message,
+  Star
 } from '@element-plus/icons-vue'
 import AccountConfiguration from './views/AccountConfiguration.vue'
 import JimengPlatform from './views/JimengPlatform.vue'
@@ -323,12 +365,7 @@ export default {
     const activeMenu = ref('home')
     const healthStatus = ref('检查中...')
     const healthChecking = ref(false)
-    
-    // 二维码弹窗相关
-    const qrcodeDialogVisible = ref(false)
-    const qrcodeDialogTitle = ref('')
-    const qrcodeDialogTip = ref('')
-    const currentQRCode = ref('')
+    const contactDialogVisible = ref(false)
 
     // 切换菜单
     const handleMenuSelect = (index) => {
@@ -355,25 +392,21 @@ export default {
       }
     }
 
-    // 初始化
-    // 显示二维码
-    const showQRCode = (type) => {
-      if (type === 'zfb') {
-        qrcodeDialogTitle.value = '支付宝收款码'
-        qrcodeDialogTip.value = '打开支付宝扫一扫，支持开源项目'
-        currentQRCode.value = '/zfb_qrcode.jpg'
-      } else if (type === 'wx') {
-        qrcodeDialogTitle.value = '微信收款码'
-        qrcodeDialogTip.value = '打开微信扫一扫，支持开源项目'
-        currentQRCode.value = '/wx_qrcode.jpg'
-      }
-      qrcodeDialogVisible.value = true
+    // 联系我们
+    const contactUs = () => {
+      contactDialogVisible.value = true
     }
-    
-    // 打开GitHub
-    const openGithub = () => {
-      window.open('https://github.com/your-username/ShukeAITools', '_blank')
-      ElMessage.info('感谢您的支持！⭐')
+
+    // 复制联系信息
+    const copyContactInfo = () => {
+      const contactInfo = `微信号：zhaxinyu--`
+      
+      navigator.clipboard.writeText(contactInfo).then(() => {
+        ElMessage.success('微信号已复制到剪贴板')
+        contactDialogVisible.value = false
+      }).catch(() => {
+        ElMessage.error('复制失败，请手动复制')
+      })
     }
     
     onMounted(() => {
@@ -384,14 +417,11 @@ export default {
       activeMenu,
       healthStatus,
       healthChecking,
-      qrcodeDialogVisible,
-      qrcodeDialogTitle,
-      qrcodeDialogTip,
-      currentQRCode,
+      contactDialogVisible,
       handleMenuSelect,
       checkHealth,
-      showQRCode,
-      openGithub
+      contactUs,
+      copyContactInfo
     }
   }
 }
@@ -806,9 +836,9 @@ export default {
   font-weight: 400;
 }
 
-/* 支持开源区域样式 */
-.support-section {
-  max-width: 800px;
+/* 定制化服务区域样式 */
+.services-section {
+  max-width: 1200px;
   margin: 60px auto 0;
   padding: 40px;
   background: var(--bg-secondary);
@@ -818,7 +848,7 @@ export default {
   overflow: hidden;
 }
 
-.support-section::before {
+.services-section::before {
   content: '';
   position: absolute;
   top: 0;
@@ -831,16 +861,16 @@ export default {
   z-index: -1;
 }
 
-.support-section:hover::before {
+.services-section:hover::before {
   left: 0;
 }
 
-.support-header {
+.services-header {
   text-align: center;
   margin-bottom: 40px;
 }
 
-.support-icon {
+.services-icon {
   font-size: 48px;
   margin-bottom: 20px;
   animation: pulse 2s infinite;
@@ -852,7 +882,7 @@ export default {
   50% { transform: scale(1.1); }
 }
 
-.support-header h3 {
+.services-header h3 {
   font-size: 28px;
   font-weight: 700;
   color: var(--text-primary);
@@ -863,7 +893,7 @@ export default {
   background-clip: text;
 }
 
-.support-header p {
+.services-header p {
   font-size: 16px;
   color: var(--text-secondary);
   line-height: 1.6;
@@ -871,104 +901,142 @@ export default {
   margin: 0 auto;
 }
 
-.qrcode-container {
-  display: flex;
-  justify-content: center;
-  gap: 60px;
+.services-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 30px;
   margin: 40px 0;
 }
 
-.qrcode-item {
-  text-align: center;
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.qrcode-item:hover {
-  transform: translateY(-5px);
-}
-
-.qrcode-wrapper {
-  position: relative;
-  width: 160px;
-  height: 160px;
-  margin: 0 auto 15px;
+.service-item {
+  background: var(--bg-primary);
+  padding: 30px;
   border-radius: 16px;
+  border: 1px solid var(--border-light);
+  transition: var(--transition);
+  position: relative;
   overflow: hidden;
-  box-shadow: var(--shadow-md);
-  transition: var(--transition);
 }
 
-.qrcode-wrapper:hover {
-  box-shadow: var(--shadow-lg);
-}
-
-.qrcode-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: var(--transition);
-}
-
-.qrcode-overlay {
+.service-item::before {
+  content: '';
   position: absolute;
   top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-gradient);
   transition: var(--transition);
-  gap: 8px;
+  opacity: 0.05;
+  z-index: -1;
 }
 
-.qrcode-wrapper:hover .qrcode-overlay {
-  opacity: 1;
+.service-item:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-lg);
+  border-color: rgba(102, 126, 234, 0.3);
 }
 
-.qrcode-overlay span {
+.service-item:hover::before {
+  left: 0;
+}
+
+.service-icon {
+  font-size: 36px;
+  margin-bottom: 16px;
+  display: inline-block;
+}
+
+.service-item h4 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.service-item p {
   font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.service-item ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.service-item li {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  padding-left: 20px;
+  position: relative;
+}
+
+.service-item li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: #4ecdc4;
+  font-weight: 600;
+}
+
+.services-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 30px;
+  border-top: 2px dashed var(--border-color);
+  gap: 40px;
+}
+
+.brand-highlight {
+  text-align: center;
+  flex: 1;
+}
+
+.brand-logo {
+  font-size: 36px;
+  margin-bottom: 12px;
+  display: inline-block;
+}
+
+.brand-highlight h4 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.brand-highlight p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
   font-weight: 500;
 }
 
-.qrcode-label {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.payment-icon {
-  font-size: 20px;
-  display: inline-block;
-}
-
-.zoom-icon {
-  font-size: 24px;
-  display: inline-block;
-}
-
-.support-footer {
+.contact-info {
   text-align: center;
-  padding-top: 30px;
-  border-top: 2px dashed var(--border-color);
+  flex: 1;
 }
 
-.support-footer p {
+.contact-info p {
   font-size: 16px;
   color: var(--text-secondary);
-  margin-bottom: 20px;
+  margin-bottom: 0;
 }
 
-.github-link .el-button {
+.contact-info .el-button {
   background: var(--primary-gradient);
   border: none;
   padding: 12px 24px;
@@ -978,32 +1046,12 @@ export default {
   transition: var(--transition);
 }
 
-.github-link .el-button:hover {
+.contact-info .el-button:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
 
-/* 弹窗样式 */
-.qrcode-dialog-content {
-  text-align: center;
-  padding: 20px;
-}
 
-.dialog-qrcode {
-  width: 280px;
-  height: 280px;
-  object-fit: cover;
-  border-radius: 12px;
-  box-shadow: var(--shadow-md);
-  margin-bottom: 20px;
-}
-
-.dialog-tip {
-  font-size: 16px;
-  color: var(--text-secondary);
-  margin: 0;
-  line-height: 1.5;
-}
 
 /* 动画效果 */
 @keyframes fadeInUp {
@@ -1078,24 +1126,23 @@ export default {
     gap: 20px;
   }
   
-  .support-section {
+  .services-section {
     margin: 40px 20px 0;
     padding: 30px 20px;
   }
   
-  .qrcode-container {
-    flex-direction: column;
-    gap: 30px;
-    align-items: center;
+  .services-container {
+    grid-template-columns: 1fr;
+    gap: 20px;
   }
   
-  .support-header h3 {
+  .services-header h3 {
     font-size: 24px;
   }
   
-  .qrcode-wrapper {
-    width: 140px;
-    height: 140px;
+  .services-footer {
+    flex-direction: column;
+    gap: 30px;
   }
 }
 
@@ -1118,6 +1165,167 @@ export default {
   
   .feature-item {
     padding: 24px 16px;
+  }
+}
+
+/* 联系我们对话框样式 */
+.contact-content {
+  padding: 20px 0;
+}
+
+.contact-simple {
+  display: flex;
+  gap: 40px;
+  align-items: center;
+  justify-content: center;
+}
+
+.wechat-info {
+  flex: 1;
+  max-width: 300px;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f6f8fa 0%, #ffffff 100%);
+  border-radius: 12px;
+  border: 1px solid #e4e7ed;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.contact-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.contact-text {
+  flex: 1;
+}
+
+.contact-label {
+  color: #909399;
+  font-size: 14px;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.contact-value {
+  color: #303133;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.qrcode-section {
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.qrcode-section h3 {
+  color: #409eff;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.qrcode-container {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #e4e7ed;
+}
+
+.qrcode-image {
+  width: 160px;
+  height: 160px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 12px;
+}
+
+.qrcode-text {
+  color: #606266;
+  font-size: 14px;
+  margin: 0;
+  font-weight: 500;
+}
+
+/* 联系弹窗响应式设计 */
+@media (max-width: 768px) {
+  .contact-simple {
+    flex-direction: column;
+    gap: 30px;
+    text-align: center;
+  }
+  
+  .wechat-info {
+    max-width: 100%;
+  }
+  
+  .qrcode-image {
+    width: 140px;
+    height: 140px;
+  }
+}
+
+@media (max-width: 480px) {
+  .contact-item {
+    padding: 16px;
+  }
+  
+  .contact-icon {
+    font-size: 24px;
+  }
+  
+  .contact-value {
+    font-size: 16px;
+  }
+  
+  .qrcode-image {
+    width: 120px;
+    height: 120px;
+  }
+}
+
+.contact-item:last-child {
+  margin-bottom: 0;
+}
+
+.contact-item strong {
+  color: #303133;
+  min-width: 60px;
+  display: inline-block;
+}
+
+.contact-footer {
+  text-align: right;
+}
+
+.contact-footer .el-button {
+  margin-left: 12px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .contact-layout {
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .qrcode-section {
+    width: 100%;
+  }
+  
+  .qrcode-image {
+    width: 140px;
+    height: 140px;
   }
 }
 </style>
