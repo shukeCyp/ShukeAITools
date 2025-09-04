@@ -239,15 +239,40 @@ async def image2video(image_path, prompt, username, password, model="Video 3.0",
         # 注册响应监听器
         page.on("response", handle_response)
         
-        # 点击类型选择下拉框
-        print(f"{Fore.YELLOW}点击类型选择下拉框...{Style.RESET_ALL}")
-        await page.click('div.lv-select[role="combobox"][class*="type-select-"]')
-        await asyncio.sleep(1)
-        
-        # 选择AI Video选项
-        print(f"{Fore.YELLOW}选择AI Video选项...{Style.RESET_ALL}")
-        await page.click('span[class*="select-option-label-content"]:has-text("AI Video")')
-        await asyncio.sleep(2)
+        # 尝试通过新的tabs方式选择AI Video
+        print(f"{Fore.YELLOW}尝试选择AI Video选项...{Style.RESET_ALL}")
+        try:
+            # 检查是否存在新的tabs节点
+            tabs_selector = 'div.tabs-dTWN8k'
+            tabs_element = await page.query_selector(tabs_selector)
+            
+            if tabs_element:
+                print(f"{Fore.GREEN}发现新的tabs界面，使用新方式选择AI Video{Style.RESET_ALL}")
+                # 使用新的tabs方式选择AI Video
+                await page.click('button.tab-YSwCEn:has-text("AI Video")')
+                await asyncio.sleep(2)
+            else:
+                print(f"{Fore.YELLOW}未发现新tabs界面，使用传统下拉框方式{Style.RESET_ALL}")
+                # 点击类型选择下拉框
+                print(f"{Fore.YELLOW}点击类型选择下拉框...{Style.RESET_ALL}")
+                await page.click('div.lv-select[role="combobox"][class*="type-select-"]')
+                await asyncio.sleep(1)
+                
+                # 选择AI Video选项
+                print(f"{Fore.YELLOW}选择AI Video选项...{Style.RESET_ALL}")
+                await page.click('span[class*="select-option-label-content"]:has-text("AI Video")')
+                await asyncio.sleep(2)
+                
+        except Exception as e:
+            print(f"{Fore.YELLOW}选择AI Video时出错: {str(e)}，尝试备用方法{Style.RESET_ALL}")
+            # 备用方法：直接尝试传统下拉框方式
+            try:
+                await page.click('div.lv-select[role="combobox"][class*="type-select-"]')
+                await asyncio.sleep(1)
+                await page.click('span[class*="select-option-label-content"]:has-text("AI Video")')
+                await asyncio.sleep(2)
+            except:
+                print(f"{Fore.RED}无法选择AI Video选项{Style.RESET_ALL}")
 
         # 选择视频模型
         print(f"{Fore.YELLOW}选择视频模型...{Style.RESET_ALL}")

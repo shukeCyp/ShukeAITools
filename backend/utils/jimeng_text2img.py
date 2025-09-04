@@ -240,14 +240,14 @@ async def text2image(prompt, username, password, model="Image 3.1", aspect_ratio
         page.on("response", handle_response)
         
         # 点击类型选择下拉框
-        print(f"{Fore.YELLOW}点击类型选择下拉框...{Style.RESET_ALL}")
-        await page.click('div.lv-select[role="combobox"][class*="type-select-"]')
-        await asyncio.sleep(1)
+        # print(f"{Fore.YELLOW}点击类型选择下拉框...{Style.RESET_ALL}")
+        # await page.click('div.lv-select[role="combobox"][class*="type-select-"]')
+        # await asyncio.sleep(1)
         
-        # 选择AI Image选项
-        print(f"{Fore.YELLOW}选择AI Image选项...{Style.RESET_ALL}")
-        await page.click('span.lv-select-view-value:has-text("AI Image")')
-        await asyncio.sleep(2)
+        # # 选择AI Image选项
+        # print(f"{Fore.YELLOW}选择AI Image选项...{Style.RESET_ALL}")
+        # await page.click('span.lv-select-view-value:has-text("AI Image")')
+        # await asyncio.sleep(2)
         
         # 输入提示词
         print(f"{Fore.YELLOW}输入提示词...{Style.RESET_ALL}")

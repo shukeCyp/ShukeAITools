@@ -229,17 +229,33 @@ async def generate_digital_human(image_path, audio_path, username, password, hea
         await page.goto('https://dreamina.capcut.com/ai-tool/generate')
         await page.wait_for_load_state('networkidle', timeout=60000)
         await asyncio.sleep(2)
-        
-        # 点击类型选择下拉框
-        print(f"{Fore.YELLOW}点击类型选择下拉框...{Style.RESET_ALL}")
-        await page.click('div.lv-select[role="combobox"]')
-        await asyncio.sleep(1)
-        
-        # 选择AI Avatar选项
-        print(f"{Fore.YELLOW}选择AI Avatar选项...{Style.RESET_ALL}")
-        await page.click('span[class^="select-option-label-content"]:has-text("AI Avatar")')
-        await asyncio.sleep(2)
-        
+
+        # 检查是否存在标签页模式的AI Avatar按钮
+        print(f"{Fore.YELLOW}检查页面模式...{Style.RESET_ALL}")
+        try:
+            # 先尝试查找标签页模式的AI Avatar按钮
+            ai_avatar_tab = await page.query_selector('button[class*="tab-"]:has-text("AI Avatar")')
+            if ai_avatar_tab:
+                print(f"{Fore.YELLOW}发现标签页模式，点击AI Avatar标签...{Style.RESET_ALL}")
+                await ai_avatar_tab.click()
+                await asyncio.sleep(2)
+            else:
+                # 如果没有标签页模式，使用下拉框模式
+                print(f"{Fore.YELLOW}使用下拉框模式，点击类型选择下拉框...{Style.RESET_ALL}")
+                await page.click('div.lv-select[role="combobox"]')
+                await asyncio.sleep(1)
+                
+                # 选择AI Avatar选项
+                print(f"{Fore.YELLOW}选择AI Avatar选项...{Style.RESET_ALL}")
+                await page.click('span[class^="select-option-label-content"]:has-text("AI Avatar")')
+                await asyncio.sleep(2)
+        except Exception as e:
+            print(f"{Fore.RED}选择AI Avatar失败: {str(e)}{Style.RESET_ALL}")
+            return {
+                "code": 603,
+                "data": None,
+                "message": f"选择AI Avatar失败: {str(e)}"
+            }
         # 上传图片
         print(f"{Fore.YELLOW}上传头像图片...{Style.RESET_ALL}")
         avatar_upload = await page.query_selector('div[class^="reference-upload-"]:has-text("Avatar") input[type="file"]')

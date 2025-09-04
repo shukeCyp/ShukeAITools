@@ -15,8 +15,9 @@
     "vue-template-compiler": "^2.7.16"
   },
   "devDependencies": {
-    "@vue/cli-service": "^5.0.0",
-    "@vue/compiler-sfc": "^3.0.0"
+    "@vue/cli-plugin-babel": "^5.0.8",
+    "@vue/cli-service": "^5.0.8",
+    "@vue/compiler-sfc": "^3.3.4"
   },
   "browserslist": [
     "> 1%",

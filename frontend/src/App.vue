@@ -291,6 +291,74 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 友情赞助弹窗 -->
+    <el-dialog 
+      v-model="sponsorDialogVisible" 
+      :title="null"
+      width="600px"
+      :close-on-click-modal="false"
+      :show-close="false"
+      center
+      class="sponsor-dialog"
+      :modal="true"
+      :modal-class="'sponsor-modal'"
+    >
+      <div class="sponsor-container">
+        <!-- 悬浮关闭按钮 -->
+        <div class="sponsor-close-btn" @click="sponsorDialogVisible = false">
+          <el-icon><Close /></el-icon>
+        </div>
+        
+        <!-- 介绍文字 -->
+        <div class="sponsor-text">
+          <h3>TK云大师,专业的TikTok矩阵系统,AI赋能自动化,单人轻松管理上万账号！</h3>
+        </div>
+        
+        <!-- 图片 -->
+        <div class="sponsor-image-container">
+          <a @click="openSponsorLink" class="sponsor-link">
+            <img src="/yundashi.png" alt="TK云大师" class="sponsor-image" />
+          </a>
+        </div>
+      </div>
+    </el-dialog>
+
+    <!-- 作者微信悬浮窗 -->
+    <div class="wechat-float" @click="toggleWechatDialog">
+      <el-icon size="24"><ChatDotRound /></el-icon>
+      <span>微信</span>
+    </div>
+
+    <!-- 作者微信弹窗 -->
+    <el-dialog 
+      v-model="wechatDialogVisible" 
+      :title="null"
+      width="400px"
+      :close-on-click-modal="false"
+      :show-close="false"
+      center
+      class="wechat-dialog"
+      :modal="true"
+      :modal-class="'wechat-modal'"
+    >
+      <div class="wechat-container">
+        <!-- 悬浮关闭按钮 -->
+        <div class="wechat-close-btn" @click="wechatDialogVisible = false">
+          <el-icon><Close /></el-icon>
+        </div>
+        
+        <!-- 介绍文字 -->
+        <div class="wechat-text">
+          <h3>联系作者微信</h3>
+        </div>
+        
+        <!-- 二维码图片 -->
+        <div class="wechat-image-container">
+          <img src="/benyue.png" alt="作者微信" class="wechat-image" />
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -315,7 +383,9 @@ import {
   Collection,
   VideoCamera,
   Message,
-  Star
+  Star,
+  Close,
+  ChatDotRound
 } from '@element-plus/icons-vue'
 import AccountConfiguration from './views/AccountConfiguration.vue'
 import JimengPlatform from './views/JimengPlatform.vue'
@@ -366,6 +436,8 @@ export default {
     const healthStatus = ref('检查中...')
     const healthChecking = ref(false)
     const contactDialogVisible = ref(false)
+    const sponsorDialogVisible = ref(false)
+    const wechatDialogVisible = ref(false)
 
     // 切换菜单
     const handleMenuSelect = (index) => {
@@ -408,9 +480,28 @@ export default {
         ElMessage.error('复制失败，请手动复制')
       })
     }
+
+    // 打开赞助链接
+    const openSponsorLink = () => {
+      window.open('https://www.tkyds.com/?=shukeCyp', '_blank')
+    }
+
+    // 切换微信弹窗
+    const toggleWechatDialog = () => {
+      wechatDialogVisible.value = true
+    }
+
+    // 检查是否应该显示赞助弹窗
+    const checkSponsorDialog = () => {
+      // 延迟3秒后显示赞助弹窗
+      setTimeout(() => {
+        sponsorDialogVisible.value = true
+      }, 3000)
+    }
     
     onMounted(() => {
       checkHealth()
+      checkSponsorDialog()
     })
 
     return {
@@ -418,10 +509,14 @@ export default {
       healthStatus,
       healthChecking,
       contactDialogVisible,
+      sponsorDialogVisible,
+      wechatDialogVisible,
       handleMenuSelect,
       checkHealth,
       contactUs,
-      copyContactInfo
+      copyContactInfo,
+      openSponsorLink,
+      toggleWechatDialog
     }
   }
 }
@@ -1310,6 +1405,309 @@ export default {
 
 .contact-footer .el-button {
   margin-left: 12px;
+}
+
+/* 友情赞助弹窗样式 */
+.sponsor-dialog {
+  background: transparent !important;
+}
+
+.sponsor-dialog .el-dialog {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  border: none !important;
+  margin: 0 !important;
+}
+
+.sponsor-dialog .el-dialog__header {
+  display: none !important;
+}
+
+.sponsor-dialog .el-dialog__body {
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.sponsor-dialog .el-dialog__wrapper {
+  background: transparent !important;
+}
+
+.sponsor-dialog .el-overlay-dialog {
+  background: transparent !important;
+}
+
+.sponsor-modal {
+  background: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* 全局覆盖弹窗样式 */
+.el-dialog.sponsor-dialog,
+.el-dialog.sponsor-dialog .el-dialog__body,
+.el-dialog.sponsor-dialog .el-dialog__header,
+.sponsor-dialog {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.sponsor-container {
+  position: relative;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+}
+
+.sponsor-close-btn {
+  position: absolute;
+  top: -15px;
+  right: -15px;
+  width: 30px;
+  height: 30px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 1000;
+  color: white;
+  font-size: 16px;
+}
+
+.sponsor-close-btn:hover {
+  background: rgba(0, 0, 0, 0.9);
+  transform: scale(1.1);
+}
+
+.sponsor-text {
+  text-align: center;
+  margin-bottom: 20px;
+  padding: 0;
+}
+
+.sponsor-text h3 {
+  color: white;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.4;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+}
+
+.sponsor-image-container {
+  width: 100%;
+  position: relative;
+}
+
+.sponsor-link {
+  display: block;
+  cursor: pointer;
+  width: 100%;
+}
+
+.sponsor-image {
+  width: 100%;
+  height: auto;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: block;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.sponsor-image:hover {
+  transform: scale(1.02);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* 响应式设计 */
+@media (max-width: 480px) {
+  .sponsor-text {
+    margin-bottom: 15px;
+    padding: 12px 15px;
+    border-radius: 12px;
+  }
+  
+  .sponsor-text h3 {
+    font-size: 14px;
+  }
+  
+  .sponsor-image {
+    border-radius: 15px;
+  }
+}
+
+/* 作者微信悬浮窗样式 */
+.wechat-float {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 60px;
+  height: 60px;
+  background: var(--primary-gradient);
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  color: white;
+}
+
+.wechat-float:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.wechat-float span {
+  font-size: 10px;
+  font-weight: 500;
+  margin-top: 2px;
+  line-height: 1;
+}
+
+/* 作者微信弹窗样式 - 与赞助弹窗保持一致 */
+.wechat-dialog {
+  background: transparent !important;
+}
+
+.wechat-dialog .el-dialog {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  border: none !important;
+  margin: 0 !important;
+}
+
+.wechat-dialog .el-dialog__header {
+  display: none !important;
+}
+
+.wechat-dialog .el-dialog__body {
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.wechat-dialog .el-dialog__wrapper {
+  background: transparent !important;
+}
+
+.wechat-dialog .el-overlay-dialog {
+  background: transparent !important;
+}
+
+.wechat-modal {
+  background: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* 全局覆盖微信弹窗样式 */
+.el-dialog.wechat-dialog,
+.el-dialog.wechat-dialog .el-dialog__body,
+.el-dialog.wechat-dialog .el-dialog__header,
+.wechat-dialog {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.wechat-container {
+  position: relative;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+}
+
+.wechat-close-btn {
+  position: absolute;
+  top: -15px;
+  right: -15px;
+  width: 30px;
+  height: 30px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 1000;
+  color: white;
+  font-size: 16px;
+}
+
+.wechat-close-btn:hover {
+  background: rgba(0, 0, 0, 0.9);
+  transform: scale(1.1);
+}
+
+.wechat-text {
+  text-align: center;
+  margin-bottom: 20px;
+  padding: 0;
+}
+
+.wechat-text h3 {
+  color: white;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.4;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+}
+
+.wechat-image-container {
+  width: 100%;
+  position: relative;
+}
+
+.wechat-image {
+  width: 100%;
+  height: auto;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: block;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.wechat-image:hover {
+  transform: scale(1.02);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* 悬浮窗响应式设计 */
+@media (max-width: 768px) {
+  .wechat-float {
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+  }
+  
+  .wechat-float .el-icon {
+    font-size: 20px;
+  }
+  
+  .wechat-float span {
+    font-size: 9px;
+  }
+  
+  .wechat-text h3 {
+    font-size: 20px;
+  }
+  
+  .wechat-image {
+    border-radius: 15px;
+  }
 }
 
 /* 响应式设计 */

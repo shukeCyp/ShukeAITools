@@ -6,6 +6,22 @@
 
 舒克AI工具集是一个开源项目，旨在为开发者和AI爱好者提供便捷的AI工具使用体验。本项目采用前后端分离架构，支持多种AI平台的集成和管理。
 
+### 🎯 功能描述
+
+- **即梦国际版** - 支持文生图、图生视频、数字人三大核心功能
+- **清影** - 专业的图生视频处理工具
+- **Runway** - 预留接口，功能开发中
+
+### ✨ 功能特性
+
+| 平台 | 文生图 | 图生视频 | 数字人 |
+|------|:------:|:--------:|:------:|
+| 即梦国际版 | ✅ | ✅ | ✅ |
+| 清影 | ❌ | ✅ | ❌ |
+| Runway | ❌ | ❌ | ❌ |
+| Vidu | ❌ | ❌ | ❌ |
+| 海螺 | ❌ | ❌ | ❌ |
+
 **免责声明：本项目仅供技术交流和学习使用，请勿用于商业用途。**
 
 ## ✨ 主要特性
@@ -163,6 +179,23 @@ ShukeAITools/
 
 感谢所有为这个项目贡献代码和建议的开发者们！
 
+## 友情赞助
+
+如果这个项目对你有帮助，欢迎支持我们的发展！你的赞助将帮助我们持续改进和维护这个项目。
+
+<div align="center">
+  <a href="https://www.tkyds.com/?=shukeCyp" target="_blank">
+    <img src="assets/yds.jpg" alt="友情赞助" width="100%"/>
+  </a>
+  <p><a href="https://www.tkyds.com/?=shukeCyp" target="_blank"><strong>TK云大师,专业的TikTok矩阵系统,AI赋能自动化,单人轻松管理上万账号！</strong></a></p>
+</div>
+
+您的每一份支持都是我们前进的动力！
+
 ---
 
 **如果这个项目对你有帮助，请给它一个Star！**
+
+## Star趋势
+
+[![Star History Chart](https://api.star-history.com/svg?repos=shukeCyp/ShukeAITools&type=Date)](https://star-history.com/#shukeCyp/ShukeAITools&Date)
