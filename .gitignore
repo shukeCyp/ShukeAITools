@@ -207,7 +207,7 @@ marimo/_lsp/
 __marimo__/
 
 # 项目特定文件
-backend/database/*.db
+backend/database/
 backend/cookies/*.json
 frontend/node_modules/
 frontend/dist/
