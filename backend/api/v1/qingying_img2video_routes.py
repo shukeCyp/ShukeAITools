@@ -457,7 +457,7 @@ def import_folder_tasks():
                         
                         # 创建任务
                         task = QingyingImage2VideoTask.create(
-                            prompt=f"根据图片 {filename} 生成视频",
+                            prompt="",
                             generation_mode=generation_mode,
                             frame_rate=frame_rate,
                             resolution=resolution,

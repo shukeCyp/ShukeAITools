@@ -396,7 +396,7 @@ class GlobalTaskManager:
                     # 最后尝试直接调用
                     result = task_callable(*args)
                 
-            print(f"任务函数执行完成: 线程{thread_id}, 结果: {type(result)}")
+            print(f"任务函数执行完成: 线程{thread_id}, 结果: {result}")
             
             # 更新进度为完成
             if thread_id in self.active_tasks:

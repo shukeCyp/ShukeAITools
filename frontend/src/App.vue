@@ -31,7 +31,7 @@
             :default-active="activeMenu"
             class="sidebar-menu"
             @select="handleMenuSelect"
-            :default-openeds="['jimeng', 'accounts', 'settings']"
+            :default-openeds="[]"
           >
             <el-menu-item index="home">
               <el-icon><House /></el-icon>

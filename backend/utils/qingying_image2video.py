@@ -82,7 +82,7 @@ async def generate_image_to_video(image_path, prompt="", cookie_string="", headl
         
         # 检查并关闭第一个弹窗
         try:
-            popup_selector1 = 'div[data-v-0f7edd1f].new-feature-content-btn.flex.flex-x-center.flex-y-center'
+            popup_selector1 = 'div.new-feature-content-btn.flex.flex-x-center.flex-y-center'
             popup_element1 = await page.wait_for_selector(popup_selector1, timeout=5000, state='visible')
             if popup_element1:
                 await popup_element1.click()
@@ -90,7 +90,6 @@ async def generate_image_to_video(image_path, prompt="", cookie_string="", headl
                 await asyncio.sleep(2)
         except Exception as e:
             print(f"{Fore.YELLOW}第一个弹窗未出现或已关闭: {str(e)}{Style.RESET_ALL}")
-        
         # 检查并关闭第二个弹窗
         try:
             popup_selector2 = 'div[data-v-3af8a7d3].btn'

@@ -7,7 +7,7 @@ import asyncio
 import time
 import threading
 from datetime import datetime
-
+from backend.utils.config_util import get_hide_window
 from backend.models.models import QingyingImage2VideoTask, QingyingAccount
 from backend.utils.qingying_image2video import generate_image_to_video
 
@@ -28,6 +28,8 @@ class QingyingImg2VideoTaskManager:
         """启动任务管理器"""
         if not self.running:
             self.running = True
+            # 启动时重置账号计数器，确保计数正确
+            self.reset_account_counters()
             self.worker_thread = threading.Thread(target=self._task_processor_loop, daemon=True)
             self.worker_thread.start()
             print("清影图生视频任务管理器已启动")
@@ -91,6 +93,7 @@ class QingyingImg2VideoTaskManager:
     
     def _process_task(self, task_id):
         """处理单个任务"""
+        account_id = None
         try:
             # 获取任务信息
             task = QingyingImage2VideoTask.get_by_id(task_id)
@@ -111,40 +114,52 @@ class QingyingImg2VideoTaskManager:
                 task.save()
                 return
             
+            # 记录使用的账号ID，用于后续清理
+            account_id = account.id
+            
             # 关联账号
             task.account_id = account.id
             task.save()
             
             print(f"清影图生视频任务 {task_id}: 使用账号 {account.nickname}")
+            headless = get_hide_window()
             
-            # 调用图生视频功能
-            result = asyncio.run(generate_image_to_video(
-                image_path=task.image_path,
-                prompt=task.prompt,
-                cookie_string=account.cookies,
-                headless=True,
-                generation_mode=task.generation_mode,
-                frame_rate=task.frame_rate,
-                resolution=task.resolution,
-                duration=task.duration,
-                ai_audio=task.ai_audio
-            ))
-            
-            # 处理结果
-            if result.get('code') == 200:
-                # 成功
-                data = result.get('data', {})
-                task.video_url = data.get('video_url', '')
-                task.status = 2  # 已完成
-                print(f"清影图生视频任务 {task_id}: 生成成功")
-                print(f"视频URL: {task.video_url}")
-            else:
-                # 失败
+            try:
+                # 调用图生视频功能
+                result = asyncio.run(generate_image_to_video(
+                    image_path=task.image_path,
+                    prompt=task.prompt,
+                    cookie_string=account.cookies,
+                    headless=headless,
+                    generation_mode=task.generation_mode,
+                    frame_rate=task.frame_rate,
+                    resolution=task.resolution,
+                    duration=task.duration,
+                    ai_audio=task.ai_audio
+                ))
+                
+                # 处理结果
+                if result.get('code') == 200:
+                    # 成功
+                    data = result.get('data', {})
+                    task.video_url = data.get('video_url', '')
+                    task.status = 2  # 已完成
+                    print(f"清影图生视频任务 {task_id}: 生成成功")
+                    print(f"视频URL: {task.video_url}")
+                else:
+                    # 失败
+                    task.status = 3  # 失败
+                    print(f"清影图生视频任务 {task_id}: 生成失败 - {result.get('message', '未知错误')}")
+                
+                task.update_at = datetime.now()
+                task.save()
+                
+            except Exception as process_error:
+                print(f"清影图生视频任务 {task_id} 处理过程出错: {str(process_error)}")
                 task.status = 3  # 失败
-                print(f"清影图生视频任务 {task_id}: 生成失败 - {result.get('message', '未知错误')}")
-            
-            task.update_at = datetime.now()
-            task.save()
+                task.update_at = datetime.now()
+                task.save()
+                raise  # 重新抛出异常，确保外层的finally块能执行
             
         except QingyingImage2VideoTask.DoesNotExist:
             print(f"清影图生视频任务 {task_id} 不存在")
@@ -152,18 +167,20 @@ class QingyingImg2VideoTaskManager:
             print(f"处理清影图生视频任务 {task_id} 时出错: {str(e)}")
             try:
                 task = QingyingImage2VideoTask.get_by_id(task_id)
-                
-                # 减少账号任务计数
-                if task.account_id:
-                    current_count = self.account_task_count.get(task.account_id, 0)
-                    if current_count > 0:
-                        self.account_task_count[task.account_id] = current_count - 1
-                
                 task.status = 3  # 失败
                 task.update_at = datetime.now()
                 task.save()
             except:
                 pass
+        finally:
+            # 确保无论任务成功还是失败，都减少账号任务计数
+            if account_id:
+                current_count = self.account_task_count.get(account_id, 0)
+                if current_count > 0:
+                    self.account_task_count[account_id] = current_count - 1
+                    print(f"任务 {task_id} 完成，减少账号 {account_id} 任务计数，当前: {self.account_task_count[account_id]}")
+                else:
+                    print(f"警告: 账号 {account_id} 任务计数已为0，无法减少")
     
     def _get_available_account(self):
         """获取可用的清影账号（支持并发，每个账号最多同时处理4个任务）"""
@@ -205,16 +222,8 @@ class QingyingImg2VideoTaskManager:
         """任务完成回调"""
         self.processing_tasks.discard(task_id)
         
-        # 减少账号任务计数
-        try:
-            task = QingyingImage2VideoTask.get_by_id(task_id)
-            if task.account_id:
-                current_count = self.account_task_count.get(task.account_id, 0)
-                if current_count > 0:
-                    self.account_task_count[task.account_id] = current_count - 1
-                    print(f"账号 {task.account_id} 任务完成，当前并发数: {self.account_task_count[task.account_id]}")
-        except Exception as e:
-            print(f"更新账号任务计数失败: {str(e)}")
+        # 注意：账号任务计数的减少已经在_process_task的finally块中处理了
+        # 这里不再重复减少，避免计数错误
         
         if future.exception():
             print(f"清影图生视频任务 {task_id} 执行出错: {future.exception()}")
@@ -225,6 +234,31 @@ class QingyingImg2VideoTaskManager:
                 task.save()
             except:
                 pass
+        else:
+            print(f"清影图生视频任务 {task_id} 处理完成")
+    
+    def reset_account_counters(self):
+        """重置账号任务计数器（用于修复计数不一致问题）"""
+        try:
+            print("重置清影账号任务计数器...")
+            
+            # 清空当前计数
+            self.account_task_count.clear()
+            
+            # 根据数据库中正在处理的任务重新计算
+            processing_tasks = QingyingImage2VideoTask.select().where(
+                QingyingImage2VideoTask.status == 1,  # 处理中的任务
+                QingyingImage2VideoTask.account_id.is_null(False)
+            )
+            
+            for task in processing_tasks:
+                if task.account_id:
+                    self.account_task_count[task.account_id] = self.account_task_count.get(task.account_id, 0) + 1
+            
+            print(f"重置完成，当前账号任务计数: {self.account_task_count}")
+            
+        except Exception as e:
+            print(f"重置账号任务计数器失败: {str(e)}")
     
     def get_status(self):
         """获取管理器状态"""
@@ -232,5 +266,6 @@ class QingyingImg2VideoTaskManager:
             'running': self.running,
             'queue_size': len(self.task_queue),
             'processing_count': len(self.processing_tasks),
-            'total_pending': len(self.task_queue) + len(self.processing_tasks)
+            'total_pending': len(self.task_queue) + len(self.processing_tasks),
+            'account_task_count': dict(self.account_task_count)
         } 

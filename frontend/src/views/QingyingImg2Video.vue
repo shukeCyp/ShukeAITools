@@ -1,39 +1,5 @@
 <template>
-  <div class="qingying-img2video-page" :class="{ 'locked': showPasswordMask }">
-    <!-- 密码遮罩 -->
-    <div v-if="showPasswordMask" class="password-mask">
-      <div class="mask-content">
-        <div class="mask-icon">
-          <el-icon size="64"><Lock /></el-icon>
-        </div>
-        <h2 class="mask-title">功能内测中</h2>
-        <p class="mask-subtitle">此功能正在内测阶段，请输入管理员密码以继续使用</p>
-        <el-form @submit.prevent="checkPassword" class="password-form">
-          <el-form-item>
-            <el-input
-              v-model="passwordInput"
-              type="password"
-              placeholder="请输入管理员密码"
-              size="large"
-              show-password
-              @keyup.enter="checkPassword"
-              class="password-input"
-            />
-          </el-form-item>
-          <el-form-item>
-            <el-button 
-              type="primary" 
-              @click="checkPassword"
-              :loading="passwordLoading"
-              size="large"
-              class="password-btn"
-            >
-              确认
-            </el-button>
-          </el-form-item>
-        </el-form>
-      </div>
-    </div>
+  <div class="qingying-img2video-page">
 
     <!-- 页面标题 -->
     <div class="page-header">
@@ -639,7 +605,6 @@ import {
   Picture,
   Download,
   FolderOpened,
-  Lock,
   VideoCamera,
   CircleCheckFilled,
   CircleCloseFilled,
@@ -729,10 +694,7 @@ const batchAddForm = reactive({
   ai_audio: false
 })
 
-// 密码遮罩相关
-const showPasswordMask = ref(false)
-const passwordInput = ref('')
-const passwordLoading = ref(false)
+
 
 // 筛选相关
 const statusFilter = ref(null)
@@ -1269,42 +1231,7 @@ const submitBatchTasks = async () => {
   }
 }
 
-// 密码验证相关方法
-const checkPassword = async () => {
-  if (!passwordInput.value.trim()) {
-    ElMessage.warning('请输入密码')
-    return
-  }
-  
-  passwordLoading.value = true
-  
-  try {
-    // 检查密码是否正确
-    if (passwordInput.value === '20250915') {
-      // 密码正确，存储到localStorage并隐藏遮罩
-      localStorage.setItem('qingying_is_can_use', 'true')
-      showPasswordMask.value = false
-      ElMessage.success('密码正确，欢迎使用智谱清影功能！')
-    } else {
-      ElMessage.error('密码错误，请重新输入')
-      passwordInput.value = ''
-    }
-  } catch (error) {
-    ElMessage.error('验证失败，请重试')
-  } finally {
-    passwordLoading.value = false
-  }
-}
 
-const initPasswordCheck = () => {
-  // 检查localStorage中是否已有授权标识
-  const canUse = localStorage.getItem('qingying_is_can_use')
-  if (canUse === 'true') {
-    showPasswordMask.value = false
-  } else {
-    showPasswordMask.value = true
-  }
-}
 
 const openVideo = (videoUrl) => {
   if (videoUrl) {
@@ -1330,7 +1257,6 @@ const handleStatusFilter = (value) => {
 
 // 生命周期
 onMounted(() => {
-  initPasswordCheck()
   refreshTasks()
 })
 
@@ -1348,98 +1274,7 @@ onActivated(() => {
   position: relative;
 }
 
-.qingying-img2video-page.locked {
-  overflow: hidden;
-}
 
-/* 密码遮罩样式 */
-.password-mask {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 999;
-}
-
-.mask-content {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-  padding: 48px;
-  box-shadow: var(--shadow-xl);
-  text-align: center;
-  max-width: 400px;
-  width: 100%;
-  margin: 0 20px;
-  position: relative;
-  overflow: hidden;
-}
-
-.mask-content::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--primary-gradient);
-  opacity: 0.05;
-  z-index: -1;
-}
-
-.mask-icon {
-  margin-bottom: 24px;
-  color: var(--primary-color);
-}
-
-.mask-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0 0 16px 0;
-  background: var(--primary-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.mask-subtitle {
-  font-size: 16px;
-  color: var(--text-secondary);
-  margin: 0 0 32px 0;
-  line-height: 1.5;
-}
-
-.password-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.password-input {
-  width: 100%;
-}
-
-.password-btn {
-  width: 100%;
-  background: var(--primary-gradient);
-  border: none;
-  border-radius: var(--radius-md);
-  font-weight: 600;
-  box-shadow: var(--shadow-sm);
-  transition: var(--transition);
-}
-
-.password-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
 
 /* 页面标题 */
 .page-header {
