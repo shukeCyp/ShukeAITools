@@ -298,7 +298,10 @@ export const qingyingImg2videoAPI = {
   }),
 
   // 批量删除任务
-  batchDeleteTasks: (taskIds) => api.post('/v1/qingying/img2video/tasks/batch-delete', { task_ids: taskIds })
+  batchDeleteTasks: (taskIds) => api.post('/v1/qingying/img2video/tasks/batch-delete', { task_ids: taskIds }),
+
+  // 批量下载视频
+  batchDownloadVideos: (taskIds) => api.post('/v1/qingying/img2video/tasks/batch-download', { task_ids: taskIds })
 }
 
 // 提示词相关API

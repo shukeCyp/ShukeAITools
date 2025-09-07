@@ -914,26 +914,14 @@ const batchDownloadVideos = async () => {
   try {
     batchDownloadLoading.value = true
     
-    ElMessage.success(`开始下载 ${selectedCompletedTasks.value.length} 个视频...`)
+    const taskIds = selectedCompletedTasks.value.map(task => task.id)
+    const response = await qingyingImg2videoAPI.batchDownloadVideos(taskIds)
     
-    // 逐个下载视频
-    for (const task of selectedCompletedTasks.value) {
-      try {
-        const link = document.createElement('a')
-        link.href = task.video_url
-        link.download = `qingying_video_${task.id}.mp4`
-        link.target = '_blank'
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        
-        await new Promise(resolve => setTimeout(resolve, 1000)) // 下载间隔
-      } catch (error) {
-        console.error(`下载任务 ${task.id} 失败:`, error)
-      }
+    if (response.data.success) {
+      ElMessage.success(response.data.message)
+    } else {
+      ElMessage.error(response.data.message || '批量下载失败')
     }
-    
-    ElMessage.success('批量下载完成')
     
   } catch (error) {
     console.error('批量下载失败:', error)

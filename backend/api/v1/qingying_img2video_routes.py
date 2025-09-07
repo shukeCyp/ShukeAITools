@@ -8,6 +8,7 @@ import time
 import platform
 import subprocess
 import threading
+import requests
 from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify, current_app
 from werkzeug.utils import secure_filename
@@ -92,34 +93,18 @@ def get_tasks():
 def get_stats():
     """获取任务统计信息"""
     try:
+        # 统计所有任务（与即梦保持一致）
+        total_tasks = QingyingImage2VideoTask.select().count()
+        pending_tasks = QingyingImage2VideoTask.select().where(QingyingImage2VideoTask.status == 0).count()
+        processing_tasks = QingyingImage2VideoTask.select().where(QingyingImage2VideoTask.status == 1).count()
+        completed_tasks = QingyingImage2VideoTask.select().where(QingyingImage2VideoTask.status == 2).count()
+        failed_tasks = QingyingImage2VideoTask.select().where(QingyingImage2VideoTask.status == 3).count()
+        
         # 获取今日任务统计
         today = datetime.now().date()
         today_start = datetime.combine(today, datetime.min.time())
-        
-        total_tasks = QingyingImage2VideoTask.select().count()
         today_tasks = QingyingImage2VideoTask.select().where(
             QingyingImage2VideoTask.create_at >= today_start
-        ).count()
-        
-        # 按状态统计今日任务
-        pending_tasks = QingyingImage2VideoTask.select().where(
-            QingyingImage2VideoTask.create_at >= today_start,
-            QingyingImage2VideoTask.status == 0
-        ).count()
-        
-        processing_tasks = QingyingImage2VideoTask.select().where(
-            QingyingImage2VideoTask.create_at >= today_start,
-            QingyingImage2VideoTask.status == 1
-        ).count()
-        
-        completed_tasks = QingyingImage2VideoTask.select().where(
-            QingyingImage2VideoTask.create_at >= today_start,
-            QingyingImage2VideoTask.status == 2
-        ).count()
-        
-        failed_tasks = QingyingImage2VideoTask.select().where(
-            QingyingImage2VideoTask.create_at >= today_start,
-            QingyingImage2VideoTask.status == 3
         ).count()
         
         return jsonify({
@@ -636,4 +621,139 @@ def batch_delete_tasks():
         
     except Exception as e:
         print(f"批量删除任务失败: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500 
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@qingying_img2video_bp.route('/tasks/batch-download', methods=['POST'])
+def batch_download_videos():
+    """批量下载清影图生视频"""
+    try:
+        data = request.get_json()
+        task_ids = data.get('task_ids', [])
+        
+        if not task_ids:
+            return jsonify({
+                'success': False,
+                'message': '请提供要下载的任务ID列表'
+            }), 400
+        
+        # 获取任务信息
+        tasks = list(QingyingImage2VideoTask.select().where(
+            QingyingImage2VideoTask.id.in_(task_ids),
+            QingyingImage2VideoTask.status == 2  # 只下载已完成的任务
+        ))
+        
+        if not tasks:
+            return jsonify({
+                'success': False,
+                'message': '没有找到可下载的已完成任务'
+            }), 400
+        
+        # 收集所有视频URL
+        all_videos = []
+        for task in tasks:
+            if task.video_url:
+                all_videos.append({
+                    'task_id': task.id,
+                    'url': task.video_url,
+                    'filename': f'qingying_task_{task.id}_video.mp4'
+                })
+        
+        if not all_videos:
+            return jsonify({
+                'success': False,
+                'message': '选中的任务没有视频可下载'
+            }), 400
+        
+        # 在后台线程中选择文件夹并下载
+        def download_in_background():
+            try:
+                # 调用原生文件夹选择对话框
+                download_dir = None
+                system = platform.system()
+                
+                if system == "Darwin":  # macOS
+                    result = subprocess.run([
+                        'osascript', '-e',
+                        'tell application "Finder" to set folder_path to (choose folder with prompt "选择视频保存文件夹") as string',
+                        '-e',
+                        'return POSIX path of folder_path'
+                    ], capture_output=True, text=True, timeout=60)
+                    
+                    if result.returncode == 0 and result.stdout.strip():
+                        download_dir = result.stdout.strip()
+                        
+                elif system == "Windows":  # Windows
+                    result = subprocess.run([
+                        'powershell', '-Command',
+                        'Add-Type -AssemblyName System.Windows.Forms; $folder = New-Object System.Windows.Forms.FolderBrowserDialog; $folder.Description = "选择视频保存文件夹"; $folder.ShowNewFolderButton = $true; if ($folder.ShowDialog() -eq "OK") { $folder.SelectedPath } else { "" }'
+                    ], capture_output=True, text=True, timeout=60)
+                    
+                    if result.returncode == 0 and result.stdout.strip():
+                        download_dir = result.stdout.strip()
+                        
+                elif system == "Linux":  # Linux
+                    result = subprocess.run([
+                        'zenity', '--file-selection', '--directory',
+                        '--title=选择视频保存文件夹'
+                    ], capture_output=True, text=True, timeout=60)
+                    
+                    if result.returncode == 0 and result.stdout.strip():
+                        download_dir = result.stdout.strip()
+                
+                if not download_dir:
+                    print("用户取消了文件夹选择")
+                    return
+                
+                print(f"选择的下载目录: {download_dir}")
+                
+                # 创建批量下载文件夹
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                batch_folder = os.path.join(download_dir, f"qingying_videos_{timestamp}")
+                os.makedirs(batch_folder, exist_ok=True)
+                
+                success_count = 0
+                error_count = 0
+                
+                # 下载每个视频
+                for video_info in all_videos:
+                    try:
+                        response = requests.get(video_info['url'], timeout=60)
+                        response.raise_for_status()
+                        
+                        file_path = os.path.join(batch_folder, video_info['filename'])
+                        with open(file_path, 'wb') as f:
+                            f.write(response.content)
+                        
+                        success_count += 1
+                        print(f"下载成功: {video_info['filename']}")
+                        
+                    except Exception as e:
+                        error_count += 1
+                        print(f"下载失败 {video_info['filename']}: {str(e)}")
+                
+                print(f"批量下载完成: 成功 {success_count} 个，失败 {error_count} 个")
+                print(f"文件保存位置: {batch_folder}")
+                
+            except Exception as e:
+                print(f"批量下载过程出错: {str(e)}")
+        
+        # 在后台线程中执行下载
+        download_thread = threading.Thread(target=download_in_background)
+        download_thread.daemon = True
+        download_thread.start()
+        
+        return jsonify({
+            'success': True,
+            'message': f'开始下载 {len(all_videos)} 个视频，请选择下载文件夹',
+            'data': {
+                'total_videos': len(all_videos),
+                'tasks_count': len(tasks)
+            }
+        })
+        
+    except Exception as e:
+        print(f"清影批量下载失败: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'批量下载失败: {str(e)}'
+        }), 500 
