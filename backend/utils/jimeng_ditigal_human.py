@@ -215,7 +215,11 @@ async def generate_digital_human(image_path, audio_path, username, password, hea
                                         print(f"{Fore.GREEN}视频生成完成! 获取到视频URL: {video_url}{Style.RESET_ALL}")
                                     except (KeyError, IndexError):
                                         print(f"{Fore.YELLOW}视频已完成但无法获取URL{Style.RESET_ALL}")
-                                        video_url = None
+                                        return {
+                                            "code": 604,
+                                            "data": None,
+                                            "message": "视频已完成但无法获取URL"
+                                        }
                                 else:
                                     print(f"{Fore.YELLOW}视频生成尚未完成，继续等待...{Style.RESET_ALL}")
                 except:

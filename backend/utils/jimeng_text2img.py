@@ -229,6 +229,11 @@ async def text2image(prompt, username, password, model="Image 3.1", aspect_ratio
                                                 print(f"{Fore.GREEN}图片{i+1} URL: {url}{Style.RESET_ALL}")
                                         else:
                                             print(f"{Fore.YELLOW}图片已完成但无法获取任何URL{Style.RESET_ALL}")
+                                            return {
+                                                "code": 604,
+                                                "data": None,
+                                                "message": "图片已完成但无法获取URL"
+                                            }
                                     except (KeyError, IndexError):
                                         print(f"{Fore.YELLOW}图片已完成但无法获取URL{Style.RESET_ALL}")
                                 else:
