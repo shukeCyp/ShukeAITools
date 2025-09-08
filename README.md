@@ -2,6 +2,20 @@
 
 > 一个基于Web的AI工具集合平台，主要用于技术交流和学习
 
+
+## 友情赞助
+
+如果这个项目对你有帮助，欢迎支持我们的发展！你的赞助将帮助我们持续改进和维护这个项目。
+
+<div align="center">
+  <a href="https://www.tkyds.com/?=shukeCyp" target="_blank">
+    <img src="assets/yds.jpg" alt="友情赞助" width="100%"/>
+  </a>
+  <p><a href="https://www.tkyds.com/?=shukeCyp" target="_blank"><strong>TK云大师,专业的TikTok矩阵系统,AI赋能自动化,单人轻松管理上万账号！</strong></a></p>
+</div>
+
+您的每一份支持都是我们前进的动力！
+
 ## 📖 项目简介
 
 舒克AI工具集是一个开源项目，旨在为开发者和AI爱好者提供便捷的AI工具使用体验。本项目采用前后端分离架构，支持多种AI平台的集成和管理。
@@ -179,18 +193,6 @@ ShukeAITools/
 
 感谢所有为这个项目贡献代码和建议的开发者们！
 
-## 友情赞助
-
-如果这个项目对你有帮助，欢迎支持我们的发展！你的赞助将帮助我们持续改进和维护这个项目。
-
-<div align="center">
-  <a href="https://www.tkyds.com/?=shukeCyp" target="_blank">
-    <img src="assets/yds.jpg" alt="友情赞助" width="100%"/>
-  </a>
-  <p><a href="https://www.tkyds.com/?=shukeCyp" target="_blank"><strong>TK云大师,专业的TikTok矩阵系统,AI赋能自动化,单人轻松管理上万账号！</strong></a></p>
-</div>
-
-您的每一份支持都是我们前进的动力！
 
 ---
 
