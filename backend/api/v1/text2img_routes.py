@@ -51,6 +51,8 @@ def get_text2img_tasks():
                 'account_id': task.account_id,
                 'images': images,  # 图片路径列表
                 'image_count': len(images),  # 图片数量
+                'failure_reason': task.failure_reason,  # 失败原因类型
+                'error_message': task.error_message,  # 详细错误信息
                 'create_at': task.create_at.strftime('%Y-%m-%d %H:%M:%S'),
                 'update_at': task.update_at.strftime('%Y-%m-%d %H:%M:%S')
             })

@@ -217,11 +217,21 @@
             </template>
           </el-table-column>
 
-
-
           <el-table-column label="操作" width="180" fixed="right" align="center">
             <template #default="{ row }">
               <div class="action-buttons">
+                <!-- 失败原因图标 -->
+                <el-tooltip 
+                  v-if="row.status === 3" 
+                  placement="top" 
+                  :content="getFailureTooltipContent(row)" 
+                  raw-content
+                >
+                  <el-icon class="failure-icon" size="18">
+                    <InfoFilled />
+                  </el-icon>
+                </el-tooltip>
+                
                 <el-button 
                   v-if="row.status === 3"
                   type="warning" 
@@ -501,6 +511,7 @@ import {
   Loading,
   CircleCheckFilled,
   CircleCloseFilled,
+  WarningFilled,
   Refresh,
   Delete,
   RefreshRight,
@@ -521,6 +532,7 @@ export default {
     Loading,
     CircleCheckFilled,
     CircleCloseFilled,
+    WarningFilled,
     Refresh,
     Delete,
     RefreshRight,
@@ -984,6 +996,31 @@ export default {
       }
     }
 
+    // 获取失败原因文本
+    const getFailureReasonText = (reason) => {
+      switch (reason) {
+        case 'WEB_INTERACTION_FAILED':
+          return '网页交互失败'
+        case 'TASK_ID_NOT_OBTAINED':
+          return '任务ID获取失败'
+        case 'GENERATION_FAILED':
+          return '生成失败'
+        case 'OTHER_ERROR':
+          return '其他错误'
+        default:
+          return reason || '未知错误'
+      }
+    }
+
+    // 获取失败原因tooltip内容
+    const getFailureTooltipContent = (row) => {
+      const reasonText = getFailureReasonText(row.failure_reason)
+      if (row.error_message) {
+        return `<div><strong>失败原因:</strong> ${reasonText}</div><div><strong>详细信息:</strong> ${row.error_message}</div>`
+      }
+      return `<div><strong>失败原因:</strong> ${reasonText}</div>`
+    }
+
     // 生命周期
     onMounted(() => {
       refreshTasks()
@@ -1044,8 +1081,10 @@ export default {
       batchDownloadLoading,
       batchRetryFailedTasks,
       batchRetryLoading,
-      deleteTasksBeforeToday,
-      deleteBeforeTodayLoading
+              deleteTasksBeforeToday,
+        deleteBeforeTodayLoading,
+        getFailureReasonText,
+        getFailureTooltipContent
     }
   }
 }
@@ -1690,6 +1729,30 @@ export default {
 .image-error .el-icon {
   font-size: 30px;
   margin-bottom: 8px;
+}
+
+/* 失败原因图标样式 */
+.failure-icon {
+  color: #f56c6c;
+  cursor: help;
+  transition: all 0.3s ease;
+  border-radius: 50%;
+  background: rgba(245, 108, 108, 0.1);
+  padding: 2px;
+}
+
+.failure-icon:hover {
+  color: #e74c3c;
+  background: rgba(245, 108, 108, 0.2);
+  transform: scale(1.1);
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
 }
 
 /* 响应式设计 */

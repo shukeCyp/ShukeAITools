@@ -50,6 +50,8 @@ def get_img2video_tasks():
                 'account_id': task.account_id,
                 'image_path': task.image_path,
                 'video_url': task.video_url,
+                'failure_reason': task.failure_reason,  # 失败原因类型
+                'error_message': task.error_message,  # 详细错误信息
                 'create_at': task.create_at.strftime('%Y-%m-%d %H:%M:%S') if task.create_at else None,
                 'update_at': task.update_at.strftime('%Y-%m-%d %H:%M:%S') if task.update_at else None
             })

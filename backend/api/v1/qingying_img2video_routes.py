@@ -64,6 +64,8 @@ def get_tasks():
                 'status_text': task.get_status_text(),
                 'image_path': task.image_path,
                 'video_url': task.video_url,
+                'failure_reason': task.failure_reason,  # 失败原因类型
+                'error_message': task.error_message,  # 详细错误信息
                 'create_at': task.create_at.strftime('%Y-%m-%d %H:%M:%S'),
                 'update_at': task.update_at.strftime('%Y-%m-%d %H:%M:%S'),
                 'account_nickname': account.nickname if account else None,

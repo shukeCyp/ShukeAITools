@@ -64,7 +64,8 @@ def get_tasks():
                 'create_at': task.create_at.isoformat() if task.create_at else None,
                 'start_time': task.start_time.isoformat() if task.start_time else None,
                 'video_url': task.video_url,
-
+                'failure_reason': task.failure_reason,  # 失败原因类型
+                'error_message': task.error_message,  # 详细错误信息
             }
             task_list.append(task_dict)
         

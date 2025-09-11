@@ -171,16 +171,6 @@
                 <el-tooltip :content="row.image_path || ''" placement="top">
                   <span class="image-filename">{{ getImageFilename(row.image_path) }}</span>
                 </el-tooltip>
-                <el-button 
-                  v-if="row.image_path" 
-                  size="small" 
-                  type="primary" 
-                  link 
-                  @click="previewImage(row.image_path)"
-                  class="preview-btn"
-                >
-                  预览
-                </el-button>
               </div>
             </template>
           </el-table-column>
@@ -217,6 +207,18 @@
           <el-table-column label="操作" width="180" fixed="right" align="center">
             <template #default="{ row }">
               <div class="action-buttons">
+                <!-- 失败原因图标 -->
+                <el-tooltip 
+                  v-if="row.status === 3" 
+                  placement="top" 
+                  :content="getFailureTooltipContent(row)" 
+                  raw-content
+                >
+                  <el-icon class="failure-icon" size="18">
+                    <CircleCloseFilled />
+                  </el-icon>
+                </el-tooltip>
+                
                 <el-button 
                   v-if="row.status === 3"
                   type="warning" 
@@ -764,6 +766,37 @@ const getStatusText = (status) => {
     3: '失败'
   }
   return statusTexts[status] || '未知'
+}
+
+// 获取失败原因文本
+const getFailureReasonText = (reason) => {
+  switch (reason) {
+    case 'WEB_INTERACTION_FAILED':
+      return '网页交互失败'
+    case 'TASK_ID_NOT_OBTAINED':
+      return '任务ID获取失败'
+    case 'GENERATION_FAILED':
+      return '生成失败'
+    case 'OTHER_ERROR':
+      return '其他错误'
+    default:
+      return reason || '未知错误'
+  }
+}
+
+// 截断文本函数
+const truncateText = (text, maxLength) => {
+  if (!text) return ''
+  return text.length > maxLength ? text.substring(0, maxLength) + '...' : text
+}
+
+// 获取失败原因tooltip内容
+const getFailureTooltipContent = (row) => {
+  const reasonText = getFailureReasonText(row.failure_reason)
+  if (row.error_message) {
+    return `<div><strong>失败原因:</strong> ${reasonText}</div><div><strong>详细信息:</strong> ${row.error_message}</div>`
+  }
+  return `<div><strong>失败原因:</strong> ${reasonText}</div>`
 }
 
 const getImageFilename = (imagePath) => {
@@ -1996,6 +2029,30 @@ onActivated(() => {
   grid-template-columns: 1fr 1fr;
   gap: 24px 48px;
   align-items: start;
+}
+
+/* 失败原因图标样式 */
+.failure-icon {
+  color: #f56c6c;
+  cursor: help;
+  transition: all 0.3s ease;
+  border-radius: 50%;
+  background: rgba(245, 108, 108, 0.1);
+  padding: 2px;
+}
+
+.failure-icon:hover {
+  color: #e74c3c;
+  background: rgba(245, 108, 108, 0.2);
+  transform: scale(1.1);
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
 }
 
 .settings-grid .el-form-item {
