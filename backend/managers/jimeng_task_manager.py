@@ -13,7 +13,7 @@ from enum import Enum
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from backend.models.models import JimengText2ImgTask, JimengAccount
-from backend.utils.jimeng_text2img import text2image
+from backend.utils.jimeng_text2img import JimengText2ImageExecutor
 from backend.utils.config_util import get_automation_max_threads, get_hide_window
 from backend.config.settings import TASK_PROCESSOR_INTERVAL, TASK_PROCESSOR_ERROR_WAIT
 
@@ -117,7 +117,7 @@ class JimengTaskManager:
         """获取即梦平台任务汇总"""
         try:
             # 统计时过滤掉空任务
-            base_query = JimengText2ImgTask.select().where(JimengText2ImgTask.is_empty_task == False)
+            base_query = JimengText2ImgTask.select()
             
             pending_count = base_query.where(
                 JimengText2ImgTask.status == 0  # 排队中
@@ -269,8 +269,7 @@ class JimengTaskManager:
             
             # 查找排队中的任务 - 只扫描非空任务
             pending_tasks = JimengText2ImgTask.select().where(
-                (JimengText2ImgTask.status == 0) & 
-                (JimengText2ImgTask.is_empty_task == False)
+                JimengText2ImgTask.status == 0
             ).order_by(JimengText2ImgTask.create_at).limit(available_slots)
             
             for task in pending_tasks:
@@ -356,12 +355,26 @@ class JimengTaskManager:
             result = self._execute_text2img_task(task)
             
             if result['success']:
-                # 任务成功
+                # 任务成功 - 账号使用记录已在_execute_text2img_task中处理
                 if 'images' in result and result['images']:
                     task.set_images(result['images'])
                 
                 if 'account_id' in result:
                     task.account_id = result['account_id']
+                    
+                    # 更新账号cookies
+                    if 'cookies' in result and result['cookies']:
+                        try:
+                            from backend.core.database import db
+                            with db.atomic():
+                                account = JimengAccount.get_by_id(result['account_id'])
+                                old_cookies = account.cookies
+                                account.cookies = result['cookies']
+                                account.updated_at = datetime.now()
+                                account.save()
+                                print(f"已更新账号 {account.account} 的cookies，旧cookies长度: {len(old_cookies) if old_cookies else 0}, 新cookies长度: {len(result['cookies'])}")
+                        except Exception as e:
+                            print(f"更新账号cookies失败: {str(e)}")
                 
                 task.status = 2  # 已完成
                 task.update_at = datetime.now()
@@ -371,18 +384,51 @@ class JimengTaskManager:
                 with self._lock:
                     self.stats['successful'] += 1
             else:
-                # 任务失败，根据错误类型决定是否创建空任务记录账号使用情况
-                if 'account_id' in result and result.get('should_create_empty_task', False):
-                    print(f"创建空任务记录账号 {result['account_id']} 的使用情况")
-                    self._create_empty_task_record(result['account_id'], task)
-                    
-                task.status = 3  # 失败
-                task.update_at = datetime.now()
-                task.save()
+                # 任务失败，但仍要更新cookies - 账号使用记录已在_execute_text2img_task中处理
+                if 'account_id' in result:
+                    # 更新账号cookies（即使失败也要更新）
+                    if 'cookies' in result and result['cookies']:
+                        try:
+                            from backend.core.database import db
+                            with db.atomic():
+                                account = JimengAccount.get_by_id(result['account_id'])
+                                old_cookies = account.cookies
+                                account.cookies = result['cookies']
+                                account.updated_at = datetime.now()
+                                account.save()
+                                print(f"已更新账号 {account.account} 的cookies，旧cookies长度: {len(old_cookies) if old_cookies else 0}, 新cookies长度: {len(result['cookies'])}")
+                        except Exception as e:
+                            print(f"更新账号cookies失败: {str(e)}")
                 
-                print(f"{self.platform_name}任务失败，ID: {task.id}，原因: {result.get('error', '未知错误')}")
-                with self._lock:
-                    self.stats['failed'] += 1
+                # 检查是否需要重试（600/900错误码）
+                error_code = result.get('code', 0)
+                if error_code in [600, 900]:
+                    # 设置失败状态和原因
+                    task.set_failure(error_code, result.get('error', '未知错误'))
+                    
+                    # 检查是否可以重试
+                    if task.can_retry():
+                        # 重试任务，重新进入排队状态
+                        if task.retry_task():
+                            print(f"{self.platform_name}任务重试，ID: {task.id}，重试次数: {task.retry_count}/{task.max_retry}")
+                            # 不增加失败计数，因为任务重新排队了
+                        else:
+                            print(f"{self.platform_name}任务重试失败，ID: {task.id}，已达最大重试次数")
+                            with self._lock:
+                                self.stats['failed'] += 1
+                    else:
+                        print(f"{self.platform_name}任务不可重试，ID: {task.id}，原因: {result.get('error', '未知错误')}")
+                        with self._lock:
+                            self.stats['failed'] += 1
+                else:
+                    # 非600/900错误，直接设置失败
+                    task.status = 3  # 失败
+                    task.update_at = datetime.now()
+                    task.save()
+                    
+                    print(f"{self.platform_name}任务失败，ID: {task.id}，原因: {result.get('error', '未知错误')}")
+                    with self._lock:
+                        self.stats['failed'] += 1
             
             with self._lock:
                 self.stats['total_processed'] += 1
@@ -390,11 +436,11 @@ class JimengTaskManager:
         except Exception as e:
             print(f"处理{self.platform_name}任务异常，ID: {task.id}，错误: {str(e)}")
             try:
-                # 异常情况下也创建空任务记录（如果有账号信息）
+                # 异常情况下也更新账号使用情况（如果有账号信息）
                 try:
                     available_account = self._get_available_account('text2img')
                     if available_account:
-                        self._create_empty_task_record(available_account.id, task)
+                        self._update_account_usage(available_account.id, 'text2img')
                 except:
                     pass
                 
@@ -433,38 +479,45 @@ class JimengTaskManager:
             # 获取浏览器隐藏配置
             headless = get_hide_window()
             
-            # 直接调用生成图片函数
-            result = asyncio.run(text2image(
+            # 使用新的执行器
+            executor = JimengText2ImageExecutor(headless=headless)
+            result = asyncio.run(executor.run(
                 prompt=task.prompt,
                 username=available_account.account,
                 password=available_account.password,
                 model=task.model,
                 aspect_ratio=task.ratio,  # 使用ratio字段作为aspect_ratio
                 quality=task.quality,
-                headless=headless,
                 cookies=available_account.cookies
             ))
             
-            if result["code"] == 200 and result["data"] and len(result["data"]) > 0:
+            if result.code == 200 and result.data and len(result.data) > 0:
                 # 更新账号使用次数
                 self._update_account_usage(available_account.id, 'text2img')
                 
                 return {
                     'success': True, 
-                    'images': result["data"],
-                    'account_id': available_account.id
+                    'images': result.data,
+                    'account_id': available_account.id,
+                    'cookies': result.cookies
                 }
             else:
-                error_msg = result.get("message", "即梦平台图片生成失败")
-                error_code = result.get("code", 500)
+                error_msg = result.message or "即梦平台图片生成失败"
+                error_code = result.code
                 
-                # 如果是603（任务ID等待超时）或604（等待超时或未能获取URL），需要创建空任务记录账号使用
-                if error_code in [603, 604]:
-                    print(f"错误码 {error_code}，创建空任务记录账号使用情况")
-                    # 这里需要创建一个空任务来记录账号使用
-                    # 由于这是在_execute_text2img_task中，调用方会处理空任务的创建
+                # 如果是700（任务ID等待超时）或800（生成失败），需要更新账号使用记录
+                if error_code in [700, 800]:
+                    print(f"错误码 {error_code}，更新账号使用情况")
+                    self._update_account_usage(available_account.id, 'text2img')
                 
-                return {'success': False, 'error': error_msg, 'account_id': available_account.id, 'should_create_empty_task': error_code in [603, 604]}
+                return {
+                    'success': False, 
+                    'error': error_msg, 
+                    'account_id': available_account.id, 
+                    'should_create_empty_task': error_code in [700, 800], 
+                    'code': error_code,
+                    'cookies': result.cookies
+                }
                 
         except Exception as e:
             print(f"即梦任务执行异常: {str(e)}")
@@ -515,33 +568,24 @@ class JimengTaskManager:
             min_usage = float('inf')
             
             for account in accounts:
-                # 统计今日该账号的指定类型任务使用次数（包括空任务）
-                if task_type == 'text2img':
-                    # 统计文生图任务
-                    today_usage = JimengText2ImgTask.select().where(
-                        (JimengText2ImgTask.account_id == account.id) &
-                        (JimengText2ImgTask.status.in_([1, 2])) &  # 处理中或已完成
-                        (JimengText2ImgTask.create_at >= today)
-                    ).count()
-                elif task_type == 'img2video':
-                    # 统计图生视频任务
-                    from backend.models.models import JimengImg2VideoTask
-                    today_usage = JimengImg2VideoTask.select().where(
-                        (JimengImg2VideoTask.account_id == account.id) &
-                        (JimengImg2VideoTask.status.in_([1, 2])) &  # 处理中或已完成
-                        (JimengImg2VideoTask.create_at >= today)
-                    ).count()
-                elif task_type == 'digital_human':
-                    # 统计数字人任务（需要根据实际的数字人任务表来统计）
-                    # 这里假设有JimengDigitalHumanTask表
-                    today_usage = 0  # 暂时设为0，需要根据实际表结构调整
-                    # today_usage = JimengDigitalHumanTask.select().where(
-                    #     (JimengDigitalHumanTask.account_id == account.id) &
-                    #     (JimengDigitalHumanTask.status.in_([1, 2])) &
-                    #     (JimengDigitalHumanTask.create_at >= today)
-                    # ).count()
-                else:
-                    today_usage = 0
+                # 统计今日该账号的指定类型任务使用次数（查询账号记录表）
+                from backend.models.models import JimengTaskRecord
+                
+                # 任务类型映射
+                task_type_map = {
+                    'text2img': 1,      # 文生图
+                    'img2video': 2,     # 图生视频
+                    'digital_human': 3  # 数字人
+                }
+                
+                task_type_id = task_type_map.get(task_type, 1)
+                
+                # 查询今日该账号该类型的任务记录数量
+                today_usage = JimengTaskRecord.select().where(
+                    (JimengTaskRecord.account_id == account.id) &
+                    (JimengTaskRecord.task_type == task_type_id) &
+                    (JimengTaskRecord.created_at >= today)
+                ).count()
                 
                 print(f"账号 {account.account} 今日{task_type}已使用: {today_usage}/{daily_limit} 次")
                 
@@ -568,25 +612,7 @@ class JimengTaskManager:
             print(f"获取可用账号失败: {str(e)}")
             return None
     
-    def _create_empty_task_record(self, account_id, original_task):
-        """创建空任务记录，用于标记账号已使用"""
-        try:
-            empty_task = JimengText2ImgTask.create(
-                prompt=original_task.prompt,
-                model=original_task.model,
-                ratio=original_task.ratio,
-                quality=original_task.quality,
-                status=3,  # 失败状态
-                account_id=account_id,
-                image1=None,
-                image2=None,
-                image3=None,
-                image4=None,
-                is_empty_task=True  # 标记为空任务
-            )
-            print(f"创建空任务记录 {empty_task.id}，账号ID: {account_id}")
-        except Exception as e:
-            print(f"创建空任务记录失败: {str(e)}")
+
     
     def _update_account_usage(self, account_id: int, task_type: str):
         """
@@ -598,8 +624,26 @@ class JimengTaskManager:
         """
         try:
             print(f"更新账号 {account_id} 的 {task_type} 使用记录")
-            # 这里可以添加更详细的使用记录统计
-            # 目前主要通过任务表来统计使用次数
+            
+            # 添加即梦账号使用记录到数据库
+            from backend.models.models import JimengTaskRecord
+            task_type_map = {
+                'text2img': 1,      # 文生图
+                'img2video': 2,     # 图生视频
+                'digital_human': 3  # 数字人
+            }
+            
+            task_type_id = task_type_map.get(task_type, 1)
+            
+            record = JimengTaskRecord.create(
+                account_id=account_id,
+                task_type=task_type_id,
+                created_at=datetime.now(),
+                updated_at=datetime.now()
+            )
+            
+            print(f"添加即梦账号使用记录成功，记录ID: {record.id}, 账号ID: {account_id}, 任务类型: {task_type}")
+            
         except Exception as e:
             print(f"更新账号使用记录失败: {str(e)}")
     

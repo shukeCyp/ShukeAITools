@@ -30,7 +30,7 @@ def get_img2video_tasks():
         print("获取图生视频任务列表，页码: {}, 每页数量: {}, 状态: {}".format(page, page_size, status))
         
         # 构建查询 - 过滤掉空任务
-        query = JimengImg2VideoTask.select().where(JimengImg2VideoTask.is_empty_task == False)
+        query = JimengImg2VideoTask.select()
         if status is not None:
             query = query.where(JimengImg2VideoTask.status == status)
         
@@ -156,8 +156,7 @@ def batch_retry_img2video_tasks():
             # 如果提供了特定的任务ID列表，只重试这些任务
             tasks = JimengImg2VideoTask.select().where(
                 JimengImg2VideoTask.id.in_(task_ids),
-                JimengImg2VideoTask.status == 3,  # 只重试失败的任务
-                JimengImg2VideoTask.is_empty_task == False  # 排除空任务
+                JimengImg2VideoTask.status == 3  # 只重试失败的任务
             )
             retry_count = 0
             for task in tasks:
@@ -166,8 +165,7 @@ def batch_retry_img2video_tasks():
         else:
             # 如果没有提供任务ID，重试所有失败的任务
             tasks = JimengImg2VideoTask.select().where(
-                JimengImg2VideoTask.status == 3,  # 只重试失败的任务
-                JimengImg2VideoTask.is_empty_task == False  # 排除空任务
+                JimengImg2VideoTask.status == 3  # 只重试失败的任务
             )
             retry_count = 0
             for task in tasks:
@@ -577,7 +575,7 @@ def get_img2video_stats():
     """获取图生视频统计信息"""
     try:
         # 统计时过滤掉空任务
-        base_query = JimengImg2VideoTask.select().where(JimengImg2VideoTask.is_empty_task == False)
+        base_query = JimengImg2VideoTask.select()
         total_tasks = base_query.count()
         pending_tasks = base_query.where(JimengImg2VideoTask.status == 0).count()
         processing_tasks = base_query.where(JimengImg2VideoTask.status == 1).count()

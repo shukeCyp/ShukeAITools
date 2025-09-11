@@ -29,7 +29,7 @@ def get_text2img_tasks():
         print("获取文生图任务列表，页码: {}, 每页数量: {}, 状态: {}".format(page, page_size, status))
         
         # 构建查询 - 过滤掉空任务
-        query = JimengText2ImgTask.select().where(JimengText2ImgTask.is_empty_task == False)
+        query = JimengText2ImgTask.select()
         if status is not None:
             query = query.where(JimengText2ImgTask.status == status)
         
@@ -188,14 +188,12 @@ def batch_retry_text2img_tasks():
             # 如果提供了特定的任务ID列表，只重试这些任务
             retry_count = JimengText2ImgTask.update(status=0).where(
                 JimengText2ImgTask.id.in_(task_ids),
-                JimengText2ImgTask.status == 3,  # 只重试失败的任务
-                JimengText2ImgTask.is_empty_task == False  # 排除空任务
+                JimengText2ImgTask.status == 3  # 只重试失败的任务
             ).execute()
         else:
             # 如果没有提供任务ID，重试所有失败的任务
             retry_count = JimengText2ImgTask.update(status=0).where(
-                JimengText2ImgTask.status == 3,  # 只重试失败的任务
-                JimengText2ImgTask.is_empty_task == False  # 排除空任务
+                JimengText2ImgTask.status == 3  # 只重试失败的任务
             ).execute()
         
         print(f"批量重试文生图任务: {retry_count}个")
@@ -219,7 +217,7 @@ def get_text2img_stats():
     """获取文生图任务统计信息"""
     try:
         # 统计时过滤掉空任务
-        base_query = JimengText2ImgTask.select().where(JimengText2ImgTask.is_empty_task == False)
+        base_query = JimengText2ImgTask.select()
         total_tasks = base_query.count()
         queued_tasks = base_query.where(JimengText2ImgTask.status == 0).count()  # 排队中
         processing_tasks = base_query.where(JimengText2ImgTask.status == 1).count()  # 生成中

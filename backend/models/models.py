@@ -66,8 +66,13 @@ class JimengText2ImgTask(BaseModel):
     image3 = CharField(max_length=500, null=True)
     image4 = CharField(max_length=500, null=True)
     
-    # 标记字段
-    is_empty_task = BooleanField(default=False)  # 是否为空任务（账号使用记录）
+    task_id = CharField(max_length=100, null=True)  # 任务ID
+
+    # 重试相关字段
+    retry_count = IntegerField(default=0)  # 重试次数
+    max_retry = IntegerField(default=2)  # 最大重试次数
+    failure_reason = CharField(max_length=50, null=True)  # 失败原因类型
+    error_message = TextField(null=True)  # 详细错误信息
     
     # 时间戳
     create_at = DateTimeField(default=datetime.now)
@@ -114,6 +119,43 @@ class JimengText2ImgTask(BaseModel):
             if img:
                 images.append(img)
         return images
+    
+    def can_retry(self):
+        """判断任务是否可以重试"""
+        # 只有网络相关的失败才能重试
+        network_failure_reasons = ['WEB_INTERACTION_FAILED', 'TASK_ID_NOT_OBTAINED']
+        return (self.status == 3 and  # 任务失败
+                self.retry_count < self.max_retry and  # 重试次数未超限
+                self.failure_reason in network_failure_reasons)  # 是网络问题
+    
+    def set_failure(self, error_code, error_message=None):
+        """设置任务失败状态和原因"""
+        self.status = 3
+        self.error_message = error_message
+        
+        # 根据错误代码判断失败原因
+        if error_code in [600, 900, 'WEB_INTERACTION_FAILED']:
+            self.failure_reason = 'WEB_INTERACTION_FAILED'
+        elif error_code in [700, 'TASK_ID_NOT_OBTAINED']:
+            self.failure_reason = 'TASK_ID_NOT_OBTAINED'
+        elif error_code in [800, 'GENERATION_FAILED']:
+            self.failure_reason = 'GENERATION_FAILED'
+        else:
+            self.failure_reason = 'OTHER_ERROR'
+        
+        self.update_at = datetime.now()
+        self.save()
+    
+    def retry_task(self):
+        """重试任务"""
+        if self.can_retry():
+            self.retry_count += 1
+            self.status = 0  # 重新排队
+            self.error_message = None
+            self.update_at = datetime.now()
+            self.save()
+            return True
+        return False
 
 class JimengImg2VideoTask(BaseModel):
     """即梦图生视频任务"""
@@ -133,8 +175,13 @@ class JimengImg2VideoTask(BaseModel):
     image_path = CharField(max_length=500, null=True)  # 输入图片路径
     video_url = CharField(max_length=500, null=True)  # 生成的视频URL
     
-    # 标记字段
-    is_empty_task = BooleanField(default=False)  # 是否为空任务（账号使用记录）
+    task_id = CharField(max_length=100, null=True)  # 任务ID
+
+    # 重试相关字段
+    retry_count = IntegerField(default=0)  # 重试次数
+    max_retry = IntegerField(default=2)  # 最大重试次数
+    failure_reason = CharField(max_length=50, null=True)  # 失败原因类型
+    error_message = TextField(null=True)  # 详细错误信息
     
     # 时间戳
     create_at = DateTimeField(default=datetime.now)
@@ -158,6 +205,43 @@ class JimengImg2VideoTask(BaseModel):
         self.status = status
         self.update_at = datetime.now()
         self.save()
+    
+    def can_retry(self):
+        """判断任务是否可以重试"""
+        # 只有网络相关的失败才能重试
+        network_failure_reasons = ['WEB_INTERACTION_FAILED', 'TASK_ID_NOT_OBTAINED']
+        return (self.status == 3 and  # 任务失败
+                self.retry_count < self.max_retry and  # 重试次数未超限
+                self.failure_reason in network_failure_reasons)  # 是网络问题
+    
+    def set_failure(self, error_code, error_message=None):
+        """设置任务失败状态和原因"""
+        self.status = 3
+        self.error_message = error_message
+        
+        # 根据错误代码判断失败原因
+        if error_code in [600, 900, 'WEB_INTERACTION_FAILED']:
+            self.failure_reason = 'WEB_INTERACTION_FAILED'
+        elif error_code in [700, 'TASK_ID_NOT_OBTAINED']:
+            self.failure_reason = 'TASK_ID_NOT_OBTAINED'
+        elif error_code in [800, 'GENERATION_FAILED']:
+            self.failure_reason = 'GENERATION_FAILED'
+        else:
+            self.failure_reason = 'OTHER_ERROR'
+        
+        self.update_at = datetime.now()
+        self.save()
+    
+    def retry_task(self):
+        """重试任务"""
+        if self.can_retry():
+            self.retry_count += 1
+            self.status = 0  # 重新排队
+            self.error_message = None
+            self.update_at = datetime.now()
+            self.save()
+            return True
+        return False
 
 class JimengDigitalHumanTask(BaseModel):
     """即梦数字人任务"""
@@ -179,10 +263,69 @@ class JimengDigitalHumanTask(BaseModel):
     # 结果字段
     video_url = TextField(null=True)  # 生成的视频URL
 
-    is_empty_task = BooleanField(default=False)  # 是否为空任务（账号使用记录）
+    task_id = CharField(max_length=100, null=True)  # 任务ID
+    
+    # 重试相关字段
+    retry_count = IntegerField(default=0)  # 重试次数
+    max_retry = IntegerField(default=2)  # 最大重试次数
+    failure_reason = CharField(max_length=50, null=True)  # 失败原因类型
+    error_message = TextField(null=True)  # 详细错误信息
     
     class Meta:
         table_name = 'jimeng_digital_human_tasks'
+    
+    def can_retry(self):
+        """判断任务是否可以重试"""
+        # 只有网络相关的失败才能重试
+        network_failure_reasons = ['WEB_INTERACTION_FAILED', 'TASK_ID_NOT_OBTAINED']
+        return (self.status == 3 and  # 任务失败
+                self.retry_count < self.max_retry and  # 重试次数未超限
+                self.failure_reason in network_failure_reasons)  # 是网络问题
+    
+    def set_failure(self, error_code, error_message=None):
+        """设置任务失败状态和原因"""
+        self.status = 3
+        self.error_message = error_message
+        
+        # 根据错误代码判断失败原因
+        if error_code in [600, 900, 'WEB_INTERACTION_FAILED']:
+            self.failure_reason = 'WEB_INTERACTION_FAILED'
+        elif error_code in [700, 'TASK_ID_NOT_OBTAINED']:
+            self.failure_reason = 'TASK_ID_NOT_OBTAINED'
+        elif error_code in [800, 'GENERATION_FAILED']:
+            self.failure_reason = 'GENERATION_FAILED'
+        else:
+            self.failure_reason = 'OTHER_ERROR'
+        
+        self.update_at = datetime.now()
+        self.save()
+    
+    def retry_task(self):
+        """重试任务"""
+        if self.can_retry():
+            self.retry_count += 1
+            self.status = 0  # 重新排队
+            self.error_message = None
+            self.update_at = datetime.now()
+            self.save()
+            return True
+        return False
+
+# 即梦任务记录
+class JimengTaskRecord(BaseModel):
+    """即梦任务记录"""
+    account_id = IntegerField(null=True)  # 使用的账号ID
+    
+    # 关联的即梦账号
+    jimeng_account = ForeignKeyField(JimengAccount, null=True, backref='jimeng_records')
+
+    task_type = IntegerField(null=True)  # 任务类型 1是文生图，2是图生视频， 3是数字人
+    # 时间戳
+    created_at = DateTimeField(default=datetime.now)
+    updated_at = DateTimeField(default=datetime.now)
+    
+    class Meta:
+        table_name = 'jimeng_task_records'
 
 class QingyingImage2VideoTask(BaseModel):
     """清影图生视频任务"""
@@ -204,6 +347,12 @@ class QingyingImage2VideoTask(BaseModel):
     # 输入图片和输出视频
     image_path = CharField(max_length=500, null=True)  # 输入图片路径
     video_url = CharField(max_length=500, null=True)  # 生成的视频URL
+    
+    # 重试相关字段
+    retry_count = IntegerField(default=0)  # 重试次数
+    max_retry = IntegerField(default=2)  # 最大重试次数
+    failure_reason = CharField(max_length=50, null=True)  # 失败原因类型
+    error_message = TextField(null=True)  # 详细错误信息
     
     # 时间戳
     create_at = DateTimeField(default=datetime.now)
@@ -227,4 +376,41 @@ class QingyingImage2VideoTask(BaseModel):
         self.status = status
         self.update_at = datetime.now()
         self.save()
+    
+    def can_retry(self):
+        """判断任务是否可以重试"""
+        # 只有网络相关的失败才能重试
+        network_failure_reasons = ['WEB_INTERACTION_FAILED', 'TASK_ID_NOT_OBTAINED']
+        return (self.status == 3 and  # 任务失败
+                self.retry_count < self.max_retry and  # 重试次数未超限
+                self.failure_reason in network_failure_reasons)  # 是网络问题
+    
+    def set_failure(self, error_code, error_message=None):
+        """设置任务失败状态和原因"""
+        self.status = 3
+        self.error_message = error_message
+        
+        # 根据错误代码判断失败原因
+        if error_code in [600, 900, 'WEB_INTERACTION_FAILED']:
+            self.failure_reason = 'WEB_INTERACTION_FAILED'
+        elif error_code in [700, 'TASK_ID_NOT_OBTAINED']:
+            self.failure_reason = 'TASK_ID_NOT_OBTAINED'
+        elif error_code in [800, 'GENERATION_FAILED']:
+            self.failure_reason = 'GENERATION_FAILED'
+        else:
+            self.failure_reason = 'OTHER_ERROR'
+        
+        self.update_at = datetime.now()
+        self.save()
+    
+    def retry_task(self):
+        """重试任务"""
+        if self.can_retry():
+            self.retry_count += 1
+            self.status = 0  # 重新排队
+            self.error_message = None
+            self.update_at = datetime.now()
+            self.save()
+            return True
+        return False
         

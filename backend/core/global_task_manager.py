@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from backend.managers.jimeng_task_manager import JimengTaskManager
 from backend.managers.jimeng_img2video_task_manager import JimengImg2VideoTaskManager
-from backend.managers.jimeng_digital_human_task_manager import digital_human_manager
+from backend.managers.jimeng_digital_human_task_manager import jimeng_digital_human_task_manager
 from backend.managers.qingying_img2video_task_manager import QingyingImg2VideoTaskManager
 from backend.utils.config_util import get_automation_max_threads
 
@@ -53,7 +53,7 @@ class GlobalTaskManager:
         self.platform_managers['jimeng_img2video'] = JimengImg2VideoTaskManager()
         
         # 即梦数字人任务管理器
-        self.platform_managers['jimeng_digital_human'] = digital_human_manager
+        self.platform_managers['jimeng_digital_human'] = jimeng_digital_human_task_manager
         
         # 清影图生视频任务管理器
         self.qingying_img2video_manager = QingyingImg2VideoTaskManager()

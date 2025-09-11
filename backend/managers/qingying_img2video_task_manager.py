@@ -9,7 +9,7 @@ import threading
 from datetime import datetime
 from backend.utils.config_util import get_hide_window
 from backend.models.models import QingyingImage2VideoTask, QingyingAccount
-from backend.utils.qingying_image2video import generate_image_to_video
+from backend.utils.qingying_image2video import QingyingImage2VideoExecutor
 
 
 class QingyingImg2VideoTaskManager:
@@ -125,12 +125,14 @@ class QingyingImg2VideoTaskManager:
             headless = get_hide_window()
             
             try:
-                # 调用图生视频功能
-                result = asyncio.run(generate_image_to_video(
+                # 创建清影图生视频执行器
+                executor = QingyingImage2VideoExecutor(headless=headless)
+                
+                # 执行任务
+                result = asyncio.run(executor.execute(
                     image_path=task.image_path,
                     prompt=task.prompt,
-                    cookie_string=account.cookies,
-                    headless=headless,
+                    cookies=account.cookies,
                     generation_mode=task.generation_mode,
                     frame_rate=task.frame_rate,
                     resolution=task.resolution,
@@ -139,26 +141,61 @@ class QingyingImg2VideoTaskManager:
                 ))
                 
                 # 处理结果
-                if result.get('code') == 200:
+                if result.code == 200:
                     # 成功
-                    data = result.get('data', {})
+                    data = result.data or {}
                     task.video_url = data.get('video_url', '')
                     task.status = 2  # 已完成
                     print(f"清影图生视频任务 {task_id}: 生成成功")
                     print(f"视频URL: {task.video_url}")
                 else:
-                    # 失败
-                    task.status = 3  # 失败
-                    print(f"清影图生视频任务 {task_id}: 生成失败 - {result.get('message', '未知错误')}")
+                    # 失败 - 检查是否需要重试
+                    error_code = result.code
+                    error_message = result.message
+                    
+                    if error_code in [600, 900]:
+                        # 设置失败状态和原因
+                        task.set_failure(error_code, error_message)
+                        
+                        # 检查是否可以重试
+                        if task.can_retry():
+                            # 重试任务，重新进入排队状态
+                            if task.retry_task():
+                                print(f"清影图生视频任务 {task_id}: 重试，重试次数: {task.retry_count}/{task.max_retry}")
+                                # 任务重新排队，不需要更新状态
+                            else:
+                                print(f"清影图生视频任务 {task_id}: 重试失败，已达最大重试次数")
+                                # task.retry_task()已经设置了失败状态
+                        else:
+                            print(f"清影图生视频任务 {task_id}: 不可重试 - {error_message}")
+                            # task.set_failure()已经设置了失败状态
+                    else:
+                        # 非600/900错误，直接设置失败
+                        task.status = 3  # 失败
+                        task.update_at = datetime.now()
+                        task.save()
+                        print(f"清影图生视频任务 {task_id}: 生成失败 - {error_message}")
                 
-                task.update_at = datetime.now()
-                task.save()
+                # 只有非重试情况才需要手动更新时间
+                if task.status != 0:  # 如果不是重新排队状态
+                    task.update_at = datetime.now()
+                    task.save()
                 
             except Exception as process_error:
                 print(f"清影图生视频任务 {task_id} 处理过程出错: {str(process_error)}")
-                task.status = 3  # 失败
-                task.update_at = datetime.now()
-                task.save()
+                # 异常情况通常是网络或系统错误，可以考虑重试
+                task.set_failure(900, f'处理异常: {str(process_error)}')
+                
+                # 检查是否可以重试
+                if task.can_retry():
+                    # 重试任务，重新进入排队状态
+                    if task.retry_task():
+                        print(f"清影图生视频任务 {task_id}: 异常后重试，重试次数: {task.retry_count}/{task.max_retry}")
+                    else:
+                        print(f"清影图生视频任务 {task_id}: 异常后重试失败，已达最大重试次数")
+                else:
+                    print(f"清影图生视频任务 {task_id}: 异常后不可重试")
+                
                 raise  # 重新抛出异常，确保外层的finally块能执行
             
         except QingyingImage2VideoTask.DoesNotExist:

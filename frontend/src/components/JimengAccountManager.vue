@@ -25,37 +25,7 @@
           <el-icon><Refresh /></el-icon>
           刷新列表
         </el-button>
-        <el-button 
-          type="success" 
-          @click="batchGetCookie"
-          :loading="batchCookieLoading"
-          size="large"
-          :disabled="selectedAccounts.length === 0"
-          class="cookie-btn"
-        >
-          <el-icon><Key /></el-icon>
-          获取选中Cookie
-        </el-button>
-        <el-button 
-          type="warning" 
-          @click="updateAllCookies"
-          :loading="updateAllCookiesLoading"
-          size="large"
-          class="update-all-btn"
-        >
-          <el-icon><RefreshRight /></el-icon>
-          更新全部Cookie
-        </el-button>
-        <el-button 
-          type="info" 
-          @click="getUncookiedAccountsCookie"
-          :loading="getUncookiedLoading"
-          size="large"
-          class="uncookied-btn"
-        >
-          <el-icon><Key /></el-icon>
-          获取未设置Cookie
-        </el-button>
+
         <el-popconfirm
           title="确定要清空所有即梦账号吗？此操作不可恢复！"
           @confirm="clearAllAccounts"
@@ -293,15 +263,7 @@
         >
           <template #default="{ row }">
             <div class="action-buttons">
-              <el-button 
-                type="primary" 
-                size="small" 
-                text
-                @click="getCookie(row.id)"
-                :loading="cookieLoading[row.id]"
-              >
-                获取Cookie
-              </el-button>
+
               <el-button 
                 type="success" 
                 size="small" 
@@ -437,9 +399,7 @@ import {
   Warning,
   Picture,
   VideoPlay,
-  Avatar,
-  Key,
-  RefreshRight
+  Avatar
 } from '@element-plus/icons-vue'
 import { accountAPI } from '../utils/api'
 
@@ -457,9 +417,7 @@ export default {
     Warning,
     Picture,
     VideoPlay,
-    Avatar,
-    Key,
-    RefreshRight
+    Avatar
   },
   setup() {
     // 响应式数据
@@ -491,11 +449,7 @@ export default {
       selectedAccounts.value = selection
     }
     
-    // Cookie获取状态
-    const cookieLoading = ref({})
-    const batchCookieLoading = ref(false)
-    const updateAllCookiesLoading = ref(false)
-    const getUncookiedLoading = ref(false)
+
     
     // 登录状态
     const loginLoading = ref({})
@@ -523,109 +477,7 @@ export default {
       }
     }
     
-    // 获取单个账号Cookie
-    const getCookie = async (accountId) => {
-      try {
-        // 设置加载状态
-        cookieLoading.value[accountId] = true
-        
-        const response = await accountAPI.getCookie(accountId)
-        if (response.data.success) {
-          ElMessage.success(response.data.message)
-        } else {
-          ElMessage.error(response.data.message)
-        }
-      } catch (error) {
-        console.error('获取Cookie失败:', error)
-        ElMessage.error('获取Cookie失败')
-      } finally {
-        // 延迟一会儿再清除加载状态，让用户有时间看到加载效果
-        setTimeout(() => {
-          cookieLoading.value[accountId] = false
-        }, 1000)
-      }
-    }
-    
-    // 批量获取Cookie
-    const batchGetCookie = async () => {
-      if (selectedAccounts.value.length === 0) {
-        ElMessage.warning('请选择要获取Cookie的账号')
-        return
-      }
-      
-      try {
-        batchCookieLoading.value = true
-        
-        const accountIds = selectedAccounts.value.map(account => account.id)
-        const response = await accountAPI.batchGetCookie(accountIds)
-        
-        if (response.data.success) {
-          ElMessage.success(response.data.message)
-        } else {
-          ElMessage.error(response.data.message)
-        }
-      } catch (error) {
-        console.error('批量获取Cookie失败:', error)
-        ElMessage.error('批量获取Cookie失败')
-      } finally {
-        setTimeout(() => {
-          batchCookieLoading.value = false
-        }, 1000)
-      }
-    }
-    
-    // 更新所有账号Cookie
-    const updateAllCookies = async () => {
-      try {
-        await ElMessageBox.confirm('确认更新所有账号的Cookie？这可能需要较长时间，系统将智能调度任务到线程池中。', '确认操作', {
-          confirmButtonText: '确认',
-          cancelButtonText: '取消',
-          type: 'warning'
-        })
-        
-        updateAllCookiesLoading.value = true
-        const response = await accountAPI.updateAllCookies()
-        
-        if (response.data.success) {
-          ElMessage.success(response.data.message)
-          // 延迟刷新账号列表
-          setTimeout(() => {
-            refreshAll()
-          }, 3000)
-        } else {
-          ElMessage.error(response.data.message || '更新所有账号Cookie失败')
-        }
-      } catch (error) {
-        if (error !== 'cancel') {
-          console.error('更新所有账号Cookie失败:', error)
-          ElMessage.error('更新所有账号Cookie失败')
-        }
-      } finally {
-        updateAllCookiesLoading.value = false
-      }
-    }
 
-    // 获取未设置Cookie的账号
-    const getUncookiedAccountsCookie = async () => {
-      try {
-        getUncookiedLoading.value = true
-        const response = await accountAPI.getUncookiedAccountsCookie()
-        if (response.data.success) {
-          ElMessage.success(response.data.message)
-          // 延迟刷新账号列表
-          setTimeout(() => {
-            refreshAll()
-          }, 3000)
-        } else {
-          ElMessage.error(response.data.message || '获取未设置Cookie失败')
-        }
-      } catch (error) {
-        console.error('获取未设置Cookie失败:', error)
-        ElMessage.error('获取未设置Cookie失败')
-      } finally {
-        getUncookiedLoading.value = false
-      }
-    }
 
     // 计算属性
     const paginatedAccounts = computed(() => {
@@ -879,14 +731,6 @@ export default {
       getAccountStatus,
       selectedAccounts,
       handleSelectionChange,
-      cookieLoading,
-      batchCookieLoading,
-      getCookie,
-      batchGetCookie,
-      updateAllCookiesLoading,
-      updateAllCookies,
-      getUncookiedLoading,
-      getUncookiedAccountsCookie,
       loginLoading,
       loginAccount,
     }
@@ -987,52 +831,7 @@ export default {
   box-shadow: var(--shadow-md);
 }
 
-.cookie-btn {
-  background: var(--success-gradient);
-  border: none;
-  color: white;
-  font-weight: 600;
-  border-radius: var(--radius-md);
-  transition: var(--transition);
-  box-shadow: var(--shadow-sm);
-}
 
-.cookie-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
-.update-all-btn {
-  background: linear-gradient(135deg, #e6a23c, #f0b90b);
-  border: none;
-  color: white;
-  font-weight: 600;
-  border-radius: var(--radius-md);
-  transition: var(--transition);
-  box-shadow: var(--shadow-sm);
-}
-
-.update-all-btn:hover {
-  background: linear-gradient(135deg, #ebb563, #f3c73f);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
-.uncookied-btn {
-  background: linear-gradient(135deg, #409eff, #67c23a);
-  border: none;
-  color: white;
-  font-weight: 600;
-  border-radius: var(--radius-md);
-  transition: var(--transition);
-  box-shadow: var(--shadow-sm);
-}
-
-.uncookied-btn:hover {
-  background: linear-gradient(135deg, #66b1ff, #85ce61);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
 
 .danger-btn {
   background: var(--danger-gradient);
@@ -1507,7 +1306,6 @@ export default {
   margin: 0;
 }
 
-/* 获取Cookie按钮样式 */
 .el-button.el-button--text.el-button--primary {
   font-weight: 500;
 }
@@ -1522,14 +1320,5 @@ export default {
   color: #85ce61;
 }
 
-/* 批量获取Cookie按钮样式 */
-.cookie-btn {
-  background-color: #67c23a;
-  border-color: #67c23a;
-}
 
-.cookie-btn:hover {
-  background-color: #85ce61;
-  border-color: #85ce61;
-}
 </style>

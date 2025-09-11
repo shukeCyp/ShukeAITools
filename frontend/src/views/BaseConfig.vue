@@ -80,6 +80,29 @@
               />
             </div>
           </div>
+
+          <div class="config-item">
+            <div class="item-header">
+              <div class="item-icon">
+                <el-icon size="20"><Refresh /></el-icon>
+              </div>
+              <div class="item-info">
+                <h4 class="item-title">自动重试失败任务</h4>
+                <p class="item-desc">启用后系统将自动重试因网络问题导致的失败任务（最多重试2次）</p>
+              </div>
+            </div>
+            <div class="item-control">
+              <el-switch
+                v-model="configForm.auto_retry_enabled"
+                active-text="启用"
+                inactive-text="禁用"
+                @change="handleConfigChange"
+                size="large"
+                :disabled="loading"
+                inline-prompt
+              />
+            </div>
+          </div>
         </div>
 
         <!-- 操作按钮 -->
@@ -156,13 +179,15 @@ export default {
     // 配置表单数据
     const configForm = reactive({
       automation_max_threads: 3,
-      hide_window: false
+      hide_window: false,
+      auto_retry_enabled: false
     })
 
     // 原始配置数据（用于重置）
     const originalConfig = reactive({
       automation_max_threads: 3,
-      hide_window: false
+      hide_window: false,
+      auto_retry_enabled: false
     })
 
     // 页面挂载后加载配置
@@ -189,6 +214,11 @@ export default {
           if (configs.hide_window) {
             configForm.hide_window = configs.hide_window.value === 'true'
             originalConfig.hide_window = configForm.hide_window
+          }
+          
+          if (configs.auto_retry_enabled) {
+            configForm.auto_retry_enabled = configs.auto_retry_enabled.value === 'true'
+            originalConfig.auto_retry_enabled = configForm.auto_retry_enabled
           }
           
           console.log('配置加载成功:', configForm)
@@ -218,7 +248,8 @@ export default {
         // 批量更新配置
         const configs = {
           automation_max_threads: configForm.automation_max_threads.toString(),
-          hide_window: configForm.hide_window.toString()
+          hide_window: configForm.hide_window.toString(),
+          auto_retry_enabled: configForm.auto_retry_enabled.toString()
         }
         
         const response = await configAPI.updateBatchConfigs(configs)

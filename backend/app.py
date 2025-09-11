@@ -19,6 +19,7 @@ from backend.core.global_task_manager import global_task_manager
 from backend.models.models import JimengAccount, JimengText2ImgTask, JimengImg2VideoTask, JimengDigitalHumanTask, QingyingImage2VideoTask
 from backend.utils.config_util import ConfigUtil
 from backend.utils.playwright_util import ensure_playwright_installed
+# from backend.utils.retry_util import start_auto_retry_scheduler  # 暂时注释掉
 
 # 导入路由蓝图
 from backend.api.v1.common_routes import common_bp
@@ -68,8 +69,7 @@ def reset_processing_tasks():
             # 重置文生图任务
             text2img_reset_count = 0
             processing_text2img_tasks = JimengText2ImgTask.select().where(
-                (JimengText2ImgTask.status == 1) &  # 生成中
-                (JimengText2ImgTask.is_empty_task == False)  # 非空任务
+                JimengText2ImgTask.status == 1  # 生成中
             )
             
             for task in processing_text2img_tasks:
@@ -79,8 +79,7 @@ def reset_processing_tasks():
             # 重置图生视频任务
             img2video_reset_count = 0
             processing_img2video_tasks = JimengImg2VideoTask.select().where(
-                (JimengImg2VideoTask.status == 1) &  # 生成中
-                (JimengImg2VideoTask.is_empty_task == False)  # 非空任务
+                JimengImg2VideoTask.status == 1  # 生成中
             )
             
             for task in processing_img2video_tasks:
@@ -90,8 +89,7 @@ def reset_processing_tasks():
             # 重置数字人任务
             digital_human_reset_count = 0
             processing_digital_human_tasks = JimengDigitalHumanTask.select().where(
-                (JimengDigitalHumanTask.status == 1) &  # 生成中
-                (JimengDigitalHumanTask.is_empty_task == False)  # 非空任务
+                JimengDigitalHumanTask.status == 1  # 生成中
             )
             
             for task in processing_digital_human_tasks:
@@ -157,6 +155,10 @@ time.sleep(0.5)
 # 启动全局任务管理器
 global_task_manager.start()
 print("全局任务管理器已启动")
+
+# 启动自动重试调度器
+    # start_auto_retry_scheduler()  # 暂时注释掉
+print("自动重试调度器已启动")
 
 if __name__ == '__main__':
     print("舒克AI工具集后端服务启动中...")

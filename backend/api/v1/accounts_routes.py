@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from flask import Blueprint, request, jsonify
 from datetime import datetime, date
-from backend.models.models import JimengAccount, JimengText2ImgTask, JimengImg2VideoTask
+from backend.models.models import JimengAccount
 from backend.utils.jimeng_account_login import login_and_get_cookie
 from backend.utils.jimeng_login_window import login_and_wait
 from backend.core.global_task_manager import global_task_manager
@@ -19,23 +19,28 @@ def get_accounts():
         today = date.today()
         
         for account in accounts:
-            # 计算今日文生图使用次数
-            text2img_usage = JimengText2ImgTask.select().where(
-                (JimengText2ImgTask.account_id == account.id) &
-                (JimengText2ImgTask.create_at >= today)
+            # 使用JimengTaskRecord表统计今日使用次数
+            from backend.models.models import JimengTaskRecord
+            
+            # 计算今日文生图使用次数 (task_type=1)
+            text2img_usage = JimengTaskRecord.select().where(
+                (JimengTaskRecord.account_id == account.id) &
+                (JimengTaskRecord.task_type == 1) &
+                (JimengTaskRecord.created_at >= today)
             ).count()
             
-            # 计算今日图生视频使用次数
-            img2video_usage = JimengImg2VideoTask.select().where(
-                (JimengImg2VideoTask.account_id == account.id) &
-                (JimengImg2VideoTask.create_at >= today)
+            # 计算今日图生视频使用次数 (task_type=2)
+            img2video_usage = JimengTaskRecord.select().where(
+                (JimengTaskRecord.account_id == account.id) &
+                (JimengTaskRecord.task_type == 2) &
+                (JimengTaskRecord.created_at >= today)
             ).count()
             
-            # 计算今日数字人使用次数
-            from backend.models.models import JimengDigitalHumanTask
-            digital_human_usage = JimengDigitalHumanTask.select().where(
-                (JimengDigitalHumanTask.account_id == account.id) &
-                (JimengDigitalHumanTask.create_at >= today)
+            # 计算今日数字人使用次数 (task_type=3)
+            digital_human_usage = JimengTaskRecord.select().where(
+                (JimengTaskRecord.account_id == account.id) &
+                (JimengTaskRecord.task_type == 3) &
+                (JimengTaskRecord.created_at >= today)
             ).count()
             
             data.append({
@@ -182,28 +187,44 @@ def get_account_usage_stats():
         
         stats = []
         for account in accounts:
-            # 统计今日文生图使用次数 - 不过滤空任务
-            today_text2img = JimengText2ImgTask.select().where(
-                (JimengText2ImgTask.account_id == account.id) &
-                (JimengText2ImgTask.create_at >= today)
+            # 使用JimengTaskRecord表统计使用次数
+            from backend.models.models import JimengTaskRecord
+            
+            # 统计今日文生图使用次数 (task_type=1)
+            today_text2img = JimengTaskRecord.select().where(
+                (JimengTaskRecord.account_id == account.id) &
+                (JimengTaskRecord.task_type == 1) &
+                (JimengTaskRecord.created_at >= today)
             ).count()
             
-            # 统计今日图生视频使用次数 - 不过滤空任务
-            today_img2video = JimengImg2VideoTask.select().where(
-                (JimengImg2VideoTask.account_id == account.id) &
-                (JimengImg2VideoTask.create_at >= today)
+            # 统计今日图生视频使用次数 (task_type=2)
+            today_img2video = JimengTaskRecord.select().where(
+                (JimengTaskRecord.account_id == account.id) &
+                (JimengTaskRecord.task_type == 2) &
+                (JimengTaskRecord.created_at >= today)
             ).count()
             
-            # 数字人暂时设为0
-            today_digital_human = 0
+            # 统计今日数字人使用次数 (task_type=3)
+            today_digital_human = JimengTaskRecord.select().where(
+                (JimengTaskRecord.account_id == account.id) &
+                (JimengTaskRecord.task_type == 3) &
+                (JimengTaskRecord.created_at >= today)
+            ).count()
             
             # 统计总使用次数
-            total_text2img = JimengText2ImgTask.select().where(
-                (JimengText2ImgTask.account_id == account.id)
+            total_text2img = JimengTaskRecord.select().where(
+                (JimengTaskRecord.account_id == account.id) &
+                (JimengTaskRecord.task_type == 1)
             ).count()
             
-            total_img2video = JimengImg2VideoTask.select().where(
-                (JimengImg2VideoTask.account_id == account.id)
+            total_img2video = JimengTaskRecord.select().where(
+                (JimengTaskRecord.account_id == account.id) &
+                (JimengTaskRecord.task_type == 2)
+            ).count()
+            
+            total_digital_human = JimengTaskRecord.select().where(
+                (JimengTaskRecord.account_id == account.id) &
+                (JimengTaskRecord.task_type == 3)
             ).count()
             
             # 设置每日限额
@@ -235,7 +256,7 @@ def get_account_usage_stats():
                 'total_usage': {
                     'text2img': total_text2img,
                     'img2video': total_img2video,
-                    'digital_human': 0
+                    'digital_human': total_digital_human
                 },
                 'status': 'available' if is_available else 'limit_reached',
                 'last_used': None  # 可以后续添加最后使用时间

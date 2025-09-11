@@ -18,6 +18,10 @@ class ConfigUtil:
         'hide_window': {
             'value': 'false',
             'description': '是否隐藏浏览器窗口'
+        },
+        'auto_retry_enabled': {
+            'value': 'false',
+            'description': '是否启用自动重试功能，只会重试因为网络问题导致的失败任务'
         }
     }
     
@@ -138,3 +142,11 @@ def get_hide_window():
 def set_hide_window(value):
     """设置是否隐藏窗口"""
     return ConfigUtil.set_config('hide_window', value)
+
+def get_auto_retry_enabled():
+    """获取是否启用自动重试"""
+    return ConfigUtil.get_config_bool('auto_retry_enabled', False)
+
+def set_auto_retry_enabled(value):
+    """设置是否启用自动重试"""
+    return ConfigUtil.set_config('auto_retry_enabled', value)

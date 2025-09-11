@@ -1,74 +1,24 @@
 """
 即梦平台自动化模块 - 图片生成视频
+based on BaseTaskExecutor refactoring version
 """
 
-import os
 import asyncio
 import time
-import subprocess
-import json
-from playwright.async_api import async_playwright
-from colorama import Fore, Style, init
+from typing import Optional, List, Dict, Any
+from backend.utils.base_task_executor import BaseTaskExecutor, TaskResult, ErrorCode, TaskLogger
 
-# 初始化colorama
-init()
-
-def get_browser_config():
-    """获取固定的浏览器配置"""
-    print(f"{Fore.YELLOW}使用默认浏览器配置...{Style.RESET_ALL}")
+class JimengImage2VideoExecutor(BaseTaskExecutor):
+    """即梦图片生成视频执行器"""
     
-    config = {
-        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "device_scale_factor": 1.0,
-        "locale": "en-US",
-        "timezone_id": "America/New_York"
-    }
+    def __init__(self, headless: bool = False):
+        super().__init__(headless)
+        self.task_id = None
+        self.video_url = None
     
-    print(f"{Fore.GREEN}浏览器配置已设置{Style.RESET_ALL}")
-    
-    return config
-
-async def image2video(image_path, prompt, username, password, model="Video 3.0", second=5, headless=False, cookies=None):
-    """
-    生成图片到视频
-    
-    参数:
-        image_path: 输入图片路径
-        prompt: 文本提示词
-        username: 登录用户名
-        password: 登录密码
-        model: 使用的模型
-        second: 视频时长（秒）
-        headless: 是否无头模式运行
-        cookies: 登录后的cookies
-        
-    返回:
-        dict: {
-            "code": 200/601/602/603/604,
-            "data": 视频URL或None,
-            "message": 状态信息
-        }
-    """
-    print(f"{Fore.GREEN}开始自动生成图片到视频...{Style.RESET_ALL}")
-    print(f"{Fore.CYAN}提示词: {Style.RESET_ALL}{prompt}")
-    print(f"{Fore.CYAN}模型: {Style.RESET_ALL}{model}")
-    
-    playwright = None
-    browser = None
-    context = None
-    page = None
-    
-    try:
-        # 初始化浏览器
-        print(f"{Fore.YELLOW}正在启动浏览器...{Style.RESET_ALL}")
-        config = get_browser_config()
-        
-        playwright = await async_playwright().start()
-        browser = await playwright.chromium.launch(headless=headless)
-        context = await browser.new_context(**config)
-        
-        if cookies:
-            # 处理cookies字符串格式
+    async def handle_cookies(self, cookies: str):
+        """处理cookies字符串格式"""
+        try:
             # 将cookies字符串转换为字典列表格式
             cookie_pairs = cookies.split('; ')
             cookie_list = []
@@ -81,138 +31,339 @@ async def image2video(image_path, prompt, username, password, model="Video 3.0",
                         'domain': '.capcut.com',
                         'path': '/'
                     })
-            cookies = cookie_list
             
-            await context.add_cookies(cookies)
-            page = await context.new_page()
-            print(f"{Fore.GREEN}已加载cookies{Style.RESET_ALL}")
-        else:
-            page = await context.new_page()
-            print(f"{Fore.YELLOW}未提供cookies，将进行登录...{Style.RESET_ALL}")
-            print(f"{Fore.GREEN}浏览器已启动{Style.RESET_ALL}")
+            await self.context.add_cookies(cookie_list)
+            self.logger.info("即梦平台cookies设置成功")
             
-            # 登录即梦平台
-            print(f"{Fore.GREEN}开始登录即梦平台...{Style.RESET_ALL}")
-            print(f"{Fore.CYAN}账号: {Style.RESET_ALL}{username}")
+        except Exception as e:
+            self.logger.error("设置即梦平台cookies时出错", error=str(e))
             
-            await page.goto('https://dreamina.capcut.com/en-us', timeout=60000)
+    async def perform_login(self, username: str, password: str) -> TaskResult:
+        """执行登录流程"""
+        try:
+            self.logger.info("开始登录即梦平台", username=username)
+            
+            await self.page.goto('https://dreamina.capcut.com/en-us', timeout=60000)
             await asyncio.sleep(2)
             
             # 点击语言切换按钮
-            print(f"{Fore.YELLOW}点击语言切换按钮...{Style.RESET_ALL}")
-            await page.click('button.dreamina-header-secondary-button')
+            self.logger.info("点击语言切换按钮")
+            await self.page.click('button.dreamina-header-secondary-button')
             await asyncio.sleep(1)
             
             # 点击切换为英文
-            print(f"{Fore.YELLOW}切换为英文...{Style.RESET_ALL}")
-            await page.click('div.language-item:has-text("English")')
+            self.logger.info("切换为英文")
+            await self.page.click('div.language-item:has-text("English")')
             await asyncio.sleep(2)
             
             # 检查并关闭可能出现的弹窗
             try:
-                print(f"{Fore.YELLOW}检查是否有弹窗需要关闭...{Style.RESET_ALL}")
-                close_button = await page.query_selector('img.close-icon')
+                self.logger.info("检查是否有弹窗需要关闭")
+                close_button = await self.page.query_selector('img.close-icon')
                 if close_button:
-                    print(f"{Fore.YELLOW}关闭弹窗...{Style.RESET_ALL}")
+                    self.logger.info("关闭弹窗")
                     await close_button.click()
                     await asyncio.sleep(1)
             except Exception as e:
-                print(f"{Fore.YELLOW}没有发现需要关闭的弹窗: {str(e)}{Style.RESET_ALL}")
+                self.logger.debug("没有发现需要关闭的弹窗", error=str(e))
             
             # 点击登录按钮
-            print(f"{Fore.YELLOW}点击登录按钮...{Style.RESET_ALL}")
-            await page.click('#loginButton')
+            self.logger.info("点击登录按钮")
+            await self.page.click('#loginButton')
             await asyncio.sleep(2)
             
             # 等待登录页面加载
-            await page.wait_for_selector('.lv-checkbox-mask', timeout=60000)
+            await self.page.wait_for_selector('.lv-checkbox-mask', timeout=60000)
             await asyncio.sleep(2)
             
             # 勾选同意条款复选框
-            print(f"{Fore.YELLOW}勾选同意条款...{Style.RESET_ALL}")
-            await page.click('.lv-checkbox-mask')
+            self.logger.info("勾选同意条款")
+            await self.page.click('.lv-checkbox-mask')
             await asyncio.sleep(2)
             
             # 点击登录按钮
-            await page.click('div[class^="login-button-"]:has-text("Sign in")')
+            await self.page.click('div[class^="login-button-"]:has-text("Sign in")')
             await asyncio.sleep(2)
             
             # 点击使用邮箱登录
-            print(f"{Fore.YELLOW}选择邮箱登录方式...{Style.RESET_ALL}")
-            await page.click('span.lv_new_third_part_sign_in_expand-label:has-text("Continue with Email")')
+            self.logger.info("选择邮箱登录方式")
+            await self.page.click('span.lv_new_third_part_sign_in_expand-label:has-text("Continue with Email")')
             await asyncio.sleep(2)
             
             # 输入账号密码
-            print(f"{Fore.YELLOW}输入账号密码...{Style.RESET_ALL}")
-            await page.fill('input[placeholder="Enter email"]', username)
+            self.logger.info("输入账号密码")
+            await self.page.fill('input[placeholder="Enter email"]', username)
             await asyncio.sleep(2)
-            await page.fill('input[type="password"]', password)
+            await self.page.fill('input[type="password"]', password)
             await asyncio.sleep(2)
             
             # 点击登录
-            print(f"{Fore.YELLOW}点击登录按钮...{Style.RESET_ALL}")
-            await page.click('.lv_new_sign_in_panel_wide-sign-in-button')
+            self.logger.info("点击登录按钮")
+            await self.page.click('.lv_new_sign_in_panel_wide-sign-in-button')
             await asyncio.sleep(2)
             
             # 等待登录完成
-            print(f"{Fore.YELLOW}等待登录完成...{Style.RESET_ALL}")
-            await page.wait_for_load_state('networkidle', timeout=60000)
+            self.logger.info("等待登录完成")
+            await self.page.wait_for_load_state('networkidle', timeout=60000)
             await asyncio.sleep(2)
             
             # 检查是否有确认按钮，如果有则点击
-            print(f"{Fore.YELLOW}检查是否需要确认...{Style.RESET_ALL}")
+            self.logger.info("检查是否需要确认")
             try:
-                confirm_button = await page.query_selector('button:has-text("Confirm")')
+                confirm_button = await self.page.query_selector('button:has-text("Confirm")')
                 if confirm_button:
-                    print(f"{Fore.GREEN}检测到确认按钮，点击确认...{Style.RESET_ALL}")
+                    self.logger.info("检测到确认按钮，点击确认")
                     await confirm_button.click()
                     await asyncio.sleep(2)
             except Exception as e:
-                print(f"{Fore.YELLOW}没有确认按钮，跳过: {str(e)}{Style.RESET_ALL}")
+                self.logger.debug("没有确认按钮，跳过", error=str(e))
             
-            # 验证登录是否成功
-            current_url = page.url
+            return TaskResult(code=ErrorCode.SUCCESS.value, data=None, message="登录成功")
+            
+        except Exception as e:
+            self.logger.error("登录失败", error=str(e))
+            return TaskResult(
+                code=ErrorCode.WEB_INTERACTION_FAILED.value,
+                data=None,
+                message="登录失败",
+                error_details={"error": str(e)}
+            )
+    
+    async def validate_login_success(self) -> TaskResult:
+        """验证登录是否成功"""
+        try:
+            current_url = self.page.url
             if "dreamina.capcut.com" in current_url and "login" not in current_url:
-                print(f"{Fore.GREEN}登录成功！{Style.RESET_ALL}")
+                self.logger.info("登录验证成功")
+                return TaskResult(code=ErrorCode.SUCCESS.value, data=None, message="登录验证成功")
             else:
-                print(f"{Fore.RED}登录可能失败，当前URL: {current_url}{Style.RESET_ALL}")
-                return {
-                    "code": 602,
-                    "data": None,
-                    "message": "登录失败，无法找到登录节点或页面跳转异常"
-                }
+                self.logger.error("登录验证失败", current_url=current_url)
+                return TaskResult(
+                    code=ErrorCode.WEB_INTERACTION_FAILED.value,
+                    data=None,
+                    message="登录验证失败，页面跳转异常"
+                )
+        except Exception as e:
+            self.logger.error("登录验证异常", error=str(e))
+            return TaskResult(
+                code=ErrorCode.WEB_INTERACTION_FAILED.value,
+                data=None,
+                message="登录验证异常",
+                error_details={"error": str(e)}
+            )
+    
+    async def navigate_to_image2video_page(self) -> TaskResult:
+        """跳转到图片生成视频页面"""
+        try:
+            self.logger.info("正在跳转到AI工具生成页面")
+            await self.page.goto('https://dreamina.capcut.com/ai-tool/generate')
+            await self.page.wait_for_load_state('networkidle', timeout=60000)
+            await asyncio.sleep(2)
             
-        # 跳转到AI工具生成页面
-        print(f"{Fore.YELLOW}正在跳转到AI工具生成页面...{Style.RESET_ALL}")
-        await page.goto('https://dreamina.capcut.com/ai-tool/generate')
-        await page.wait_for_load_state('networkidle', timeout=60000)
-        await asyncio.sleep(2)
-        print(f"{Fore.GREEN}已跳转到AI工具页面{Style.RESET_ALL}")
-        
-        # 设置请求监听器
-        task_id = None
-        video_url = None
-        
+            # 选择AI Video选项
+            self.logger.info("尝试选择AI Video选项")
+            try:
+                # 检查是否存在新的tabs节点
+                tabs_selector = 'div.tabs-dTWN8k'
+                tabs_element = await self.page.query_selector(tabs_selector)
+                
+                if tabs_element:
+                    self.logger.info("发现新的tabs界面，使用新方式选择AI Video")
+                    # 使用新的tabs方式选择AI Video
+                    await self.page.click('button.tab-YSwCEn:has-text("AI Video")')
+                    await asyncio.sleep(2)
+                else:
+                    self.logger.info("未发现新tabs界面，使用传统下拉框方式")
+                    # 点击类型选择下拉框
+                    await self.page.click('div.lv-select[role="combobox"][class*="type-select-"]')
+                    await asyncio.sleep(1)
+                    
+                    # 选择AI Video选项
+                    await self.page.click('span[class*="select-option-label-content"]:has-text("AI Video")')
+                    await asyncio.sleep(2)
+                    
+            except Exception as e:
+                self.logger.warning("选择AI Video时出错，尝试备用方法", error=str(e))
+                # 备用方法：直接尝试传统下拉框方式
+                try:
+                    await self.page.click('div.lv-select[role="combobox"][class*="type-select-"]')
+                    await asyncio.sleep(1)
+                    await self.page.click('span[class*="select-option-label-content"]:has-text("AI Video")')
+                    await asyncio.sleep(2)
+                except Exception as backup_e:
+                    self.logger.error("无法选择AI Video选项", error=str(backup_e))
+                    return TaskResult(
+                        code=ErrorCode.WEB_INTERACTION_FAILED.value,
+                        data=None,
+                        message=f"无法选择AI Video选项: {str(backup_e)}",
+                        error_details={"error": str(backup_e)}
+                    )
+            
+            self.logger.info("已跳转到图片生成视频页面并选择AI Video")
+            return TaskResult(code=ErrorCode.SUCCESS.value, data=None, message="页面跳转成功")
+        except Exception as e:
+            self.logger.error("页面跳转失败", error=str(e))
+            return TaskResult(
+                code=ErrorCode.WEB_INTERACTION_FAILED.value,
+                data=None,
+                message="页面跳转失败",
+                error_details={"error": str(e)}
+            )
+    
+    async def select_video_model(self, model: str = "Video 3.0") -> TaskResult:
+        """选择视频模型"""
+        try:
+            self.logger.info("选择视频模型", model=model)
+            
+            # 点击视频模型选择下拉框（第一个非类型选择的下拉框）
+            video_model_selectors = await self.page.query_selector_all('div.lv-select[role="combobox"]:not([class*="type-select-"])')
+            if len(video_model_selectors) >= 1:
+                await video_model_selectors[0].click()
+                await asyncio.sleep(1)
+                
+                # 等待下拉菜单出现
+                await self.page.wait_for_selector('div.lv-select-popup-inner[role="listbox"]', timeout=5000)
+                await asyncio.sleep(1)
+                
+                # 根据模型参数选择对应的视频模型
+                try:
+                    if "Video 3.0" in model or model == "Video 3.0":
+                        await self.page.click('li[role="option"] span:has-text("Video 3.0")')
+                        self.logger.info("已选择视频模型: Video 3.0")
+                    elif "Video S2.0 Pro" in model or model == "Video S2.0 Pro":
+                        # 选择Video S2.0 Pro模型
+                        await self.page.click('li[role="option"] span:has-text("Video S2.0 Pro")')
+                        self.logger.info("已选择视频模型: Video S2.0 Pro")
+                    else:
+                        # 默认选择第一个可用模型
+                        await self.page.click('li[role="option"]:first-child')
+                        self.logger.info("使用默认视频模型")
+                except Exception as e:
+                    self.logger.warning("选择视频模型时出错，使用默认选项", error=str(e))
+                    await self.page.click('li[role="option"]:first-child')
+                
+                await asyncio.sleep(2)
+                return TaskResult(code=ErrorCode.SUCCESS.value, data=None, message="视频模型选择成功")
+            else:
+                self.logger.warning("未找到视频模型选择器")
+                return TaskResult(code=ErrorCode.SUCCESS.value, data=None, message="未找到视频模型选择器，跳过")
+                
+        except Exception as e:
+            self.logger.error("选择视频模型失败", error=str(e))
+            return TaskResult(
+                code=ErrorCode.WEB_INTERACTION_FAILED.value,
+                data=None,
+                message="选择视频模型失败",
+                error_details={"error": str(e)}
+            )
+    
+    async def select_video_duration(self, second: int = 5) -> TaskResult:
+        """选择视频时长"""
+        try:
+            self.logger.info("选择视频时长", second=second)
+            
+            # 点击时长选择下拉框（第二个非类型选择的下拉框）
+            duration_selectors = await self.page.query_selector_all('div.lv-select[role="combobox"]:not([class*="type-select-"])')
+            if len(duration_selectors) >= 2:
+                await duration_selectors[1].click()  # 第二个非类型选择的下拉框就是时长选择
+                await asyncio.sleep(1)
+                
+                # 等待时长选择弹窗出现
+                await self.page.wait_for_selector('div.lv-select-popup-inner[role="listbox"]', timeout=5000)
+                await asyncio.sleep(1)
+                
+                # 根据second参数选择对应的时长
+                try:
+                    if second == 5:
+                        # 选择5s选项
+                        await self.page.click('li[role="option"] span:has-text("5s")')
+                        self.logger.info("已选择时长: 5s")
+                    elif second == 10:
+                        # 选择10s选项
+                        await self.page.click('li[role="option"] span:has-text("10s")')
+                        self.logger.info("已选择时长: 10s")
+                    else:
+                        # 默认选择5s
+                        await self.page.click('li[role="option"] span:has-text("5s")')
+                        self.logger.info("使用默认时长: 5s")
+                except Exception as e:
+                    self.logger.warning("选择时长时出错，使用默认选项", error=str(e))
+                    await self.page.click('li[role="option"]:first-child')
+                
+                await asyncio.sleep(2)
+                return TaskResult(code=ErrorCode.SUCCESS.value, data=None, message="视频时长选择成功")
+            else:
+                self.logger.warning("未找到时长选择器")
+                return TaskResult(code=ErrorCode.SUCCESS.value, data=None, message="未找到时长选择器，跳过")
+                
+        except Exception as e:
+            self.logger.error("选择视频时长失败", error=str(e))
+            return TaskResult(
+                code=ErrorCode.WEB_INTERACTION_FAILED.value,
+                data=None,
+                message="选择视频时长失败",
+                error_details={"error": str(e)}
+            )
+
+    async def upload_image(self, image_path: str) -> TaskResult:
+        """上传图片"""
+        try:
+            self.logger.info("上传图片", image_path=image_path)
+            
+            # 查找文件上传输入框
+            upload_selector = 'input[type="file"][accept*="image"]'
+            await self.page.wait_for_selector(upload_selector, timeout=10000, state='attached')
+            
+            # 上传图片文件
+            await self.page.set_input_files(upload_selector, image_path)
+            self.logger.info("图片上传成功")
+            await asyncio.sleep(3)
+            return TaskResult(code=ErrorCode.SUCCESS.value, data=None, message="图片上传成功")
+        except Exception as e:
+            self.logger.error("图片上传失败", error=str(e))
+            return TaskResult(
+                code=ErrorCode.WEB_INTERACTION_FAILED.value,
+                data=None,
+                message="图片上传失败",
+                error_details={"error": str(e)}
+            )
+    
+    async def input_prompt(self, prompt: str) -> TaskResult:
+        """输入提示词"""
+        try:
+            self.logger.info("输入提示词", prompt=prompt)
+            await self.page.fill('textarea.lv-textarea[placeholder="Describe the scene and motion you\'d like to generate"]', prompt)
+            await asyncio.sleep(2)
+            return TaskResult(code=ErrorCode.SUCCESS.value, data=None, message="提示词输入成功")
+        except Exception as e:
+            self.logger.error("提示词输入失败", error=str(e))
+            return TaskResult(
+                code=ErrorCode.WEB_INTERACTION_FAILED.value,
+                data=None,
+                message="提示词输入失败",
+                error_details={"error": str(e)}
+            )
+    
+    async def setup_response_listener(self):
+        """设置响应监听器"""
         async def handle_response(response):
-            nonlocal task_id, video_url
-            
             if "aigc_draft/generate" in response.url:
                 try:
                     data = await response.json()
-                    print(f"{Fore.GREEN}监测到生成请求响应...{Style.RESET_ALL}")
+                    self.logger.info("监测到生成请求响应")
                     if data.get("ret") == "0" and "data" in data and "aigc_data" in data["data"]:
-                        task_id = data["data"]["aigc_data"]["task"]["task_id"]
-                        print(f"{Fore.GREEN}获取到任务ID: {task_id}{Style.RESET_ALL}")
+                        self.task_id = data["data"]["aigc_data"]["task"]["task_id"]
+                        self.logger.info("获取到任务ID", task_id=self.task_id)
                 except:
                     pass
             
-            if "/v1/get_asset_list" in response.url and task_id:
+            if "/v1/get_asset_list" in response.url and self.task_id:
                 try:
                     data = await response.json()
                     if "data" in data and "asset_list" in data["data"]:
                         asset_list = data["data"]["asset_list"]
                         for asset in asset_list:
-                            if "id" in asset and asset.get("id") == task_id:
+                            if "id" in asset and asset.get("id") == self.task_id:
                                 # 检查视频生成是否完成
                                 if "video" in asset and asset["video"].get("finish_time", 0) != 0:
                                     try:
@@ -222,254 +373,257 @@ async def image2video(image_path, prompt, username, password, model="Video 3.0",
                                             if "video" in video_item and "transcoded_video" in video_item["video"]:
                                                 transcoded = video_item["video"]["transcoded_video"]
                                                 if "origin" in transcoded and "video_url" in transcoded["origin"]:
-                                                    video_url = transcoded["origin"]["video_url"]
+                                                    self.video_url = transcoded["origin"]["video_url"]
                                         
-                                        if video_url:
-                                            print(f"{Fore.GREEN}视频生成完成! 视频URL: {video_url}{Style.RESET_ALL}")
+                                        if self.video_url:
+                                            self.logger.info("视频生成完成", video_url=self.video_url)
                                         else:
-                                            print(f"{Fore.YELLOW}视频已完成但无法获取URL{Style.RESET_ALL}")
-                                            return {
-                                                "code": 604,
-                                                "data": None,
-                                                "message": "视频已完成但无法获取URL"
-                                            }
-                                    except (KeyError, IndexError) as e:
-                                        print(f"{Fore.YELLOW}视频已完成但无法获取URL: {str(e)}{Style.RESET_ALL}")
+                                            self.logger.warning("视频已完成但无法获取URL")
+                                    except (KeyError, IndexError):
+                                        self.logger.warning("视频已完成但无法获取URL")
                                 else:
-                                    print(f"{Fore.YELLOW}视频生成尚未完成，继续等待...{Style.RESET_ALL}")
-                except Exception as e:
-                    print(f"{Fore.YELLOW}解析响应数据时出错: {str(e)}{Style.RESET_ALL}")
+                                    self.logger.debug("视频生成尚未完成，继续等待")
+                except:
                     pass
         
         # 注册响应监听器
-        page.on("response", handle_response)
-        
-        # 尝试通过新的tabs方式选择AI Video
-        print(f"{Fore.YELLOW}尝试选择AI Video选项...{Style.RESET_ALL}")
+        self.page.on("response", handle_response)
+    
+    async def start_generation(self) -> TaskResult:
+        """点击生成按钮开始生成"""
         try:
-            # 检查是否存在新的tabs节点
-            tabs_selector = 'div.tabs-dTWN8k'
-            tabs_element = await page.query_selector(tabs_selector)
+            self.logger.info("等待生成按钮可用并点击")
+            await self.page.wait_for_selector('button[class^="lv-btn lv-btn-primary"][class*="submit-button-"]:not(.lv-btn-disabled)', timeout=60000)
+            await self.page.click('button[class^="lv-btn lv-btn-primary"][class*="submit-button-"]:not(.lv-btn-disabled)')
+            self.logger.info("已点击生成按钮，开始生成视频")
+            await asyncio.sleep(2)
+            return TaskResult(code=ErrorCode.SUCCESS.value, data=None, message="开始生成")
+        except Exception as e:
+            self.logger.error("点击生成按钮失败", error=str(e))
+            return TaskResult(
+                code=ErrorCode.WEB_INTERACTION_FAILED.value,
+                data=None,
+                message="点击生成按钮失败",
+                error_details={"error": str(e)}
+            )
+    
+    async def wait_for_generation_complete(self, max_wait_time: int = 3600) -> TaskResult:
+        """等待生成完成"""
+        try:
+            # 等待获取到任务ID
+            self.logger.info("等待获取任务ID")
+            wait_task_id_time = 30
+            task_id_start_time = time.time()
             
-            if tabs_element:
-                print(f"{Fore.GREEN}发现新的tabs界面，使用新方式选择AI Video{Style.RESET_ALL}")
-                # 使用新的tabs方式选择AI Video
-                await page.click('button.tab-YSwCEn:has-text("AI Video")')
-                await asyncio.sleep(2)
-            else:
-                print(f"{Fore.YELLOW}未发现新tabs界面，使用传统下拉框方式{Style.RESET_ALL}")
-                # 点击类型选择下拉框
-                print(f"{Fore.YELLOW}点击类型选择下拉框...{Style.RESET_ALL}")
-                await page.click('div.lv-select[role="combobox"][class*="type-select-"]')
+            while not self.task_id and time.time() - task_id_start_time < wait_task_id_time:
+                elapsed = time.time() - task_id_start_time
+                self.logger.debug(f"等待任务ID中，已等待 {elapsed:.1f} 秒")
                 await asyncio.sleep(1)
+            
+            if not self.task_id:
+                self.logger.error("未能获取到任务ID，生成可能失败")
+                return TaskResult(
+                    code=ErrorCode.TASK_ID_NOT_OBTAINED.value,
+                    data=None,
+                    message="任务ID等待超时"
+                )
                 
-                # 选择AI Video选项
-                print(f"{Fore.YELLOW}选择AI Video选项...{Style.RESET_ALL}")
-                await page.click('span[class*="select-option-label-content"]:has-text("AI Video")')
-                await asyncio.sleep(2)
+            # 等待视频生成完成
+            self.logger.info("已获取任务ID，等待视频生成完成", task_id=self.task_id)
+            start_time = time.time()
+            
+            while not self.video_url and time.time() - start_time < max_wait_time:
+                elapsed = time.time() - start_time
+                self.logger.debug(f"等待视频生成中，已等待 {elapsed:.1f} 秒")
+                await self.page.reload()
+                self.logger.debug("刷新页面，检查视频生成状态")
+                await asyncio.sleep(5)
+            
+            if self.video_url:
+                self.logger.info("视频生成成功", total_time=f"{time.time() - start_time:.1f}秒", video_url=self.video_url)
+                return TaskResult(
+                    code=ErrorCode.SUCCESS.value,
+                    data=self.video_url,
+                    message="视频生成成功"
+                )
+            else:
+                self.logger.warning("等待超时或未能获取视频URL", wait_time=f"{time.time() - start_time:.1f}秒", task_id=self.task_id)
+                return TaskResult(
+                    code=ErrorCode.GENERATION_FAILED.value,
+                    data=None,
+                    message="等待超时或未能获取视频URL"
+                )
                 
         except Exception as e:
-            print(f"{Fore.YELLOW}选择AI Video时出错: {str(e)}，尝试备用方法{Style.RESET_ALL}")
-            # 备用方法：直接尝试传统下拉框方式
-            try:
-                await page.click('div.lv-select[role="combobox"][class*="type-select-"]')
-                await asyncio.sleep(1)
-                await page.click('span[class*="select-option-label-content"]:has-text("AI Video")')
-                await asyncio.sleep(2)
-            except:
-                print(f"{Fore.RED}无法选择AI Video选项{Style.RESET_ALL}")
-
-        # 选择视频模型
-        print(f"{Fore.YELLOW}选择视频模型...{Style.RESET_ALL}")
-        
-        # 点击视频模型选择下拉框（第二个下拉框）
-        video_model_selectors = await page.query_selector_all('div.lv-select[role="combobox"]:not([class*="type-select-"])')
-        if len(video_model_selectors) >= 1:
-            await video_model_selectors[0].click()
-            await asyncio.sleep(1)
-            
-            # 等待下拉菜单出现
-            await page.wait_for_selector('div.lv-select-popup-inner[role="listbox"]', timeout=5000)
-            await asyncio.sleep(1)
-            
-            # 根据模型参数选择对应的视频模型
-            try:
-                if "Video 3.0" in model or model == "Video 3.0":
-                    await page.click('li[role="option"] span:has-text("Video 3.0")')
-                    print(f"{Fore.GREEN}已选择视频模型: Video 3.0{Style.RESET_ALL}")
-                elif "Video S2.0 Pro" in model or model == "Video S2.0 Pro":
-                    # 选择Video S2.0 Pro模型
-                    await page.click('li[role="option"] span:has-text("Video S2.0 Pro")')
-                    print(f"{Fore.GREEN}已选择视频模型: Video S2.0 Pro{Style.RESET_ALL}")
-                else:
-                    # 默认选择第一个可用模型
-                    await page.click('li[role="option"]:first-child')
-                    print(f"{Fore.YELLOW}使用默认视频模型{Style.RESET_ALL}")
-            except Exception as e:
-                print(f"{Fore.YELLOW}选择视频模型时出错: {str(e)}，使用默认选项{Style.RESET_ALL}")
-                await page.click('li[role="option"]:first-child')
-            
-            await asyncio.sleep(2)
-        
-        # 选择时长
-        print(f"{Fore.YELLOW}选择时长: {second}s...{Style.RESET_ALL}")
-        
-        # 点击时长选择下拉框（第四个下拉框，跳过分辨率按钮）
-        duration_selectors = await page.query_selector_all('div.lv-select[role="combobox"]:not([class*="type-select-"])')
-        if len(duration_selectors) >= 2:
-            await duration_selectors[1].click()  # 第二个非类型选择的下拉框就是时长选择
-            await asyncio.sleep(1)
-            
-            # 等待时长选择弹窗出现
-            await page.wait_for_selector('div.lv-select-popup-inner[role="listbox"]', timeout=5000)
-            await asyncio.sleep(1)
-            
-            # 根据second参数选择对应的时长
-            try:
-                if second == 5:
-                    # 选择5s选项
-                    await page.click('li[role="option"] span:has-text("5s")')
-                    print(f"{Fore.GREEN}已选择时长: 5s{Style.RESET_ALL}")
-                elif second == 10:
-                    # 选择10s选项
-                    await page.click('li[role="option"] span:has-text("10s")')
-                    print(f"{Fore.GREEN}已选择时长: 10s{Style.RESET_ALL}")
-                else:
-                    # 默认选择5s
-                    await page.click('li[role="option"] span:has-text("5s")')
-                    print(f"{Fore.YELLOW}使用默认时长: 5s{Style.RESET_ALL}")
-            except Exception as e:
-                print(f"{Fore.YELLOW}选择时长时出错: {str(e)}，使用默认选项{Style.RESET_ALL}")
-                await page.click('li[role="option"]:first-child')
-            
-            await asyncio.sleep(2)
-        # 上传图片
-        # 上传图片
-        print(f"{Fore.YELLOW}正在上传图片...{Style.RESET_ALL}")
-        
-        # 查找文件上传输入框
-        upload_selector = 'input[type="file"][accept*="image"]'
-        await page.wait_for_selector(upload_selector, timeout=10000, state='attached')
-        
-        # 上传图片文件
-        await page.set_input_files(upload_selector, image_path)
-        print(f"{Fore.GREEN}图片上传成功: {image_path}{Style.RESET_ALL}")
-        await asyncio.sleep(3)
-        # 输入提示词
-        print(f"{Fore.YELLOW}输入提示词...{Style.RESET_ALL}")
-        await page.fill('textarea.lv-textarea[placeholder="Describe the scene and motion you\'d like to generate"]', prompt)
-        await asyncio.sleep(2)
-        # 点击生成按钮
-        print(f"{Fore.YELLOW}等待生成按钮可用并点击...{Style.RESET_ALL}")
-        await page.wait_for_selector('button[class^="lv-btn lv-btn-primary"][class*="submit-button-"]:not(.lv-btn-disabled)', timeout=60000)
-        await page.click('button[class^="lv-btn lv-btn-primary"][class*="submit-button-"]:not(.lv-btn-disabled)')
-        print(f"{Fore.GREEN}已点击生成按钮，开始生成视频...{Style.RESET_ALL}")
-        await asyncio.sleep(2)
-        
-        # 等待获取到任务ID
-        print(f"{Fore.YELLOW}等待获取任务ID...{Style.RESET_ALL}")
-        wait_task_id_time = 30
-        task_id_start_time = time.time()
-        
-        while not task_id and time.time() - task_id_start_time < wait_task_id_time:
-            elapsed = time.time() - task_id_start_time
-            print(f"{Fore.YELLOW}等待任务ID中，已等待 {elapsed:.1f} 秒...{Style.RESET_ALL}")
-            await asyncio.sleep(1)
-        
-        if not task_id:
-            print(f"{Fore.RED}未能获取到任务ID，生成可能失败{Style.RESET_ALL}")
-            return {
-                "code": 603,
-                "data": None,
-                "message": "任务ID等待超时"
-            }
-            
-        # 等待视频生成完成
-        print(f"{Fore.YELLOW}已获取任务ID，等待视频生成完成...{Style.RESET_ALL}")
-        max_wait_time = 3600
+            self.logger.error("等待生成完成时出错", error=str(e))
+            return TaskResult(
+                code=ErrorCode.OTHER_ERROR.value,
+                data=None,
+                message="等待生成完成时出错",
+                error_details={"error": str(e)}
+            )
+    
+    async def execute(self, **kwargs) -> TaskResult:
+        """执行图片生成视频任务"""
         start_time = time.time()
         
-        while not video_url and time.time() - start_time < max_wait_time:
-            elapsed = time.time() - start_time
-            print(f"{Fore.YELLOW}等待视频生成中，已等待 {elapsed:.1f} 秒...{Style.RESET_ALL}")
-            await page.reload()
-            print(f"{Fore.YELLOW}刷新页面，检查视频生成状态...{Style.RESET_ALL}")
-            await asyncio.sleep(5)
+        # 提取参数
+        image_path = kwargs.get('image_path')
+        prompt = kwargs.get('prompt', '')
+        model = kwargs.get('model', 'Video 3.0')
+        second = kwargs.get('second', 5)
+        username = kwargs.get('username')
+        password = kwargs.get('password')
+        cookies = kwargs.get('cookies')
         
-        if video_url:
-            print(f"{Fore.GREEN}视频生成成功！总共用时 {time.time() - start_time:.1f} 秒{Style.RESET_ALL}")
-            print(f"{Fore.GREEN}视频URL: {video_url}{Style.RESET_ALL}")
-            return {
-                "code": 200,
-                "data": video_url,
-                "message": "视频生成成功"
-            }
-        else:
-            print(f"{Fore.YELLOW}等待超时或未能获取视频URL，已等待 {time.time() - start_time:.1f} 秒{Style.RESET_ALL}")
-            print(f"{Fore.YELLOW}任务ID: {task_id or '未获取'}{Style.RESET_ALL}")
-            return {
-                "code": 604,
-                "data": None,
-                "message": "等待超时或未能获取视频URL"
-            }
+        self.logger.info("开始执行图片生成视频任务", 
+                        image_path=image_path, prompt=prompt, model=model, second=second)
         
-    except asyncio.TimeoutError as e:
-        print(f"{Fore.RED}Playwright等待超时: {str(e)}{Style.RESET_ALL}")
-        return {
-            "code": 601,
-            "data": None,
-            "message": f"Playwright等待超时: {str(e)}"
-        }
-    except Exception as e:
-        error_msg = str(e)
-        print(f"{Fore.RED}生成视频时出错: {error_msg}{Style.RESET_ALL}")
-        
-        # 根据错误信息判断错误类型
-        if "selector" in error_msg.lower() or "element" in error_msg.lower() or "not found" in error_msg.lower():
-            return {
-                "code": 602,
-                "data": None,
-                "message": f"找不到页面节点: {error_msg}"
-            }
-        elif "timeout" in error_msg.lower():
-            return {
-                "code": 601,
-                "data": None,
-                "message": f"操作超时: {error_msg}"
-            }
-        else:
-            return {
-                "code": 500,
-                "data": None,
-                "message": f"未知错误: {error_msg}"
-            }
-    
-    finally:
-        # 关闭浏览器
         try:
-            if browser:
-                await browser.close()
-                print(f"{Fore.GREEN}浏览器已关闭{Style.RESET_ALL}")
-            if playwright:
-                await playwright.stop()
+            # 初始化浏览器
+            init_result = await self.init_browser(cookies)
+            if init_result.code != ErrorCode.SUCCESS.value:
+                return init_result
+            
+            # 如果没有cookies，需要登录
+            if not cookies:
+                login_result = await self.perform_login(username, password)
+                if login_result.code != ErrorCode.SUCCESS.value:
+                    return login_result
+                
+                validate_result = await self.validate_login_success()
+                if validate_result.code != ErrorCode.SUCCESS.value:
+                    return validate_result
+            else:
+                # 如果有cookies，直接设置
+                await self.handle_cookies(cookies)
+            
+            # 跳转到图片生成视频页面
+            nav_result = await self.navigate_to_image2video_page()
+            if nav_result.code != ErrorCode.SUCCESS.value:
+                return nav_result
+            
+            # 设置响应监听器
+            await self.setup_response_listener()
+            
+            # 选择视频模型
+            model_result = await self.select_video_model(model)
+            if model_result.code != ErrorCode.SUCCESS.value:
+                return model_result
+            
+            # 选择视频时长
+            duration_result = await self.select_video_duration(second)
+            if duration_result.code != ErrorCode.SUCCESS.value:
+                return duration_result
+            
+            # 上传图片
+            upload_result = await self.upload_image(image_path)
+            if upload_result.code != ErrorCode.SUCCESS.value:
+                return upload_result
+            
+            # 输入提示词（如果有）
+            if prompt:
+                prompt_result = await self.input_prompt(prompt)
+                if prompt_result.code != ErrorCode.SUCCESS.value:
+                    return prompt_result
+            
+            # 开始生成
+            gen_result = await self.start_generation()
+            if gen_result.code != ErrorCode.SUCCESS.value:
+                return gen_result
+            
+            # 等待生成完成
+            complete_result = await self.wait_for_generation_complete()
+            
+            # 获取最新的cookies
+            final_cookies = await self.get_cookies()
+            complete_result.cookies = final_cookies
+            complete_result.execution_time = time.time() - start_time
+            
+            return complete_result
+            
+        except asyncio.TimeoutError as e:
+            self.logger.error("Playwright等待超时", error=str(e))
+            return TaskResult(
+                code=ErrorCode.WEB_INTERACTION_FAILED.value,
+                data=None,
+                message=f"Playwright等待超时: {str(e)}",
+                execution_time=time.time() - start_time
+            )
         except Exception as e:
-            print(f"{Fore.RED}关闭浏览器时出错: {str(e)}{Style.RESET_ALL}")
+            error_msg = str(e)
+            self.logger.error("生成视频时出错", error=error_msg)
+            
+            # 根据错误信息判断错误类型
+            if "selector" in error_msg.lower() or "element" in error_msg.lower() or "not found" in error_msg.lower():
+                error_code = ErrorCode.WEB_INTERACTION_FAILED.value
+            elif "timeout" in error_msg.lower():
+                error_code = ErrorCode.WEB_INTERACTION_FAILED.value
+            else:
+                error_code = ErrorCode.OTHER_ERROR.value
+                
+            return TaskResult(
+                code=error_code,
+                data=None,
+                message=f"生成视频时出错: {error_msg}",
+                execution_time=time.time() - start_time,
+                error_details={"error": error_msg}
+            )
+        
+        finally:
+            await self.close_browser()
+
+    async def run(self, **kwargs) -> TaskResult:
+        """运行任务的入口方法"""
+        return await self.execute(**kwargs)
+
+# 兼容性函数，保持向后兼容
+async def image2video(image_path, prompt="", model="Video 3.0", second=5, username=None, password=None, headless=False, cookies=None):
+    """
+    兼容性函数，用于保持向后兼容
+    """
+    executor = JimengImage2VideoExecutor(headless=headless)
+    result = await executor.run(
+        image_path=image_path,
+        prompt=prompt,
+        model=model,
+        second=second,
+        username=username,
+        password=password,
+        cookies=cookies
+    )
+    
+    # 转换为旧格式的返回值
+    return {
+        "code": result.code,
+        "data": result.data,
+        "message": result.message
+    }
 
 # 使用示例
 if __name__ == "__main__":
     async def test():
-        username = "hsabqiq2bqnr@maildrop.cc"
-        password = "123456"
-        prompt = "dance"
+        username = "test@example.com"
+        password = "password123"
+        image_path = "/path/to/image.jpg"
+        prompt = "让这张图片动起来"
         model = "Video 3.0"
         second = 10
-        image_path = "/Users/chaiyapeng/Desktop/IMG_1546.jpg"
-        result = await image2video(image_path, prompt, username, password, model, second, headless=False)
         
-        if result["code"] == 200:
-            print(f"{Fore.GREEN}生成成功，视频链接: {result['data']}{Style.RESET_ALL}")
+        executor = JimengImage2VideoExecutor(headless=False)
+        result = await executor.run(
+            image_path=image_path,
+            prompt=prompt,
+            model=model,
+            second=second,
+            username=username,
+            password=password
+        )
+        
+        if result.code == 200:
+            print(f"生成成功，视频链接: {result.data}")
         else:
-            print(f"{Fore.RED}生成失败: {result['message']}{Style.RESET_ALL}")
+            print(f"生成失败: {result.message}")
     
     # 运行测试
     asyncio.run(test())

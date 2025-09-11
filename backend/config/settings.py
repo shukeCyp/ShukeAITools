@@ -7,7 +7,7 @@ import os
 
 # 数据库配置
 DATABASE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'database')
-DATABASE_PATH = os.path.join(DATABASE_DIR, 'shukeai_tools.db')
+DATABASE_PATH = os.path.join(DATABASE_DIR, 'shueke_v2.db')
 
 # Cookies目录
 COOKIES_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'cookies')
