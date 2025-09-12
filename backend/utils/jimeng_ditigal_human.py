@@ -15,6 +15,7 @@ class JimengDigitalHumanExecutor(BaseTaskExecutor):
         super().__init__(headless)
         self.task_id = None
         self.video_url = None
+        self.generation_completed = False
     
     async def handle_cookies(self, cookies: str):
         """处理cookies字符串格式"""
@@ -299,8 +300,10 @@ class JimengDigitalHumanExecutor(BaseTaskExecutor):
                                     try:
                                         self.video_url = asset["video"]["item_list"][0]["video"]["transcoded_video"]["origin"]["video_url"]
                                         self.logger.info("数字人视频生成完成", video_url=self.video_url)
+                                        self.generation_completed = True
                                     except (KeyError, IndexError):
                                         self.logger.warning("数字人视频已完成但无法获取URL")
+                                        self.generation_completed = True  # 标记为完成，即使没有URL
                                 else:
                                     self.logger.debug("数字人视频生成尚未完成，继续等待")
                 except:
@@ -354,26 +357,33 @@ class JimengDigitalHumanExecutor(BaseTaskExecutor):
             self.logger.info("已获取任务ID，等待数字人视频生成完成", task_id=self.task_id)
             start_time = time.time()
             
-            while not self.video_url and time.time() - start_time < max_wait_time:
+            while not self.generation_completed and time.time() - start_time < max_wait_time:
                 elapsed = time.time() - start_time
                 self.logger.debug(f"等待数字人视频生成中，已等待 {elapsed:.1f} 秒")
                 await self.page.reload()
                 self.logger.debug("刷新页面，检查数字人视频生成状态")
                 await asyncio.sleep(5)
             
-            if self.video_url:
+            if self.generation_completed and self.video_url:
                 self.logger.info("数字人视频生成成功", total_time=f"{time.time() - start_time:.1f}秒", video_url=self.video_url)
                 return TaskResult(
                     code=ErrorCode.SUCCESS.value,
                     data=self.video_url,
                     message="数字人视频生成成功"
                 )
-            else:
-                self.logger.warning("等待超时或未能获取数字人视频URL", wait_time=f"{time.time() - start_time:.1f}秒", task_id=self.task_id)
+            elif self.generation_completed and not self.video_url:
+                self.logger.error("任务已完成但未获取到数字人视频URL", task_id=self.task_id, wait_time=f"{time.time() - start_time:.1f}秒")
                 return TaskResult(
                     code=ErrorCode.GENERATION_FAILED.value,
                     data=None,
-                    message="等待超时或未能获取数字人视频URL"
+                    message="当前任务生成失败，请手动生成"
+                )
+            else:
+                self.logger.warning("等待超时，任务未完成", wait_time=f"{time.time() - start_time:.1f}秒", task_id=self.task_id)
+                return TaskResult(
+                    code=ErrorCode.GENERATION_FAILED.value,
+                    data=None,
+                    message="当前任务生成失败，请手动生成"
                 )
                 
         except Exception as e:

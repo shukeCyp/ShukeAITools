@@ -8,7 +8,7 @@ import time
 import asyncio
 import random
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, Optional
 from enum import Enum
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -352,7 +352,7 @@ class JimengTaskManager:
             task.save()
             
             # 执行具体的任务处理逻辑 - 这里需要用户自己实现
-            result = self._execute_text2img_task(task)
+            result = asyncio.run(self._execute_text2img_task(task))
             
             if result['success']:
                 # 任务成功 - 账号使用记录已在_execute_text2img_task中处理
@@ -420,8 +420,14 @@ class JimengTaskManager:
                         print(f"{self.platform_name}任务不可重试，ID: {task.id}，原因: {result.get('error', '未知错误')}")
                         with self._lock:
                             self.stats['failed'] += 1
+                elif error_code == 800:
+                    # 800错误码：生成失败，账号使用记录已在执行方法中处理
+                    task.set_failure(error_code, result.get('error', '未知错误'))
+                    print(f"{self.platform_name}任务生成失败，ID: {task.id}，原因: {result.get('error', '未知错误')}")
+                    with self._lock:
+                        self.stats['failed'] += 1
                 else:
-                    # 非600/900错误，直接设置失败
+                    # 非600/900/800错误，直接设置失败
                     task.status = 3  # 失败
                     task.update_at = datetime.now()
                     task.save()
@@ -453,7 +459,7 @@ class JimengTaskManager:
             except:
                 pass
     
-    def _execute_text2img_task(self, task) -> Dict:
+    async def _execute_text2img_task(self, task) -> Dict:
         """
         执行即梦文生图任务的具体逻辑
         
@@ -493,7 +499,7 @@ class JimengTaskManager:
             
             if result.code == 200 and result.data and len(result.data) > 0:
                 # 更新账号使用次数
-                self._update_account_usage(available_account.id, 'text2img')
+                await self.add_task_record(available_account.id, 1)  # 1=文生图
                 
                 return {
                     'success': True, 
@@ -508,7 +514,7 @@ class JimengTaskManager:
                 # 如果是700（任务ID等待超时）或800（生成失败），需要更新账号使用记录
                 if error_code in [700, 800]:
                     print(f"错误码 {error_code}，更新账号使用情况")
-                    self._update_account_usage(available_account.id, 'text2img')
+                    await self.add_task_record(available_account.id, 1)  # 1=文生图
                 
                 return {
                     'success': False, 
@@ -646,6 +652,25 @@ class JimengTaskManager:
             
         except Exception as e:
             print(f"更新账号使用记录失败: {str(e)}")
+    
+    async def add_task_record(self, account_id: int, task_type: int = 1, 
+                            task_id: Optional[str] = None) -> Optional[int]:
+        """添加任务记录到数据库 (task_type: 1=文生图)"""
+        try:
+            from backend.models.models import JimengTaskRecord
+            record = JimengTaskRecord.create(
+                account_id=account_id,
+                task_type=task_type,
+                created_at=datetime.now(),
+                updated_at=datetime.now()
+            )
+            
+            print(f"添加任务记录成功，记录ID: {record.id}")
+            return record.id
+            
+        except Exception as e:
+            print(f"添加任务记录失败: {str(e)}")
+            return None
     
 # 已删除_login_and_generate方法，现在直接使用text2image函数
 

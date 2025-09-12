@@ -15,6 +15,7 @@ class JimengText2ImageExecutor(BaseTaskExecutor):
         super().__init__(headless)
         self.task_id = None
         self.image_urls = []
+        self.generation_completed = False
     
     async def handle_cookies(self, cookies: str):
         """处理cookies字符串格式"""
@@ -344,10 +345,13 @@ class JimengText2ImageExecutor(BaseTaskExecutor):
                                             self.logger.info("图片生成完成", count=len(self.image_urls))
                                             for i, url in enumerate(self.image_urls):
                                                 self.logger.info(f"图片{i+1} URL", url=url)
+                                            self.generation_completed = True
                                         else:
                                             self.logger.warning("图片已完成但无法获取任何URL")
+                                            self.generation_completed = True  # 标记为完成，即使没有URL
                                     except (KeyError, IndexError):
                                         self.logger.warning("图片已完成但无法获取URL")
+                                        self.generation_completed = True  # 标记为完成，即使没有URL
                                 else:
                                     self.logger.debug("图片生成尚未完成，继续等待")
                 except:
@@ -399,14 +403,14 @@ class JimengText2ImageExecutor(BaseTaskExecutor):
             self.logger.info("已获取任务ID，等待图片生成完成", task_id=self.task_id)
             start_time = time.time()
             
-            while not self.image_urls and time.time() - start_time < max_wait_time:
+            while not self.generation_completed and time.time() - start_time < max_wait_time:
                 elapsed = time.time() - start_time
                 self.logger.debug(f"等待图片生成中，已等待 {elapsed:.1f} 秒")
                 await self.page.reload()
                 self.logger.debug("刷新页面，检查图片生成状态")
                 await asyncio.sleep(5)
             
-            if self.image_urls:
+            if self.generation_completed and self.image_urls:
                 self.logger.info("图片生成成功", total_time=f"{time.time() - start_time:.1f}秒", count=len(self.image_urls))
                 for i, url in enumerate(self.image_urls):
                     self.logger.info(f"图片{i+1} URL", url=url)
@@ -415,12 +419,19 @@ class JimengText2ImageExecutor(BaseTaskExecutor):
                     data=self.image_urls,
                     message="图片生成成功"
                 )
-            else:
-                self.logger.warning("等待超时或未能获取图片URL", wait_time=f"{time.time() - start_time:.1f}秒", task_id=self.task_id)
+            elif self.generation_completed and not self.image_urls:
+                self.logger.error("任务已完成但未获取到图片URL", task_id=self.task_id, wait_time=f"{time.time() - start_time:.1f}秒")
                 return TaskResult(
                     code=ErrorCode.GENERATION_FAILED.value,
                     data=None,
-                    message="等待超时或未能获取图片URL"
+                    message="当前任务生成失败，请手动生成"
+                )
+            else:
+                self.logger.warning("等待超时，任务未完成", wait_time=f"{time.time() - start_time:.1f}秒", task_id=self.task_id)
+                return TaskResult(
+                    code=ErrorCode.GENERATION_FAILED.value,
+                    data=None,
+                    message="当前任务生成失败，请手动生成"
                 )
                 
         except Exception as e:

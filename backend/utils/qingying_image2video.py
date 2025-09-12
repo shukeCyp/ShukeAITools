@@ -562,14 +562,14 @@ class QingyingImage2VideoExecutor(BaseTaskExecutor):
                                 self.video_result = TaskResult(
                                     code=ErrorCode.GENERATION_FAILED.value,
                                     data=None,
-                                    message="生成完成但未获取到视频URL"
+                                    message="当前任务生成失败，请手动生成"
                                 )
                         elif status == 'failed' or status == 'error':
                             self.logger.error("视频生成失败", msg=msg)
                             self.video_result = TaskResult(
                                 code=ErrorCode.GENERATION_FAILED.value,
                                 data=None,
-                                message=f"视频生成失败: {msg}"
+                                message="当前任务生成失败，请手动生成"
                             )
                             
             except Exception as e:

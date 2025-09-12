@@ -404,6 +404,21 @@
         <el-form-item label="AI音效" prop="ai_audio">
           <el-switch v-model="importFolderForm.ai_audio" />
         </el-form-item>
+
+        <el-form-item label="添加提示词">
+          <el-switch v-model="importFolderForm.usePrompt" />
+        </el-form-item>
+
+        <el-form-item v-if="importFolderForm.usePrompt" label="提示词内容">
+          <el-input
+            v-model="importFolderForm.prompt"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入提示词，将应用于本次导入的所有任务"
+            maxlength="500"
+            show-word-limit
+          />
+        </el-form-item>
       </el-form>
 
       <template #footer>
@@ -684,7 +699,9 @@ const importFolderForm = reactive({
   frame_rate: '30',
   resolution: '720p',
   duration: '5s',
-  ai_audio: false
+  ai_audio: false,
+  usePrompt: false,
+  prompt: ''
 })
 
 // 批量添加表单数据
@@ -1008,11 +1025,16 @@ const confirmImportFolder = async () => {
       frame_rate: importFolderForm.frame_rate,
       resolution: importFolderForm.resolution,
       duration: importFolderForm.duration,
-      ai_audio: importFolderForm.ai_audio
+      ai_audio: importFolderForm.ai_audio,
+      use_prompt: importFolderForm.usePrompt,
+      prompt: importFolderForm.prompt
     })
     
     if (response.data.success) {
-      ElMessage.success(response.data.message || '开始导入文件夹')
+      ElMessage.success("文件选择器已调用打开，请小化浏览器返回桌面选择文件夹")
+      if (importFolderForm.usePrompt && importFolderForm.prompt) {
+        ElMessage.info(`已设置提示词: ${importFolderForm.prompt}`)
+      }
       showImportFolderDialog.value = false
       // 延迟刷新任务列表
       setTimeout(() => {

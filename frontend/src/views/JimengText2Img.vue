@@ -87,10 +87,10 @@
             class="status-filter"
             >
               <el-option label="全部" :value="null" />
-              <el-option label="排队中" value="pending" />
-              <el-option label="生成中" value="processing" />
-              <el-option label="已完成" value="completed" />
-              <el-option label="失败" value="failed" />
+              <el-option label="排队中" value="0" />
+              <el-option label="生成中" value="1" />
+              <el-option label="已完成" value="2" />
+              <el-option label="失败" value="3" />
             </el-select>
             <el-button 
               @click="refreshTasks"
@@ -127,21 +127,6 @@
               <el-icon><RefreshRight /></el-icon>
               批量重试失败任务
             </el-button>
-            <el-popconfirm
-              title="确定要删除今日前的所有任务吗？此操作不可恢复！"
-              @confirm="deleteTasksBeforeToday"
-            >
-              <template #reference>
-                <el-button 
-                  type="danger" 
-                  :loading="deleteBeforeTodayLoading"
-                  class="delete-before-today-btn"
-                >
-                  <el-icon><Delete /></el-icon>
-                  删除今日前任务
-                </el-button>
-              </template>
-            </el-popconfirm>
             <el-popconfirm
               title="确定要删除选中的任务吗？"
               @confirm="batchDeleteTasks"
@@ -975,26 +960,7 @@ export default {
       }
     }
 
-    // 删除今日前任务
-    const deleteBeforeTodayLoading = ref(false)
 
-    const deleteTasksBeforeToday = async () => {
-      deleteBeforeTodayLoading.value = true
-      try {
-        const response = await text2imgAPI.deleteTasksBeforeToday()
-        if (response.data.success) {
-          ElMessage.success(response.data.message)
-          refreshTasks()
-        } else {
-          ElMessage.error(response.data.message)
-        }
-      } catch (error) {
-        console.error('删除今日前任务失败:', error)
-        ElMessage.error(error.response?.data?.message || '删除今日前任务失败')
-      } finally {
-        deleteBeforeTodayLoading.value = false
-      }
-    }
 
     // 获取失败原因文本
     const getFailureReasonText = (reason) => {
@@ -1079,11 +1045,9 @@ export default {
       selectedCompletedTasks,
       batchDownloadImages,
       batchDownloadLoading,
-      batchRetryFailedTasks,
+            batchRetryFailedTasks,
       batchRetryLoading,
-              deleteTasksBeforeToday,
-        deleteBeforeTodayLoading,
-        getFailureReasonText,
+      getFailureReasonText,
         getFailureTooltipContent
     }
   }
@@ -1223,15 +1187,7 @@ export default {
   border-color: #f78989;
 }
 
-.delete-before-today-btn {
-  background-color: #F56C6C;
-  border-color: #F56C6C;
-}
 
-.delete-before-today-btn:hover {
-  background-color: #f78989;
-  border-color: #f78989;
-}
 
 .refresh-btn {
   background-color: #E6A23C;

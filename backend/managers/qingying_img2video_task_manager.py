@@ -109,7 +109,7 @@ class QingyingImg2VideoTaskManager:
             account = self._get_available_account()
             if not account:
                 print(f"清影图生视频任务 {task_id}: 没有可用的账号")
-                task.status = 3  # 失败
+                task.status = 0  # 排队中
                 task.update_at = datetime.now()
                 task.save()
                 return

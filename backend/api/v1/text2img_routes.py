@@ -248,6 +248,35 @@ def get_text2img_stats():
             'message': '获取统计信息失败: {}'.format(str(e))
         }), 500
 
+@jimeng_text2img_bp.route('/tasks/batch-delete', methods=['POST'])
+def batch_delete_text2img_tasks():
+    """批量删除文生图任务"""
+    try:
+        data = request.get_json()
+        task_ids = data.get('task_ids', [])
+        
+        if not task_ids:
+            return jsonify({
+                'success': False,
+                'message': '未提供任务ID'
+            }), 400
+        
+        # 删除任务
+        deleted_count = JimengText2ImgTask.delete().where(JimengText2ImgTask.id.in_(task_ids)).execute()
+        
+        print(f"批量删除文生图任务: {deleted_count}个")
+        return jsonify({
+            'success': True,
+            'message': f'成功删除 {deleted_count} 个任务'
+        })
+        
+    except Exception as e:
+        print(f"批量删除文生图任务失败: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'批量删除失败: {str(e)}'
+        }), 500
+
 @jimeng_text2img_bp.route('/tasks/batch-download', methods=['POST'])
 def batch_download_images():
     """批量下载任务图片"""
@@ -381,25 +410,26 @@ def batch_download_images():
                 batch_folder = os.path.join(download_dir, f"jimeng_images_{timestamp}")
                 os.makedirs(batch_folder, exist_ok=True)
                 
-                success_count = 0
-                error_count = 0
-                
-                # 下载每张图片
+                # 准备下载信息
+                file_infos = []
                 for img_info in all_images:
-                    try:
-                        response = requests.get(img_info['url'], timeout=30)
-                        response.raise_for_status()
-                        
-                        file_path = os.path.join(batch_folder, img_info['filename'])
-                        with open(file_path, 'wb') as f:
-                            f.write(response.content)
-                        
-                        success_count += 1
-                        print(f"下载成功: {img_info['filename']}")
-                        
-                    except Exception as e:
-                        error_count += 1
-                        print(f"下载失败 {img_info['filename']}: {str(e)}")
+                    file_infos.append({
+                        'url': img_info['url'],
+                        'file_path': os.path.join(batch_folder, img_info['filename']),
+                        'filename': img_info['filename']
+                    })
+                
+                # 使用带重试机制的批量下载
+                from utils.download_util import batch_download_files
+                download_result = batch_download_files(
+                    file_infos=file_infos,
+                    max_retries=5,
+                    delay_between_downloads=1.0,
+                    timeout=30
+                )
+                
+                success_count = download_result['success_count']
+                error_count = download_result['failed_count']
                 
                 print(f"批量下载完成: 成功 {success_count} 张，失败 {error_count} 张")
                 print(f"文件保存位置: {batch_folder}")

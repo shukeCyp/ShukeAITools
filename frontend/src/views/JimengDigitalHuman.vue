@@ -86,7 +86,7 @@
             @change="loadTasks"
             class="status-filter"
           >
-            <el-option label="全部" value="all" />
+            <el-option label="全部" :value="null" />
             <el-option label="排队中" value="0" />
             <el-option label="生成中" value="1" />
             <el-option label="已完成" value="2" />
@@ -108,21 +108,6 @@
             <el-icon><RefreshRight /></el-icon>
             批量重试失败任务
           </el-button>
-          <el-popconfirm
-            title="确定要删除今日前的所有任务吗？此操作不可恢复！"
-            @confirm="deleteTasksBeforeToday"
-          >
-            <template #reference>
-              <el-button 
-                type="danger" 
-                :loading="deleteBeforeTodayLoading"
-                class="delete-before-today-btn"
-              >
-                <el-icon><Delete /></el-icon>
-                删除今日前任务
-              </el-button>
-            </template>
-          </el-popconfirm>
           <el-button 
             type="success" 
             @click="batchDownloadVideos" 
@@ -540,7 +525,7 @@ export default {
     const currentPage = ref(1)
     const pageSize = ref(20)
     const totalTasks = ref(0)
-    const statusFilter = ref('all')
+    const statusFilter = ref(null)
     const selectedTasks = ref([])
     
     // 上传相关
@@ -557,8 +542,7 @@ export default {
       error: ''
     })
 
-    // 删除今日前任务相关
-    const deleteBeforeTodayLoading = ref(false)
+
     
     // 批量下载相关
     const batchDownloadLoading = ref(false)
@@ -735,11 +719,16 @@ export default {
     const loadTasks = async () => {
       try {
         loading.value = true
-        const response = await digitalHumanAPI.getTasks({
+        const params = {
           page: currentPage.value,
-          per_page: pageSize.value,
-          status: statusFilter.value === 'all' ? undefined : statusFilter.value
-        })
+          per_page: pageSize.value
+        }
+        
+        if (statusFilter.value !== null) {
+          params.status = statusFilter.value
+        }
+        
+        const response = await digitalHumanAPI.getTasks(params)
         
         if (response.data.success) {
           // 适配新的数据结构
@@ -964,25 +953,7 @@ export default {
       }
     }
 
-    // 删除今日前的所有任务
-    const deleteTasksBeforeToday = async () => {
-      try {
-        deleteBeforeTodayLoading.value = true
-        
-        const response = await digitalHumanAPI.deleteTasksBeforeToday()
-        if (response.data.success) {
-          ElMessage.success(response.data.message)
-          refreshTasks()
-        } else {
-          ElMessage.error(response.data.message)
-        }
-      } catch (error) {
-        console.error('删除今日前任务失败:', error)
-        ElMessage.error('删除今日前任务失败')
-      } finally {
-        deleteBeforeTodayLoading.value = false
-      }
-    }
+
 
     // 预览视频
     const previewVideo = (videoUrl) => {
@@ -1077,7 +1048,6 @@ export default {
       imageFileList,
       audioFileList,
       audioInfo,
-      deleteBeforeTodayLoading,
       batchDownloadLoading,
       selectedCompletedTasks,
       getStatusType,
@@ -1105,7 +1075,6 @@ export default {
       batchRetryFailedTasks,
       batchDownloadVideos,
       batchDeleteSelected,
-      deleteTasksBeforeToday,
       previewVideo,
       downloadVideo,
       handleSelectionChange,
@@ -1393,15 +1362,7 @@ export default {
   border-color: #ebb563;
 }
 
-.delete-before-today-btn {
-  background-color: #F56C6C;
-  border-color: #F56C6C;
-}
 
-.delete-before-today-btn:hover {
-  background-color: #f78989;
-  border-color: #f78989;
-}
 
 .batch-delete-btn {
   background-color: #F56C6C;

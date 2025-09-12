@@ -111,7 +111,7 @@ export const text2imgAPI = {
   deleteTask: (taskId) => api.delete(`/jimeng/text2img/tasks/${taskId}`),
   
   // 批量删除任务
-  batchDeleteTasks: (taskIds) => api.delete('/jimeng/text2img/tasks/batch', { data: { task_ids: taskIds } }),
+  batchDeleteTasks: (taskIds) => api.post('/jimeng/text2img/tasks/batch-delete', { task_ids: taskIds }),
   
   // 获取统计信息
   getStats: () => api.get('/jimeng/text2img/stats'),

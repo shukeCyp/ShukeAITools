@@ -304,8 +304,14 @@ class JimengDigitalHumanTaskManager:
                         logger.error(f"{self.platform_name}任务不可重试，ID: {task.id}，原因: {result.get('error', '未知错误')}")
                         with self._lock:
                             self.stats['failed'] += 1
+                elif error_code == 800:
+                    # 800错误码：生成失败，账号使用记录已在执行方法中处理
+                    task.set_failure(error_code, result.get('error', '未知错误'))
+                    logger.error(f"{self.platform_name}任务生成失败，ID: {task.id}，原因: {result.get('error', '未知错误')}")
+                    with self._lock:
+                        self.stats['failed'] += 1
                 else:
-                    # 非600/900错误，直接设置失败
+                    # 非600/900/800错误，直接设置失败
                     task.set_failure(error_code, result.get('error', '未知错误'))
                     
                     logger.error(f"{self.platform_name}任务失败，ID: {task.id}，原因: {result.get('error', '未知错误')}")

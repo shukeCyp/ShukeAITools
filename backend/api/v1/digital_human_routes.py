@@ -366,29 +366,31 @@ def batch_download_videos():
                     JimengDigitalHumanTask.video_url.is_null(False)  # 有视频URL
                 )
                 
-                download_count = 0
-                import requests
-                import shutil
-                
+                # 准备下载信息
+                file_infos = []
                 for task in tasks:
-                    try:
-                        if task.video_url:
-                            # 构造文件名
-                            filename = f"digital_human_task_{task.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4"
-                            file_path = os.path.join(folder_path, filename)
-                            
-                            # 下载视频
-                            response = requests.get(task.video_url, stream=True, timeout=30)
-                            if response.status_code == 200:
-                                with open(file_path, 'wb') as f:
-                                    shutil.copyfileobj(response.raw, f)
-                                print(f"已下载: {filename}")
-                                download_count += 1
-                            else:
-                                print(f"下载失败，任务ID {task.id}: HTTP {response.status_code}")
-                                
-                    except Exception as e:
-                        print(f"下载任务 {task.id} 失败: {str(e)}")
+                    if task.video_url:
+                        filename = f"digital_human_task_{task.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4"
+                        file_infos.append({
+                            'url': task.video_url,
+                            'file_path': os.path.join(folder_path, filename),
+                            'filename': filename
+                        })
+                
+                if not file_infos:
+                    print("没有可下载的视频")
+                    return
+                
+                # 使用带重试机制的批量下载
+                from utils.download_util import batch_download_files
+                download_result = batch_download_files(
+                    file_infos=file_infos,
+                    max_retries=5,
+                    delay_between_downloads=1.0,
+                    timeout=60
+                )
+                
+                download_count = download_result['success_count']
                 
                 print(f"批量下载完成，成功下载 {download_count} 个视频")
                 

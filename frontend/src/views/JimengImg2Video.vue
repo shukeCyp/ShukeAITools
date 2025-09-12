@@ -123,21 +123,6 @@
             <el-icon><RefreshRight /></el-icon>
             批量重试失败任务
           </el-button>
-          <el-popconfirm
-            title="确定要删除今日前的所有任务吗？此操作不可恢复！"
-            @confirm="deleteTasksBeforeToday"
-          >
-            <template #reference>
-              <el-button 
-                type="danger" 
-                :loading="deleteBeforeTodayLoading"
-                class="delete-before-today-btn"
-              >
-                <el-icon><Delete /></el-icon>
-                删除今日前任务
-              </el-button>
-            </template>
-          </el-popconfirm>
           <!-- 批量操作按钮 -->
           <el-button 
             type="danger" 
@@ -345,15 +330,28 @@
             <el-option label="10秒" :value="10" />
           </el-select>
         </el-form-item>
+        <el-form-item label="添加提示词">
+          <el-switch v-model="importFolderForm.usePrompt" />
+        </el-form-item>
+        <el-form-item v-if="importFolderForm.usePrompt" label="提示词内容">
+          <el-input
+            v-model="importFolderForm.prompt"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入提示词，将应用于本次导入的所有任务"
+            maxlength="500"
+            show-word-limit
+          />
+        </el-form-item>
       </el-form>
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="importFolderDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="importFromFolder" :loading="importFolderLoading">
-            确认
+          <el-button type="primary" @click="confirmImportFolder" :loading="importFolderLoading">
+            确认并选择文件夹
           </el-button>
         </span>
-            </template>
+      </template>
     </el-dialog>
 
     <!-- 批量添加对话框 -->
@@ -568,8 +566,7 @@ const paginationContainer = ref(null)
 // 批量重试状态
 const batchRetryLoading = ref(false)
 
-// 删除今日前任务状态
-const deleteBeforeTodayLoading = ref(false)
+
 
 // 预览相关状态
 const imagePreviewVisible = ref(false)
@@ -581,7 +578,9 @@ const previewVideoUrl = ref('')
 const importFolderDialogVisible = ref(false)
 const importFolderForm = reactive({
   model: 'Video 3.0',
-  second: 5
+  second: 5,
+  usePrompt: false,
+  prompt: ''
 })
 
 // 批量添加表单数据
@@ -643,79 +642,7 @@ const loadStats = async () => {
   }
 }
 
-const importFromFolder = async () => {
-  try {
-    // 首先询问用户选择模型和时长
-    const model = await ElMessageBox.confirm(
-      '请选择视频模型',
-      '导入文件夹设置',
-      {
-        confirmButtonText: 'Video 3.0',
-        cancelButtonText: 'Video S2.0 Pro',
-        distinguishCancelAndClose: true,
-        type: 'info'
-      }
-    ).then(
-      () => 'Video 3.0',  // 确认按钮返回Video 3.0
-      (action) => action === 'cancel' ? 'Video S2.0 Pro' : null  // 取消按钮返回Video S2.0 Pro，关闭返回null
-    )
-    
-    // 如果用户关闭了对话框，则取消操作
-    if (!model) return
-    
-    // 根据选择的模型，询问用户选择时长
-    let second = 5
-    if (model === 'Video 3.0') {
-      const result = await ElMessageBox.confirm(
-        '请选择视频时长',
-        '导入文件夹设置',
-        {
-          confirmButtonText: '5秒',
-          cancelButtonText: '10秒',
-          distinguishCancelAndClose: true,
-          type: 'info'
-        }
-      ).then(
-        () => 5,  // 确认按钮返回5秒
-        (action) => action === 'cancel' ? 10 : null  // 取消按钮返回10秒，关闭返回null
-      )
-      
-      // 如果用户关闭了对话框，则取消操作
-      if (result === null) return
-      
-      second = result
-    }
-    
-    // 设置表单值
-    importFolderForm.model = model
-    importFolderForm.second = second
-    
-    // 调用API
-    importFolderLoading.value = true
-    
-    // 使用选择的模型和时长
-    const response = await img2videoAPI.importFolder({
-      model: importFolderForm.model,
-      second: importFolderForm.second
-    })
-    
-    if (response.data.success) {
-      ElMessage.success(`开始导入文件夹，使用模型: ${importFolderForm.model}，时长: ${importFolderForm.second}秒`)
-      // 延迟刷新任务列表
-      setTimeout(() => {
-        loadTasks()
-        loadStats()
-      }, 2000)
-    } else {
-      ElMessage.error(response.data.message || '导入文件夹失败')
-    }
-  } catch (error) {
-    console.error('导入文件夹失败:', error)
-    ElMessage.error('导入文件夹失败')
-  } finally {
-    importFolderLoading.value = false
-  }
-}
+
 
 // 显示批量添加对话框
 const showBatchAddDialog = () => {
@@ -1168,29 +1095,50 @@ const batchRetryFailedTasks = async () => {
   }
 }
 
-// 删除今日前的所有任务
-const deleteTasksBeforeToday = async () => {
-  try {
-    deleteBeforeTodayLoading.value = true
-    const response = await img2videoAPI.deleteTasksBeforeToday()
-    if (response.data.success) {
-      ElMessage.success(response.data.message || '今日前的任务已删除')
-      await loadTasks()
-      await loadStats()
-    } else {
-      ElMessage.error(response.data.message || '删除今日前任务失败')
-    }
-  } catch (error) {
-    console.error('删除今日前任务失败:', error)
-    ElMessage.error(error.response?.data?.message || '删除今日前任务失败')
-  } finally {
-    deleteBeforeTodayLoading.value = false
-  }
-}
+
 
 // 显示导入文件夹对话框
 const showImportFolderDialog = () => {
-  importFromFolder()
+  importFolderDialogVisible.value = true
+}
+
+// 确认导入文件夹
+const confirmImportFolder = async () => {
+  try {
+    importFolderLoading.value = true
+    const model = importFolderForm.model
+    const second = importFolderForm.second
+    const usePrompt = importFolderForm.usePrompt
+    const prompt = importFolderForm.prompt
+
+    const response = await img2videoAPI.importFolder({
+      model,
+      second,
+      usePrompt,
+      prompt
+    })
+
+         if (response.data.success) {
+       ElMessage.success("文件选择器已调用打开，请小化浏览器返回桌面选择文件夹")
+       ElMessage.info(`使用模型: ${model}，时长: ${second}秒${usePrompt ? '，添加提示词' : ''}`)
+       if (prompt) {
+         ElMessage.info(`提示词: ${prompt}`)
+       }
+       // 延迟刷新任务列表
+       setTimeout(() => {
+         loadTasks()
+         loadStats()
+       }, 2000)
+       importFolderDialogVisible.value = false
+     } else {
+       ElMessage.error(response.data.message || '导入文件夹失败')
+     }
+  } catch (error) {
+    console.error('导入文件夹失败:', error)
+    ElMessage.error('导入文件夹失败')
+  } finally {
+    importFolderLoading.value = false
+  }
 }
 
 // 生命周期
@@ -1493,15 +1441,7 @@ onUnmounted(() => {
   border-color: #ebb563;
 }
 
-.delete-before-today-btn {
-  background-color: #F56C6C;
-  border-color: #F56C6C;
-}
 
-.delete-before-today-btn:hover {
-  background-color: #f78989;
-  border-color: #f78989;
-}
 
 /* 任务表格 */
 .task-table-container {

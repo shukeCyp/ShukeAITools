@@ -713,25 +713,26 @@ def batch_download_videos():
                 batch_folder = os.path.join(download_dir, f"qingying_videos_{timestamp}")
                 os.makedirs(batch_folder, exist_ok=True)
                 
-                success_count = 0
-                error_count = 0
-                
-                # 下载每个视频
+                # 准备下载信息
+                file_infos = []
                 for video_info in all_videos:
-                    try:
-                        response = requests.get(video_info['url'], timeout=60)
-                        response.raise_for_status()
-                        
-                        file_path = os.path.join(batch_folder, video_info['filename'])
-                        with open(file_path, 'wb') as f:
-                            f.write(response.content)
-                        
-                        success_count += 1
-                        print(f"下载成功: {video_info['filename']}")
-                        
-                    except Exception as e:
-                        error_count += 1
-                        print(f"下载失败 {video_info['filename']}: {str(e)}")
+                    file_infos.append({
+                        'url': video_info['url'],
+                        'file_path': os.path.join(batch_folder, video_info['filename']),
+                        'filename': video_info['filename']
+                    })
+                
+                # 使用带重试机制的批量下载
+                from utils.download_util import batch_download_files
+                download_result = batch_download_files(
+                    file_infos=file_infos,
+                    max_retries=5,
+                    delay_between_downloads=1.0,
+                    timeout=60
+                )
+                
+                success_count = download_result['success_count']
+                error_count = download_result['failed_count']
                 
                 print(f"批量下载完成: 成功 {success_count} 个，失败 {error_count} 个")
                 print(f"文件保存位置: {batch_folder}")
