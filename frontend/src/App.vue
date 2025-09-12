@@ -9,6 +9,9 @@
             <el-icon size="32"><Tools /></el-icon>
             <h1>舒克AI工具集</h1>
           </div>
+          <div class="center-slogan">
+            <span class="logo-slogan">用科技让复杂的世界更简单</span>
+          </div>
           <div class="header-actions">
             <el-button 
               text 
@@ -35,7 +38,7 @@
           >
             <el-menu-item index="home">
               <el-icon><House /></el-icon>
-              <span>首页</span>
+              <span>工具分享</span>
             </el-menu-item>
             
             <el-menu-item index="task-manager">
@@ -118,82 +121,40 @@
         <!-- 主要内容区域 -->
         <el-main class="app-main">
           <div class="content-wrapper">
-            <!-- 首页 -->
+            <!-- 工具分享界面 -->
             <div v-if="activeMenu === 'home'" class="page-content">
-                <div class="welcome-content">
-                  <div class="welcome-header">
-                    <h2>欢迎使用舒克AI工具集</h2>
-                    <p>基于 Vue 3 + Flask 构建的现代化 AI 工具集成平台</p>
+              <div class="tools-share-page">
+                <!-- 页面标题 -->
+                <div class="page-header">
+                  <div class="header-content">
+                    <div class="title-section">
+                      <div class="title-icon">
+                        <el-icon size="32"><Share /></el-icon>
+                      </div>
+                      <h1 class="page-title">工具分享</h1>
+                    </div>
+                    <div class="status-section">
+                      <span class="page-subtitle">分享实用工具，让效率加倍</span>
+                    </div>
                   </div>
+                </div>
                 
-                <!-- 定制化服务区域 -->
-                <div class="services-section">
-                  <div class="services-header">
-                    <div class="services-icon">🚀</div>
-                    <h3>舒克专业定制服务</h3>
-                    <p>专业的AI工具定制开发，为您量身打造专属解决方案 🎯</p>
-                  </div>
-                  
-                  <div class="services-container">
-                    <div class="service-item">
-                      <div class="service-icon">⚙️</div>
-                      <h4>定制化脚本</h4>
-                      <p>根据您的需求开发专属自动化脚本</p>
-                      <ul>
-                        <li>数据处理自动化</li>
-                        <li>业务流程脚本</li>
-                        <li>爬虫与数据采集</li>
-                        <li>系统集成方案</li>
-                      </ul>
-                    </div>
-                    
-                    <div class="service-item">
-                      <div class="service-icon">🎨</div>
-                      <h4>ComfyUI工作流</h4>
-                      <p>专业的ComfyUI节点开发与工作流定制</p>
-                      <ul>
-                        <li>自定义节点开发</li>
-                        <li>复杂工作流设计</li>
-                        <li>模型整合优化</li>
-                        <li>批量处理方案</li>
-                      </ul>
-                    </div>
-                    
-                    <div class="service-item">
-                      <div class="service-icon">🔗</div>
-                      <h4>扣子工作流</h4>
-                      <p>扣子平台工作流开发与部署服务</p>
-                      <ul>
-                        <li>智能对话流程</li>
-                        <li>知识库集成</li>
-                        <li>API接口开发</li>
-                        <li>多平台部署</li>
-                      </ul>
-                    </div>
-                  </div>
-                  
-                  <div class="services-footer">
-                    <div class="brand-highlight">
-                      <div class="brand-logo">🏆</div>
-                      <h4>认准舒克</h4>
-                      <p>专业 · 高效 · 可靠</p>
-                    </div>
-                    <div class="contact-info">
-                      <p>💬 需要定制服务？联系我们获取专业方案</p>
-                      <el-button 
-                        type="primary" 
-                        size="large"
-                        @click="contactUs"
-                        style="margin-top: 15px;"
-                      >
-                        📞 立即咨询
-                      </el-button>
+                <!-- 工具分享内容区域 -->
+                <div class="tools-container">
+                  <div class="tools-grid">
+                    <!-- 舒克数字人工具 -->
+                    <div class="tool-card" @click="showToolDialog('shukeDigitalHuman')">
+                      <div class="tool-image">
+                        <img src="./assets/skszr.png" alt="舒克数字人" />
+                      </div>
+                      <div class="tool-content">
+                        <h3 class="tool-title">舒克数字人</h3>
+                        <p class="tool-description">智能数字人生成工具</p>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-              
-
             </div>
 
             <!-- 即梦国际版功能页面 -->
@@ -395,6 +356,42 @@
         </div>
       </div>
     </el-dialog>
+
+    <!-- 工具详情弹窗 -->
+    <el-dialog 
+      v-model="toolDialogVisible" 
+      :title="currentTool.title"
+      width="400px"
+      :close-on-click-modal="false"
+      :show-close="true"
+      class="tool-dialog"
+    >
+      <div class="tool-dialog-content">
+        <!-- 功能介绍 -->
+        <div class="tool-features">
+          <h4>功能特色</h4>
+          <ul class="features-list">
+            <li v-for="feature in currentTool.features" :key="feature">
+              <el-icon class="feature-icon"><Check /></el-icon>
+              {{ feature }}
+            </li>
+          </ul>
+        </div>
+        
+        <!-- 微信联系 -->
+        <div class="tool-contact">
+          <div class="wechat-info">
+            <div class="wechat-id-container" @click="copyWechatId">
+              <el-icon class="wechat-icon"><ChatDotRound /></el-icon>
+              <div class="wechat-content">
+                <span class="wechat-label">微信号</span>
+                <span class="wechat-id">zhaxinyu--</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -418,7 +415,9 @@ import {
   Monitor,
   Collection,
   VideoCamera,
+  Share,
   Message,
+  Check,
   Star,
   Close,
   ChatDotRound
@@ -475,6 +474,26 @@ export default {
     const sponsorDialogVisible = ref(false)
     const wechatDialogVisible = ref(false)
     const groupDialogVisible = ref(false) // 新增：交流群弹窗可见性
+    
+    // 工具弹窗相关
+    const toolDialogVisible = ref(false)
+    const currentTool = ref({
+      title: '',
+      features: []
+    })
+    
+    // 工具数据
+    const toolsData = {
+      shukeDigitalHuman: {
+        title: '舒克数字人',
+        features: [
+          '支持批量生成',
+          '支持无限长度视频生成',
+          '支持音色克隆',
+          '支持试用'
+        ]
+      }
+    }
 
     // 切换菜单
     const handleMenuSelect = (index) => {
@@ -504,6 +523,35 @@ export default {
     // 联系我们
     const contactUs = () => {
       contactDialogVisible.value = true
+    }
+    
+    // 显示工具详情弹窗
+    const showToolDialog = (toolKey) => {
+      if (toolsData[toolKey]) {
+        currentTool.value = toolsData[toolKey]
+        toolDialogVisible.value = true
+      }
+    }
+    
+    // 复制微信号
+    const copyWechatId = async () => {
+      try {
+        await navigator.clipboard.writeText('zhaxinyu--')
+        ElMessage.success('微信号已复制到剪贴板')
+      } catch (error) {
+        // 降级方案：使用传统方法复制
+        const textArea = document.createElement('textarea')
+        textArea.value = 'zhaxinyu--'
+        document.body.appendChild(textArea)
+        textArea.select()
+        try {
+          document.execCommand('copy')
+          ElMessage.success('微信号已复制到剪贴板')
+        } catch (err) {
+          ElMessage.error('复制失败，请手动复制')
+        }
+        document.body.removeChild(textArea)
+      }
     }
 
     // 复制联系信息
@@ -554,13 +602,17 @@ export default {
       sponsorDialogVisible,
       wechatDialogVisible,
       groupDialogVisible, // 新增：返回交流群弹窗可见性
+      toolDialogVisible,
+      currentTool,
       handleMenuSelect,
       checkHealth,
       contactUs,
       copyContactInfo,
       openSponsorLink,
       toggleWechatDialog,
-      toggleGroupDialog // 新增：返回切换交流群弹窗的方法
+      toggleGroupDialog, // 新增：返回切换交流群弹窗的方法
+      showToolDialog,
+      copyWechatId
     }
   }
 }
@@ -639,6 +691,7 @@ export default {
   height: 64px;
   padding: 0 32px;
   backdrop-filter: blur(10px);
+  position: relative;
 }
 
 .logo {
@@ -660,6 +713,26 @@ export default {
   margin: 0;
   font-size: 28px;
   font-weight: 700;
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.center-slogan {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-slogan {
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
   background: var(--primary-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -814,23 +887,31 @@ export default {
   animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 首页样式 */
-.welcome-content {
+/* 工具分享界面样式 */
+.tools-share-page {
+  max-width: 1200px;
+  margin: 0 auto;
   padding: 0;
 }
 
-.welcome-header {
-  text-align: center;
-  padding: 60px 40px;
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  position: relative;
-  overflow: hidden;
-  margin-bottom: 0;
+.tools-share-page .page-header {
+  max-width: 1200px;
+  margin: 20px auto 24px auto;
 }
 
-.welcome-header::before {
+.tools-share-page .header-content {
+  background: var(--bg-primary);
+  padding: 24px 32px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.tools-share-page .header-content::before {
   content: '';
   position: absolute;
   top: 0;
@@ -842,24 +923,258 @@ export default {
   z-index: -1;
 }
 
-.welcome-header h2 {
+.tools-share-page .title-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.tools-share-page .title-icon {
+  background: var(--primary-gradient);
+  color: white;
+  padding: 8px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tools-share-page .page-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 20px;
-  font-size: 36px;
-  font-weight: 700;
   background: var(--primary-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-.welcome-header p {
-  color: var(--text-secondary);
-  font-size: 18px;
-  margin-bottom: 0;
-  font-weight: 400;
-  line-height: 1.6;
+.tools-share-page .status-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
+
+.tools-share-page .page-subtitle {
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.tools-container {
+  padding: 24px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
+  min-height: 300px;
+}
+
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.tool-card {
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-light);
+  overflow: hidden;
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.tool-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
+  border-color: rgba(102, 126, 234, 0.3);
+}
+
+.tool-image {
+  width: 100%;
+  aspect-ratio: 4/3;
+  overflow: hidden;
+  position: relative;
+}
+
+.tool-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: var(--transition);
+}
+
+.tool-card:hover .tool-image img {
+  transform: scale(1.05);
+}
+
+.tool-content {
+  padding: 20px;
+}
+
+.tool-title {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.tool-description {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* 工具详情弹窗样式 - 微信风格 */
+.tool-dialog .el-dialog {
+  border-radius: 24px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
+  background: white !important;
+  overflow: hidden !important;
+}
+
+.el-dialog.tool-dialog {
+  border-radius: 24px !important;
+}
+
+.tool-dialog .el-dialog__header {
+  background: white;
+  color: var(--text-primary);
+  padding: 24px 28px 20px 28px;
+  margin: 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.tool-dialog .el-dialog__title {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 17px;
+}
+
+.tool-dialog .el-dialog__headerbtn {
+  top: 24px;
+  right: 24px;
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  background: #f8f8f8;
+}
+
+.tool-dialog .el-dialog__close {
+  color: #999;
+  font-size: 16px;
+}
+
+.tool-dialog .el-dialog__body {
+  padding: 0 28px 28px 28px;
+}
+
+.tool-dialog-content {
+  padding: 0;
+}
+
+.tool-features {
+  margin-bottom: 20px;
+}
+
+.tool-features h4 {
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+}
+
+.features-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.features-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.feature-icon {
+  color: #07c160;
+  font-size: 14px;
+}
+
+.tool-contact {
+  border-top: 1px solid #f0f0f0;
+  padding-top: 20px;
+}
+
+.wechat-info {
+  display: flex;
+  justify-content: center;
+}
+
+.wechat-id-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 20px;
+  background: var(--bg-secondary);
+  border-radius: 16px;
+  border: 1px solid var(--border-light);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.wechat-id-container:hover {
+  background: #f0f0f0;
+  border-color: #07c160;
+  transform: translateY(-1px);
+}
+
+
+
+.wechat-icon {
+  font-size: 32px;
+  color: #07c160;
+}
+
+.wechat-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.wechat-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.wechat-id {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  user-select: all;
+}
+
+
+
+
 
 .feature-list {
   display: grid;

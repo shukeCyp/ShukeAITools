@@ -70,7 +70,7 @@ class JimengText2ImgTask(BaseModel):
 
     # 重试相关字段
     retry_count = IntegerField(default=0)  # 重试次数
-    max_retry = IntegerField(default=2)  # 最大重试次数
+    max_retry = IntegerField(default=10)  # 最大重试次数
     failure_reason = CharField(max_length=50, null=True)  # 失败原因类型
     error_message = TextField(null=True)  # 详细错误信息
     
@@ -179,7 +179,7 @@ class JimengImg2VideoTask(BaseModel):
 
     # 重试相关字段
     retry_count = IntegerField(default=0)  # 重试次数
-    max_retry = IntegerField(default=2)  # 最大重试次数
+    max_retry = IntegerField(default=10)  # 最大重试次数
     failure_reason = CharField(max_length=50, null=True)  # 失败原因类型
     error_message = TextField(null=True)  # 详细错误信息
     
@@ -267,7 +267,7 @@ class JimengDigitalHumanTask(BaseModel):
     
     # 重试相关字段
     retry_count = IntegerField(default=0)  # 重试次数
-    max_retry = IntegerField(default=2)  # 最大重试次数
+    max_retry = IntegerField(default=10)  # 最大重试次数
     failure_reason = CharField(max_length=50, null=True)  # 失败原因类型
     error_message = TextField(null=True)  # 详细错误信息
     
@@ -350,7 +350,7 @@ class QingyingImage2VideoTask(BaseModel):
     
     # 重试相关字段
     retry_count = IntegerField(default=0)  # 重试次数
-    max_retry = IntegerField(default=2)  # 最大重试次数
+    max_retry = IntegerField(default=10)  # 最大重试次数
     failure_reason = CharField(max_length=50, null=True)  # 失败原因类型
     error_message = TextField(null=True)  # 详细错误信息
     
