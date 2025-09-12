@@ -18,7 +18,6 @@ from backend.core.middleware import before_request, after_request
 from backend.core.global_task_manager import global_task_manager
 from backend.models.models import JimengAccount, JimengText2ImgTask, JimengImg2VideoTask, JimengDigitalHumanTask, QingyingImage2VideoTask
 from backend.utils.config_util import ConfigUtil
-from backend.utils.playwright_util import ensure_playwright_installed
 # from backend.utils.retry_util import start_auto_retry_scheduler  # 暂时注释掉
 
 # 导入路由蓝图
@@ -46,13 +45,6 @@ init_database()
 
 # 等待数据库初始化完全完成
 time.sleep(0.5)
-
-# 检查并安装Playwright
-print("检查Playwright安装状态...")
-if not ensure_playwright_installed():
-    print("警告: Playwright安装失败，某些功能可能无法正常使用")
-else:
-    print("Playwright检查完成")
 
 # 初始化默认配置
 ConfigUtil.init_default_configs()

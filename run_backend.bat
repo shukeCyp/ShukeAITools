@@ -50,6 +50,19 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+:: 安装Playwright浏览器
+echo.
+echo 正在安装Playwright浏览器...
+playwright install
+if %errorlevel% neq 0 (
+    echo.
+    echo ✗ Playwright安装失败！
+    echo 请检查网络连接后重试
+    echo.
+    pause
+    exit /b 1
+)
+
 :: 启动后端服务
 echo.
 echo ✓ 正在启动后端服务器...

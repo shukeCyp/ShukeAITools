@@ -324,11 +324,47 @@
       </div>
     </el-dialog>
 
+    <!-- 交流群悬浮窗 -->
+    <div class="group-float" @click="toggleGroupDialog">
+      <el-icon size="24"><Message /></el-icon>
+      <span>交流群</span>
+    </div>
+
     <!-- 作者微信悬浮窗 -->
     <div class="wechat-float" @click="toggleWechatDialog">
       <el-icon size="24"><ChatDotRound /></el-icon>
       <span>微信</span>
     </div>
+
+    <!-- 交流群弹窗 -->
+    <el-dialog 
+      v-model="groupDialogVisible" 
+      :title="null"
+      width="400px"
+      :close-on-click-modal="false"
+      :show-close="false"
+      center
+      class="group-dialog"
+      :modal="true"
+      :modal-class="'group-modal'"
+    >
+      <div class="group-container">
+        <!-- 悬浮关闭按钮 -->
+        <div class="group-close-btn" @click="groupDialogVisible = false">
+          <el-icon><Close /></el-icon>
+        </div>
+        
+        <!-- 介绍文字 -->
+        <div class="group-text">
+          <h3>舒克AI工具集交流群</h3>
+        </div>
+        
+        <!-- 二维码图片 -->
+        <div class="group-image-container">
+          <img src="./assets/wx_group_qrcode.png" alt="交流群二维码" class="group-image" />
+        </div>
+      </div>
+    </el-dialog>
 
     <!-- 作者微信弹窗 -->
     <el-dialog 
@@ -438,6 +474,7 @@ export default {
     const contactDialogVisible = ref(false)
     const sponsorDialogVisible = ref(false)
     const wechatDialogVisible = ref(false)
+    const groupDialogVisible = ref(false) // 新增：交流群弹窗可见性
 
     // 切换菜单
     const handleMenuSelect = (index) => {
@@ -491,6 +528,11 @@ export default {
       wechatDialogVisible.value = true
     }
 
+    // 切换交流群弹窗
+    const toggleGroupDialog = () => {
+      groupDialogVisible.value = true
+    }
+
     // 检查是否应该显示赞助弹窗
     const checkSponsorDialog = () => {
       // 延迟3秒后显示赞助弹窗
@@ -511,12 +553,14 @@ export default {
       contactDialogVisible,
       sponsorDialogVisible,
       wechatDialogVisible,
+      groupDialogVisible, // 新增：返回交流群弹窗可见性
       handleMenuSelect,
       checkHealth,
       contactUs,
       copyContactInfo,
       openSponsorLink,
-      toggleWechatDialog
+      toggleWechatDialog,
+      toggleGroupDialog // 新增：返回切换交流群弹窗的方法
     }
   }
 }
@@ -1541,6 +1585,38 @@ export default {
   }
 }
 
+/* 交流群悬浮窗样式 */
+.group-float {
+  position: fixed;
+  bottom: 100px;
+  right: 30px;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(255, 107, 107, 0.4);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  color: white;
+}
+
+.group-float:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 6px 20px rgba(255, 107, 107, 0.6);
+}
+
+.group-float span {
+  font-size: 10px;
+  font-weight: 500;
+  margin-top: 2px;
+  line-height: 1;
+}
+
 /* 作者微信悬浮窗样式 */
 .wechat-float {
   position: fixed;
@@ -1686,6 +1762,21 @@ export default {
 
 /* 悬浮窗响应式设计 */
 @media (max-width: 768px) {
+  .group-float {
+    bottom: 80px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+  }
+  
+  .group-float .el-icon {
+    font-size: 20px;
+  }
+  
+  .group-float span {
+    font-size: 9px;
+  }
+  
   .wechat-float {
     bottom: 20px;
     right: 20px;
@@ -1706,6 +1797,143 @@ export default {
   }
   
   .wechat-image {
+    border-radius: 15px;
+  }
+}
+
+/* 交流群弹窗样式 */
+.group-dialog {
+  background: transparent !important;
+}
+
+.group-dialog .el-dialog {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  border: none !important;
+  margin: 0 !important;
+}
+
+.group-dialog .el-dialog__header {
+  display: none !important;
+}
+
+.group-dialog .el-dialog__body {
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.group-dialog .el-dialog__wrapper {
+  background: transparent !important;
+}
+
+.group-dialog .el-overlay-dialog {
+  background: transparent !important;
+}
+
+.group-modal {
+  background: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* 全局覆盖交流群弹窗样式 */
+.el-dialog.group-dialog,
+.el-dialog.group-dialog .el-dialog__body,
+.el-dialog.group-dialog .el-dialog__header,
+.group-dialog {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.group-container {
+  position: relative;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+}
+
+.group-close-btn {
+  position: absolute;
+  top: -15px;
+  right: -15px;
+  width: 30px;
+  height: 30px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 1000;
+  color: white;
+  font-size: 16px;
+}
+
+.group-close-btn:hover {
+  background: rgba(0, 0, 0, 0.9);
+  transform: scale(1.1);
+}
+
+.group-text {
+  text-align: center;
+  margin-bottom: 20px;
+  padding: 0;
+}
+
+.group-text h3 {
+  color: white;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.4;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+}
+
+.group-image-container {
+  width: 100%;
+  position: relative;
+}
+
+.group-image {
+  width: 100%;
+  height: auto;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: block;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.group-image:hover {
+  transform: scale(1.02);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* 悬浮窗响应式设计 */
+@media (max-width: 768px) {
+  .group-float {
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+  }
+  
+  .group-float .el-icon {
+    font-size: 20px;
+  }
+  
+  .group-float span {
+    font-size: 9px;
+  }
+  
+  .group-text h3 {
+    font-size: 20px;
+  }
+  
+  .group-image {
     border-radius: 15px;
   }
 }

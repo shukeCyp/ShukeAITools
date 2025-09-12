@@ -27,6 +27,19 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+:: 更新npm到最新版本
+echo.
+echo 正在更新npm到最新版本...
+npm install -g npm@latest
+if %errorlevel% neq 0 (
+    echo.
+    echo ✗ npm更新失败！
+    echo 请检查网络连接或管理员权限后重试
+    echo.
+    pause
+    exit /b 1
+)
+
 :: 检查是否存在node_modules目录
 if not exist "node_modules" (
     echo.
