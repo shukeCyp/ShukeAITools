@@ -3,7 +3,6 @@ import time
 import os
 from typing import Optional, Dict, Any
 import ssl
-from urllib3.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter as RequestsHTTPAdapter
 
