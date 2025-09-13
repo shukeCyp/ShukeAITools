@@ -23,6 +23,39 @@ from backend.config.settings import TASK_PROCESSOR_INTERVAL, TASK_PROCESSOR_ERRO
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+def run_async_safe(coro):
+    """安全地运行异步协程，处理事件循环冲突"""
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # 如果事件循环正在运行，在新线程中创建新的事件循环
+            import threading
+            result = None
+            exception = None
+            
+            def run_in_thread():
+                nonlocal result, exception
+                try:
+                    new_loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(new_loop)
+                    result = new_loop.run_until_complete(coro)
+                    new_loop.close()
+                except Exception as e:
+                    exception = e
+            
+            thread = threading.Thread(target=run_in_thread)
+            thread.start()
+            thread.join()
+            
+            if exception:
+                raise exception
+            return result
+        else:
+            return asyncio.run(coro)
+    except RuntimeError:
+        # 如果没有事件循环，直接使用 asyncio.run
+        return asyncio.run(coro)
+
 class JimengDigitalHumanTaskManagerStatus(Enum):
     """即梦数字人任务管理器状态枚举"""
     STOPPED = "stopped"
@@ -257,7 +290,7 @@ class JimengDigitalHumanTaskManager:
             task.save()
             
             # 执行具体的任务处理逻辑
-            result = asyncio.run(self._execute_digital_human_task(task))
+            result = run_async_safe(self._execute_digital_human_task(task))
             
             if result['success']:
                 # 任务成功
@@ -269,7 +302,7 @@ class JimengDigitalHumanTaskManager:
                     
                     # 更新账号cookies
                     if 'cookies' in result and result['cookies']:
-                        asyncio.run(self.update_account_cookies(result['account_id'], result['cookies']))
+                        run_async_safe(self.update_account_cookies(result['account_id'], result['cookies']))
                 
                 task.status = 2  # 已完成
                 task.save()
@@ -282,7 +315,7 @@ class JimengDigitalHumanTaskManager:
                 if 'account_id' in result:
                     # 更新账号cookies（即使失败也要更新）
                     if 'cookies' in result and result['cookies']:
-                        asyncio.run(self.update_account_cookies(result['account_id'], result['cookies']))
+                        run_async_safe(self.update_account_cookies(result['account_id'], result['cookies']))
                 
                 # 检查是否需要重试（600/900错误码）
                 error_code = result.get('code', 'OTHER_ERROR')

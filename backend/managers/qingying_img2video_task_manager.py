@@ -11,6 +11,38 @@ from backend.utils.config_util import get_hide_window
 from backend.models.models import QingyingImage2VideoTask, QingyingAccount
 from backend.utils.qingying_image2video import QingyingImage2VideoExecutor
 
+def run_async_safe(coro):
+    """安全地运行异步协程，处理事件循环冲突"""
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # 如果事件循环正在运行，在新线程中创建新的事件循环
+            import threading
+            result = None
+            exception = None
+            
+            def run_in_thread():
+                nonlocal result, exception
+                try:
+                    new_loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(new_loop)
+                    result = new_loop.run_until_complete(coro)
+                    new_loop.close()
+                except Exception as e:
+                    exception = e
+            
+            thread = threading.Thread(target=run_in_thread)
+            thread.start()
+            thread.join()
+            
+            if exception:
+                raise exception
+            return result
+        else:
+            return asyncio.run(coro)
+    except RuntimeError:
+        # 如果没有事件循环，直接使用 asyncio.run
+        return asyncio.run(coro)
 
 class QingyingImg2VideoTaskManager:
     """清影图生视频任务管理器"""
@@ -129,7 +161,7 @@ class QingyingImg2VideoTaskManager:
                 executor = QingyingImage2VideoExecutor(headless=headless)
                 
                 # 执行任务
-                result = asyncio.run(executor.execute(
+                result = run_async_safe(executor.execute(
                     image_path=task.image_path,
                     prompt=task.prompt,
                     cookies=account.cookies,

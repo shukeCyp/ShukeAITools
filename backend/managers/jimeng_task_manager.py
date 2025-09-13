@@ -17,6 +17,39 @@ from backend.utils.jimeng_text2img import JimengText2ImageExecutor
 from backend.utils.config_util import get_automation_max_threads, get_hide_window
 from backend.config.settings import TASK_PROCESSOR_INTERVAL, TASK_PROCESSOR_ERROR_WAIT
 
+def run_async_safe(coro):
+    """安全地运行异步协程，处理事件循环冲突"""
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # 如果事件循环正在运行，在新线程中创建新的事件循环
+            import threading
+            result = None
+            exception = None
+            
+            def run_in_thread():
+                nonlocal result, exception
+                try:
+                    new_loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(new_loop)
+                    result = new_loop.run_until_complete(coro)
+                    new_loop.close()
+                except Exception as e:
+                    exception = e
+            
+            thread = threading.Thread(target=run_in_thread)
+            thread.start()
+            thread.join()
+            
+            if exception:
+                raise exception
+            return result
+        else:
+            return asyncio.run(coro)
+    except RuntimeError:
+        # 如果没有事件循环，直接使用 asyncio.run
+        return asyncio.run(coro)
+
 class JimengTaskManagerStatus(Enum):
     """即梦任务管理器状态枚举"""
     STOPPED = "stopped"
@@ -352,7 +385,7 @@ class JimengTaskManager:
             task.save()
             
             # 执行具体的任务处理逻辑 - 这里需要用户自己实现
-            result = asyncio.run(self._execute_text2img_task(task))
+            result = run_async_safe(self._execute_text2img_task(task))
             
             if result['success']:
                 # 任务成功 - 账号使用记录已在_execute_text2img_task中处理
@@ -487,7 +520,7 @@ class JimengTaskManager:
             
             # 使用新的执行器
             executor = JimengText2ImageExecutor(headless=headless)
-            result = asyncio.run(executor.run(
+            result = await executor.run(
                 prompt=task.prompt,
                 username=available_account.account,
                 password=available_account.password,
@@ -495,7 +528,7 @@ class JimengTaskManager:
                 aspect_ratio=task.ratio,  # 使用ratio字段作为aspect_ratio
                 quality=task.quality,
                 cookies=available_account.cookies
-            ))
+            )
             
             if result.code == 200 and result.data and len(result.data) > 0:
                 # 更新账号使用次数
@@ -532,7 +565,7 @@ class JimengTaskManager:
             # 确保浏览器关闭
             if client:
                 try:
-                    asyncio.run(client.close())
+                    await client.close()
                 except Exception as e:
                     print(f"关闭浏览器异常: {str(e)}")
                     pass
