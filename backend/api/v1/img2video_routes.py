@@ -215,8 +215,10 @@ def import_folder_tasks():
         data = request.get_json()
         model = data.get('model', 'Video 3.0')  # 默认为Video 3.0
         second = data.get('second', 5)  # 默认为5秒
+        use_prompt = data.get('usePrompt', False)  # 是否使用提示词
+        prompt = data.get('prompt', '')  # 提示词内容
         
-        print(f"导入文件夹任务，模型: {model}, 时长: {second}秒")
+        print(f"导入文件夹任务，模型: {model}, 时长: {second}秒, 使用提示词: {use_prompt}, 提示词: {prompt}")
         
         def select_folder_and_import():
             try:
@@ -274,8 +276,11 @@ def import_folder_tasks():
                 created_count = 0
                 for image_path in image_files:
                     try:
+                        # 根据usePrompt参数决定是否使用提示词
+                        task_prompt = prompt if use_prompt else ''
+                        
                         task = JimengImg2VideoTask.create(
-                            prompt='',  # 文件夹导入时提示词为空
+                            prompt=task_prompt,  # 根据usePrompt参数决定提示词
                             model=model,  # 使用传入的模型参数
                             second=second,  # 使用传入的时长参数
                             image_path=image_path,
@@ -285,7 +290,7 @@ def import_folder_tasks():
                     except Exception as e:
                         print(f"创建任务失败 {image_path}: {str(e)}")
                 
-                print(f"成功创建 {created_count} 个图生视频任务，模型: {model}, 时长: {second}秒")
+                print(f"成功创建 {created_count} 个图生视频任务，模型: {model}, 时长: {second}秒, 提示词: {task_prompt}")
                 
             except Exception as e:
                 print(f"文件夹导入失败: {str(e)}")

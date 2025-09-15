@@ -540,7 +540,7 @@ class JimengDigitalHumanTaskManager:
             # 根据任务类型设置每日限制
             daily_limits = {
                 'text2img': 10,      # 图片生成每天10次
-                'img2video': 1,      # 视频生成每天1次
+                'img2video': 2,      # 视频生成每天1次
                 'digital_human': 1   # 数字人生成每天1次
             }
             

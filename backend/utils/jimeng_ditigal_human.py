@@ -152,7 +152,42 @@ class JimengDigitalHumanExecutor(BaseTaskExecutor):
                 message="登录验证异常",
                 error_details={"error": str(e)}
             )
-    
+
+
+    async def check_login_status(self) -> TaskResult:
+        """检查登录状态，如果有登录按钮说明cookies过期"""
+        try:
+            self.logger.info("检查登录状态")
+            
+            # 跳转到主页面
+            await self.page.goto('https://dreamina.capcut.com/ai-tool/home/en-us', timeout=60000)
+            await self.page.wait_for_load_state('networkidle', timeout=60000)
+            await asyncio.sleep(3)
+            
+            # 检查是否存在登录按钮
+            login_button = await self.page.query_selector('div[class*="login-button"]:has-text("Sign in")')
+            if login_button:
+                self.logger.warning("检测到登录按钮，cookies已过期")
+                return TaskResult(
+                    code=600,
+                    data=None,
+                    message="cookies已过期，需要重新登录",
+                    cookies=""
+                )
+            
+            self.logger.info("登录状态正常")
+            return TaskResult(code=ErrorCode.SUCCESS.value, data=None, message="登录状态正常")
+            
+        except Exception as e:
+            self.logger.error("检查登录状态时出错", error=str(e))
+            return TaskResult(
+                code=ErrorCode.WEB_INTERACTION_FAILED.value,
+                data=None,
+                message="检查登录状态失败",
+                error_details={"error": str(e)}
+            )
+
+
     async def navigate_to_digital_human_page(self) -> TaskResult:
         """跳转到数字人生成页面"""
         try:
@@ -433,9 +468,14 @@ class JimengDigitalHumanExecutor(BaseTaskExecutor):
             init_result = await self.init_browser(cookies)
             if init_result.code != ErrorCode.SUCCESS.value:
                 return init_result
+
+            if cookies:
+                await self.handle_cookies(cookies)
+                # 检查登录状态
+                login_status_result = await self.check_login_status()
             
-            # 如果没有cookies，需要登录
-            if not cookies:
+            # 如果没有cookies或cookies检查失败，需要登录
+            if not cookies or login_status_result.code == 600:
                 login_result = await self.perform_login(username, password)
                 if login_result.code != ErrorCode.SUCCESS.value:
                     return login_result

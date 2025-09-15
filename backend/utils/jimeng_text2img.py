@@ -38,6 +38,39 @@ class JimengText2ImageExecutor(BaseTaskExecutor):
             
         except Exception as e:
             self.logger.error("设置即梦平台cookies时出错", error=str(e))
+    
+    async def check_login_status(self) -> TaskResult:
+        """检查登录状态，如果有登录按钮说明cookies过期"""
+        try:
+            self.logger.info("检查登录状态")
+            
+            # 跳转到主页面
+            await self.page.goto('https://dreamina.capcut.com/ai-tool/home/en-us', timeout=60000)
+            await self.page.wait_for_load_state('networkidle', timeout=60000)
+            await asyncio.sleep(3)
+            
+            # 检查是否存在登录按钮
+            login_button = await self.page.query_selector('div[class*="login-button"]:has-text("Sign in")')
+            if login_button:
+                self.logger.warning("检测到登录按钮，cookies已过期")
+                return TaskResult(
+                    code=600,
+                    data=None,
+                    message="cookies已过期，需要重新登录",
+                    cookies=""
+                )
+            
+            self.logger.info("登录状态正常")
+            return TaskResult(code=ErrorCode.SUCCESS.value, data=None, message="登录状态正常")
+            
+        except Exception as e:
+            self.logger.error("检查登录状态时出错", error=str(e))
+            return TaskResult(
+                code=ErrorCode.WEB_INTERACTION_FAILED.value,
+                data=None,
+                message="检查登录状态失败",
+                error_details={"error": str(e)}
+            )
             
     async def perform_login(self, username: str, password: str) -> TaskResult:
         """执行登录流程"""
@@ -466,8 +499,14 @@ class JimengText2ImageExecutor(BaseTaskExecutor):
             if init_result.code != ErrorCode.SUCCESS.value:
                 return init_result
             
-            # 如果没有cookies，需要登录
-            if not cookies:
+            # 如果有cookies，先设置cookies并检查登录状态
+            if cookies:
+                await self.handle_cookies(cookies)
+                # 检查登录状态
+                login_status_result = await self.check_login_status()
+            
+            # 如果没有cookies或cookies检查失败，需要登录
+            if not cookies or login_status_result.code == 600:
                 login_result = await self.perform_login(username, password)
                 if login_result.code != ErrorCode.SUCCESS.value:
                     return login_result
@@ -475,9 +514,6 @@ class JimengText2ImageExecutor(BaseTaskExecutor):
                 validate_result = await self.validate_login_success()
                 if validate_result.code != ErrorCode.SUCCESS.value:
                     return validate_result
-            else:
-                # 如果有cookies，直接设置
-                await self.handle_cookies(cookies)
             
             # 跳转到生成页面
             nav_result = await self.navigate_to_generation_page()
@@ -584,6 +620,7 @@ if __name__ == "__main__":
         model = "Image 3.1"
         aspect_ratio = "1:1"
         quality = "1K"
+        cookies = "faceu-commerce-user-info=U19xKzQpj3FOtLUIN8ecOFLt_kRh1dlEZ8xhDCSIc_CAhci-xH0kl4-B9p1k4QJDyb3bQXwRFulN9G8hgvgUPJ1Jw5GRFZoI5R29tuEC05uy7-AwMrbQmVmdtEwY0JEVMia9HzhByRVg1lDjtdCv8hzFv_djVRenN6fdMiWQWhwwOhS0cyv5NDat6Un-fwDv6aSv7bEQoxcgkHqUp5drJRr99Z-E9I_McJotKhNEZ9TCVSy4f1rKmVW5E-lQH4fuYWNONUy2aH6MtDBeoW2vNZLhwh05iHlaothh8GAXagxIhu3mGKOknoO22lXfdLPpiCUiU-AgfPFYwUeeIq_I3zLVWwl77ivxTHSZuvIdAZsnOFFouzqbrua1E-2_ga_R13M7NJQ9S=GS2.1.s1757648995$o1$g1$t1757649015$j40$l0$h0; uifid_temp=455d7194fb3030a9c1fd263cebe74df90113e22092f6daad0427de1b7f41a2e9b77c56e4177b112b8983ebd64cf5fc9d413f46625ce887736fbfbdba7df2af5fac8a459f6488ef3e1b07c8e0c56d47ba; fpk1=c40c6a0e21650f53942fb9038168e96a23e6ecd1a46982c8087cedb2c27da6c7cd83836ac8695e11d7c8057151c2695d; s_v_web_id=verify_mfgaur92_1vPUMg70_EZxG_4FDY_9flF_nbVDH5PwyLCF; passport_csrf_token=87cfb78370b506cc86b2a1ec199feb61; passport_csrf_token_default=87cfb78370b506cc86b2a1ec199feb61; sid_guard=5fe20bddb672d697c2bd8bbdf9ec3e12%7C1757649043%7C5184000%7CTue%2C+11-Nov-2025+03%3A50%3A43+GMT; uid_tt=4fcec1e103b7d8673099ca0df4fb961fc1c2acb03a3b7f8bc7629abe29f4ab14; uid_tt_ss=4fcec1e103b7d8673099ca0df4fb961fc1c2acb03a3b7f8bc7629abe29f4ab14; sid_tt=5fe20bddb672d697c2bd8bbdf9ec3e12; sessionid=5fe20bddb672d697c2bd8bbdf9ec3e12; sessionid_ss=5fe20bddb672d697c2bd8bbdf9ec3e12; sid_ucp_v1=1.0.0-KDkwMDgyOTlkYzY0YmY0NDNmODM5MmQyMTRhMjA0ZWQ0NWQxNDI3MGMKGQiQiJDsisrE22gQk7GOxgYY6awfOAFA6wcQAxoDbXkyIiA1ZmUyMGJkZGI2NzJkNjk3YzJiZDhiYmRmOWVjM2UxMg; ssid_ucp_v1=1.0.0-KDkwMDgyOTlkYzY0YmY0NDNmODM5MmQyMTRhMjA0ZWQ0NWQxNDI3MGMKGQiQiJDsisrE22gQk7GOxgYY6awfOAFA6wcQAxoDbXkyIiA1ZmUyMGJkZGI2NzJkNjk3YzJiZDhiYmRmOWVjM2UxMg; store-idc=alisg; store-country-code=tw; store-country-code-src=uid; cc-target-idc=alisg; tt-target-idc-sign=j1gi6RRElkOy2S8lFGZZOi6sgRdq3rvZxBsfxbUFPanUX4SS_7c2_H778z1E6VHTus_q5KIBd3-yUkH_7fHMfe9OgaVR-0u9VSYiXZEuECLbi6ws0dOZD1x9F53Ms8tV2G_FL2G114WtfmGLAnBszsba8bkwKHlmEMyEtuRjSgkTWKaJXefX8aSByZ8it8EJlWustQ9gyhaG4vLANRG9ViAf-Cz40TzhebioRwI6g-SIlmv0U89SW4lwKxXuBFSamz25LyD-XXO-xOfHOzkHpIP9ob-WAudufIbw8Pg8RmsQwwJ0-PmbF8fiWo43Tr2AnNsd0-CA2HU4iURscnosyK3GQbj9arTd9_7LN8v0Zbt"
         
         executor = JimengText2ImageExecutor(headless=False)
         result = await executor.run(
@@ -592,7 +629,8 @@ if __name__ == "__main__":
             password=password,
             model=model,
             aspect_ratio=aspect_ratio,
-            quality=quality
+            quality=quality,
+            cookies=cookies
         )
         
         if result.code == 200:
