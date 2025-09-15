@@ -259,23 +259,27 @@ class JimengImage2VideoExecutor(BaseTaskExecutor):
                 await self.page.wait_for_selector('div.lv-select-popup-inner[role="listbox"]', timeout=5000)
                 await asyncio.sleep(1)
                 
-                # 根据模型参数选择对应的视频模型
+                # 根据模型参数按照位置选择对应的视频模型
                 try:
-                    if "Video 3.0" in model or model == "Video 3.0":
-                        await self.page.click('li[role="option"] span:has-text("Video 3.0")')
+                    if "Video 3.0 Pro" in model or model == "Video 3.0 Pro":
+                        # Video 3.0 Pro 在第一个位置（index 0）
+                        await self.page.click('li[role="option"]:nth-child(1)')
+                        self.logger.info("已选择视频模型: Video 3.0 Pro")
+                    elif "Video 3.0" in model or model == "Video 3.0":
+                        # Video 3.0 在第二个位置（index 1）
+                        await self.page.click('li[role="option"]:nth-child(2)')
                         self.logger.info("已选择视频模型: Video 3.0")
                     elif "Video S2.0 Pro" in model or model == "Video S2.0 Pro":
-                        # 选择Video S2.0 Pro模型
-                        await self.page.click('li[role="option"] span:has-text("Video S2.0 Pro")')
+                        # Video S2.0 Pro 在第三个位置（index 2）
+                        await self.page.click('li[role="option"]:nth-child(3)')
                         self.logger.info("已选择视频模型: Video S2.0 Pro")
                     else:
-                        # 默认选择第一个可用模型
-                        await self.page.click('li[role="option"]:first-child')
-                        self.logger.info("使用默认视频模型")
+                        # 默认选择第一个可用模型（Video 3.0 Pro）
+                        await self.page.click('li[role="option"]:nth-child(1)')
+                        self.logger.info("使用默认视频模型: Video 3.0 Pro")
                 except Exception as e:
                     self.logger.warning("选择视频模型时出错，使用默认选项", error=str(e))
-                    await self.page.click('li[role="option"]:first-child')
-                
+                    await self.page.click('li[role="option"]:nth-child(1)')
                 await asyncio.sleep(2)
                 return TaskResult(code=ErrorCode.SUCCESS.value, data=None, message="视频模型选择成功")
             else:
