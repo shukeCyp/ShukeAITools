@@ -32,6 +32,17 @@
             <el-icon><Plus /></el-icon>
             批量添加
           </el-button>
+          
+          <el-button 
+            type="warning" 
+            size="large"
+            @click="showTableImportDialog"
+            :loading="tableImportLoading"
+            class="import-btn"
+          >
+            <el-icon><Upload /></el-icon>
+            表格导入
+          </el-button>
         </div>
       </div>
     </div>
@@ -505,6 +516,146 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 表格导入对话框 -->
+    <el-dialog
+      v-model="tableImportDialogVisible"
+      title="表格导入"
+      width="80%"
+      max-width="1000px"
+      destroy-on-close
+      @close="resetTableImportDialog"
+    >
+      <div class="table-import-container">
+        <!-- 文件选择区域 -->
+        <div class="file-select-area" v-if="tableData.length === 0">
+          <input 
+            ref="tableFileInput"
+            type="file"
+            accept=".csv,.xlsx,.xls"
+            style="display: none"
+            @change="handleTableFileSelect"
+          />
+          <div class="upload-area" @click="triggerTableFileInput">
+            <el-icon size="48" class="upload-icon"><Upload /></el-icon>
+            <div class="upload-text">
+              <p class="primary-text">点击选择表格文件</p>
+              <p class="secondary-text">支持 CSV、Excel (.xlsx, .xls) 格式</p>
+              <p class="hint-text">表格格式: 类型 | 图片路径 | 提示词/备注 | 比例 | 秒数</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 数据预览和设置区域 -->
+        <div class="data-preview-area" v-if="tableData.length > 0">
+          <!-- 导入设置 -->
+          <div class="import-settings">
+            <h4>导入设置</h4>
+            <el-form :model="importSettings" label-width="100px" class="settings-form">
+              <div class="settings-row">
+                <el-form-item label="视频模型">
+                  <el-select v-model="importSettings.model" placeholder="请选择模型">
+                    <el-option label="Video 3.0" value="Video 3.0" />
+                    <el-option label="Video S2.0 Pro" value="Video S2.0 Pro" />
+                  </el-select>
+                </el-form-item>
+                <el-form-item label="默认时长">
+                  <el-select v-model="importSettings.defaultDuration" placeholder="请选择时长">
+                    <el-option label="5秒" :value="5" />
+                    <el-option label="10秒" :value="10" />
+                  </el-select>
+                </el-form-item>
+              </div>
+              
+              <div class="settings-row">
+                <el-form-item label="图片路径列" required>
+                  <el-select v-model="importSettings.imageColumn" placeholder="请选择图片路径列">
+                    <el-option 
+                      v-for="header in tableHeaders" 
+                      :key="header" 
+                      :label="header" 
+                      :value="header" 
+                    />
+                  </el-select>
+                </el-form-item>
+                <el-form-item label="提示词列">
+                  <el-select v-model="importSettings.promptColumn" placeholder="请选择提示词列" clearable>
+                    <el-option 
+                      v-for="header in tableHeaders" 
+                      :key="header" 
+                      :label="header" 
+                      :value="header" 
+                    />
+                  </el-select>
+                </el-form-item>
+              </div>
+              
+              <div class="settings-row">
+                <el-form-item label="时长列">
+                  <el-select v-model="importSettings.durationColumn" placeholder="请选择时长列" clearable>
+                    <el-option 
+                      v-for="header in tableHeaders" 
+                      :key="header" 
+                      :label="header" 
+                      :value="header" 
+                    />
+                  </el-select>
+                </el-form-item>
+              </div>
+            </el-form>
+          </div>
+
+          <!-- 数据预览 -->
+          <div class="data-preview">
+            <div class="preview-header">
+              <h4>数据预览 (共 {{ tableData.length }} 行，显示前 10 行)</h4>
+              <el-button size="small" @click="resetTableImportDialog">
+                <el-icon><Close /></el-icon>
+                重新选择文件
+              </el-button>
+            </div>
+            
+            <div class="preview-table">
+              <el-table :data="previewData" border stripe max-height="300">
+                <el-table-column 
+                  v-for="header in tableHeaders" 
+                  :key="header" 
+                  :prop="header" 
+                  :label="header"
+                  min-width="120"
+                  show-overflow-tooltip
+                >
+                  <template #default="{ row }">
+                    <span :class="{
+                      'highlighted-cell': header === importSettings.imageColumn,
+                      'prompt-cell': header === importSettings.promptColumn,
+                      'duration-cell': header === importSettings.durationColumn
+                    }">
+                      {{ row[header] }}
+                    </span>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="tableImportDialogVisible = false">取消</el-button>
+          <el-button 
+            type="primary" 
+            @click="submitTableImportTasks" 
+            :loading="tableImportLoading"
+            :disabled="tableData.length === 0 || !importSettings.imageColumn"
+          >
+            <el-icon><Plus /></el-icon>
+            创建任务 ({{ tableData.length }})
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -525,6 +676,7 @@ import {
   RefreshRight,
   Plus,
   UploadFilled,
+  Upload,
   Close,
   MagicStick as Magic
 } from '@element-plus/icons-vue'
@@ -565,6 +717,21 @@ const paginationContainer = ref(null)
 
 // 批量重试状态
 const batchRetryLoading = ref(false)
+
+// 表格导入相关状态
+const tableImportLoading = ref(false)
+const tableImportDialogVisible = ref(false)
+const tableFileInput = ref(null)
+const tableData = ref([])
+const tableHeaders = ref([])
+const previewData = ref([])
+const importSettings = reactive({
+  model: 'Video 3.0',
+  imageColumn: '',
+  promptColumn: '',
+  durationColumn: '',
+  defaultDuration: 5
+})
 
 
 
@@ -1100,6 +1267,184 @@ const batchRetryFailedTasks = async () => {
 // 显示导入文件夹对话框
 const showImportFolderDialog = () => {
   importFolderDialogVisible.value = true
+}
+
+// 显示表格导入对话框
+const showTableImportDialog = () => {
+  tableImportDialogVisible.value = true
+}
+
+// 触发表格文件选择
+const triggerTableFileInput = () => {
+  tableFileInput.value?.click()
+}
+
+// 处理表格文件选择
+const handleTableFileSelect = async (event) => {
+  const file = event.target.files?.[0]
+  if (!file) return
+  
+  try {
+    tableImportLoading.value = true
+    await parseTableFile(file)
+  } catch (error) {
+    console.error('解析表格文件失败:', error)
+    ElMessage.error('解析表格文件失败')
+  } finally {
+    tableImportLoading.value = false
+    event.target.value = ''
+  }
+}
+
+// 解析表格文件
+const parseTableFile = async (file) => {
+  const fileExtension = file.name.split('.').pop()?.toLowerCase()
+  
+  if (!['csv', 'xlsx', 'xls'].includes(fileExtension)) {
+    throw new Error('不支持的文件格式，请选择CSV或Excel文件')
+  }
+  
+  if (fileExtension === 'csv') {
+    await parseCSVFile(file)
+  } else {
+    await parseExcelFile(file)
+  }
+}
+
+// 解析CSV文件
+const parseCSVFile = async (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result
+        const lines = text.split('\n').filter(line => line.trim())
+        
+        if (lines.length < 2) {
+          reject(new Error('表格数据不完整'))
+          return
+        }
+        
+        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''))
+        const data = lines.slice(1).map(line => {
+          const values = line.split(',').map(v => v.trim().replace(/"/g, ''))
+          const row = {}
+          headers.forEach((header, index) => {
+            row[header] = values[index] || ''
+          })
+          return row
+        })
+        
+        tableHeaders.value = headers
+        tableData.value = data
+        previewData.value = data.slice(0, 10) // 只预览前10行
+        
+        // 自动识别列
+        autoDetectColumns(headers)
+        
+        ElMessage.success(`成功解析 ${data.length} 行数据`)
+        resolve(data)
+      } catch (error) {
+        reject(error)
+      }
+    }
+    reader.onerror = () => reject(new Error('文件读取失败'))
+    reader.readAsText(file, 'utf-8')
+  })
+}
+
+// 解析Excel文件
+const parseExcelFile = async (file) => {
+  // 这里需要引入xlsx库来解析Excel文件
+  // 为了简化，我们先提示用户转换为CSV格式
+  ElMessage.warning('请将Excel文件转换为CSV格式后再导入')
+  throw new Error('暂不支持Excel格式，请转换为CSV格式')
+}
+
+// 自动识别列
+const autoDetectColumns = (headers) => {
+  headers.forEach(header => {
+    const lowerHeader = header.toLowerCase()
+    
+    // 识别图片路径列
+    if (lowerHeader.includes('图片') || lowerHeader.includes('image') || lowerHeader.includes('路径') || lowerHeader.includes('path')) {
+      importSettings.imageColumn = header
+    }
+    
+    // 识别提示词列
+    if (lowerHeader.includes('提示') || lowerHeader.includes('prompt') || lowerHeader.includes('备注') || lowerHeader.includes('描述')) {
+      importSettings.promptColumn = header
+    }
+    
+    // 识别时长列
+    if (lowerHeader.includes('时长') || lowerHeader.includes('秒') || lowerHeader.includes('duration') || lowerHeader.includes('second')) {
+      importSettings.durationColumn = header
+    }
+  })
+}
+
+// 重置表格导入对话框
+const resetTableImportDialog = () => {
+  tableData.value = []
+  tableHeaders.value = []
+  previewData.value = []
+  importSettings.imageColumn = ''
+  importSettings.promptColumn = ''
+  importSettings.durationColumn = ''
+  importSettings.model = 'Video 3.0'
+  importSettings.defaultDuration = 5
+}
+
+// 提交表格导入任务
+const submitTableImportTasks = async () => {
+  if (tableData.value.length === 0) {
+    ElMessage.warning('请先选择并解析表格文件')
+    return
+  }
+  
+  if (!importSettings.imageColumn) {
+    ElMessage.warning('请选择图片路径列')
+    return
+  }
+  
+  try {
+    tableImportLoading.value = true
+    
+    // 构建任务列表
+    const tasks = tableData.value.map(row => ({
+      image_path: row[importSettings.imageColumn] || '',
+      prompt: importSettings.promptColumn ? (row[importSettings.promptColumn] || '') : '',
+      model: importSettings.model,
+      second: importSettings.durationColumn ? (parseInt(row[importSettings.durationColumn]) || importSettings.defaultDuration) : importSettings.defaultDuration
+    })).filter(task => task.image_path.trim() !== '') // 过滤空的图片路径
+    
+    if (tasks.length === 0) {
+      ElMessage.warning('没有有效的任务数据')
+      return
+    }
+    
+    // 调用API批量创建任务
+    const response = await img2videoAPI.batchCreateTasksFromTable(tasks)
+    
+    if (response.data.success) {
+      ElMessage.success(`成功创建 ${tasks.length} 个任务`)
+      tableImportDialogVisible.value = false
+      resetTableImportDialog()
+      
+      // 刷新任务列表
+      setTimeout(() => {
+        loadTasks()
+        loadStats()
+      }, 1000)
+    } else {
+      ElMessage.error(response.data.message || '创建任务失败')
+    }
+  } catch (error) {
+    console.error('表格导入失败:', error)
+    ElMessage.error('表格导入失败')
+  } finally {
+    tableImportLoading.value = false
+  }
 }
 
 // 确认导入文件夹
@@ -1922,5 +2267,136 @@ onUnmounted(() => {
   gap: 8px;
   align-items: center;
   justify-content: center;
+}
+
+/* 表格导入对话框样式 */
+.table-import-container {
+  padding: 20px 0;
+}
+
+.file-select-area {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.upload-area {
+  border: 2px dashed var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 60px 40px;
+  background: var(--bg-secondary);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.upload-area:hover {
+  border-color: var(--primary-color);
+  background: rgba(102, 126, 234, 0.02);
+}
+
+.upload-icon {
+  color: var(--primary-color);
+  opacity: 0.6;
+  margin-bottom: 16px;
+}
+
+.upload-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hint-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 8px 0 0 0;
+  font-style: italic;
+}
+
+.data-preview-area {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.import-settings {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  border: 1px solid var(--border-light);
+}
+
+.import-settings h4 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.settings-form .settings-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.settings-form .settings-row:last-child {
+  margin-bottom: 0;
+}
+
+.settings-form .el-form-item {
+  margin-bottom: 0;
+}
+
+.data-preview {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  border: 1px solid var(--border-light);
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.preview-header h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.preview-table {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.highlighted-cell {
+  background: rgba(102, 126, 234, 0.1);
+  color: var(--primary-color);
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.prompt-cell {
+  background: rgba(103, 194, 58, 0.1);
+  color: #67c23a;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.duration-cell {
+  background: rgba(230, 162, 60, 0.1);
+  color: #e6a23c;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
 }
 </style>

@@ -648,4 +648,80 @@ def delete_tasks_before_today():
         return jsonify({
             'success': False,
             'message': f'删除今日前任务失败: {str(e)}'
+        }), 500
+
+@jimeng_img2video_bp.route('/tasks/batch-create-from-table', methods=['POST'])
+def batch_create_tasks_from_table():
+    """从表格批量创建图生视频任务"""
+    try:
+        data = request.get_json()
+        if not data or 'tasks' not in data:
+            return jsonify({
+                'success': False,
+                'message': '请提供任务数据'
+            }), 400
+
+        tasks_data = data['tasks']
+        if not tasks_data or not isinstance(tasks_data, list):
+            return jsonify({
+                'success': False,
+                'message': '任务数据格式错误'
+            }), 400
+
+        created_tasks = []
+        failed_tasks = []
+
+        for i, task_data in enumerate(tasks_data):
+            try:
+                # 验证必需字段
+                if 'image_path' not in task_data or not task_data['image_path']:
+                    failed_tasks.append(f"第 {i+1} 行: 缺少图片路径")
+                    continue
+
+                image_path = task_data['image_path'].strip()
+                prompt = task_data.get('prompt', '').strip()
+                model = task_data.get('model', 'Video 3.0')
+                second = int(task_data.get('second', 5))
+
+                # 验证图片路径是否存在
+                if not os.path.exists(image_path):
+                    failed_tasks.append(f"第 {i+1} 行: 图片文件不存在 - {image_path}")
+                    continue
+
+                # 创建任务
+                task = JimengImg2VideoTask.create(
+                    prompt=prompt,
+                    model=model,
+                    second=second,
+                    image_path=image_path,
+                    status=0
+                )
+                created_tasks.append(task.id)
+                print(f"从表格创建图生视频任务: {task.id}, 图片: {image_path}, 提示词: {prompt}, 模型: {model}, 时长: {second}s")
+
+            except Exception as e:
+                failed_tasks.append(f"第 {i+1} 行: {str(e)}")
+                print(f"处理第 {i+1} 行任务失败: {str(e)}")
+
+        # 返回结果
+        result_message = f"成功创建 {len(created_tasks)} 个任务"
+        if failed_tasks:
+            result_message += f"，{len(failed_tasks)} 个任务创建失败"
+
+        return jsonify({
+            'success': True,
+            'message': result_message,
+            'data': {
+                'created_count': len(created_tasks),
+                'failed_count': len(failed_tasks),
+                'created_task_ids': created_tasks,
+                'failed_tasks': failed_tasks
+            }
+        })
+
+    except Exception as e:
+        print(f"表格批量创建任务失败: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'表格批量创建任务失败: {str(e)}'
         }), 500 

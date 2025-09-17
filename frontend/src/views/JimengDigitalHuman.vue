@@ -330,9 +330,9 @@
                       <span class="file-size">{{ formatFileSize(audioFileList[0].size) }}</span>
                       <span v-if="audioInfo.duration" class="duration">{{ audioInfo.duration }}秒</span>
                     </div>
-                    <div v-if="audioInfo.duration > 15" class="warning-text">
+                    <div v-if="audioInfo.duration > 10" class="warning-text">
                       <el-icon><Warning /></el-icon>
-                      音频时长超过15秒限制
+                      音频时长超过10秒限制
                     </div>
                   </div>
                 </div>
@@ -405,7 +405,7 @@
           </div>
               <template #tip>
                 <div class="upload-tip">
-                  支持 MP3、WAV、M4A 格式，时长不超过 15 秒
+                  支持 MP3、WAV、M4A 格式，时长不超过 10 秒
         </div>
               </template>
             </el-upload>
@@ -420,7 +420,7 @@
             type="primary" 
             @click="createTask"
             :loading="uploading"
-            :disabled="audioInfo.duration > 15 || imageFileList.length === 0 || audioFileList.length === 0"
+            :disabled="audioInfo.duration > 10 || imageFileList.length === 0 || audioFileList.length === 0"
             size="large"
           >
             <el-icon v-if="!uploading"><Plus /></el-icon>
@@ -695,9 +695,9 @@ export default {
         const duration = Math.round(audio.duration * 10) / 10 // 保留一位小数
         audioInfo.duration = duration
         
-        if (duration > 15) {
-          audioInfo.error = '音频时长超过15秒限制'
-          ElMessage.warning('音频时长超过15秒，请选择更短的音频文件')
+        if (duration > 10) {
+          audioInfo.error = '音频时长超过10秒限制'
+          ElMessage.warning('音频时长超过10秒，请选择更短的音频文件')
         } else {
           audioInfo.error = ''
         }
@@ -793,8 +793,8 @@ export default {
         return
       }
 
-      if (audioInfo.duration > 15) {
-        ElMessage.warning('音频时长超过15秒，请重新选择')
+      if (audioInfo.duration > 10) {
+        ElMessage.warning('音频时长超过10秒，请重新选择')
         return
       }
 

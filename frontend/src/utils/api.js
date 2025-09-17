@@ -168,6 +168,9 @@ export const img2videoAPI = {
     }
   }),
   
+  // 从表格批量创建任务
+  batchCreateTasksFromTable: (tasks) => api.post('/jimeng/img2video/tasks/batch-create-from-table', { tasks }),
+  
   // 删除今日前任务
   deleteTasksBeforeToday: () => api.delete('/jimeng/img2video/tasks/delete-before-today')
 }
