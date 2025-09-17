@@ -547,68 +547,25 @@
             <div class="upload-text">
               <p class="primary-text">点击选择表格文件或拖拽到此处</p>
               <p class="secondary-text">支持 CSV、Excel (.xlsx, .xls) 格式</p>
-              <p class="hint-text">表格格式: 类型 | 图片路径 | 提示词/备注 | 比例 | 秒数</p>
+              <p class="hint-text">固定格式: 图片路径 | 提示词/备注 | 比例 | 时长(秒)</p>
             </div>
           </div>
         </div>
 
-        <!-- 数据预览和设置区域 -->
+        <!-- 数据预览区域 -->
         <div class="data-preview-area" v-if="tableData.length > 0">
-          <!-- 导入设置 -->
-          <div class="import-settings">
-            <h4>导入设置</h4>
-            <el-form :model="importSettings" label-width="100px" class="settings-form">
-              <div class="settings-row">
-                <el-form-item label="视频模型">
-                  <el-select v-model="importSettings.model" placeholder="请选择模型">
-                    <el-option label="Video 3.0" value="Video 3.0" />
-                    <el-option label="Video S2.0 Pro" value="Video S2.0 Pro" />
-                  </el-select>
-                </el-form-item>
-                <el-form-item label="默认时长">
-                  <el-select v-model="importSettings.defaultDuration" placeholder="请选择时长">
-                    <el-option label="5秒" :value="5" />
-                    <el-option label="10秒" :value="10" />
-                  </el-select>
-                </el-form-item>
+          <!-- 格式说明 -->
+          <div class="format-info">
+            <h4>表格格式说明</h4>
+            <div class="format-description">
+              <p>请确保表格按以下固定格式排列（前4列）：</p>
+              <div class="format-columns">
+                <span class="format-col">第1列: 图片路径</span>
+                <span class="format-col">第2列: 提示词/备注</span>
+                <span class="format-col">第3列: 比例 (如: 16:9)</span>
+                <span class="format-col">第4列: 时长 (秒)</span>
               </div>
-              
-              <div class="settings-row">
-                <el-form-item label="图片路径列" required>
-                  <el-select v-model="importSettings.imageColumn" placeholder="请选择图片路径列">
-                    <el-option 
-                      v-for="header in tableHeaders" 
-                      :key="header" 
-                      :label="header" 
-                      :value="header" 
-                    />
-                  </el-select>
-                </el-form-item>
-                <el-form-item label="提示词列">
-                  <el-select v-model="importSettings.promptColumn" placeholder="请选择提示词列" clearable>
-                    <el-option 
-                      v-for="header in tableHeaders" 
-                      :key="header" 
-                      :label="header" 
-                      :value="header" 
-                    />
-                  </el-select>
-                </el-form-item>
-              </div>
-              
-              <div class="settings-row">
-                <el-form-item label="时长列">
-                  <el-select v-model="importSettings.durationColumn" placeholder="请选择时长列" clearable>
-                    <el-option 
-                      v-for="header in tableHeaders" 
-                      :key="header" 
-                      :label="header" 
-                      :value="header" 
-                    />
-                  </el-select>
-                </el-form-item>
-              </div>
-            </el-form>
+            </div>
           </div>
 
           <!-- 数据预览 -->
@@ -632,13 +589,7 @@
                   show-overflow-tooltip
                 >
                   <template #default="{ row }">
-                    <span :class="{
-                      'highlighted-cell': header === importSettings.imageColumn,
-                      'prompt-cell': header === importSettings.promptColumn,
-                      'duration-cell': header === importSettings.durationColumn
-                    }">
-                      {{ row[header] }}
-                    </span>
+                    <span>{{ row[header] }}</span>
                   </template>
                 </el-table-column>
               </el-table>
@@ -654,7 +605,7 @@
             type="primary" 
             @click="submitTableImportTasks" 
             :loading="tableImportLoading"
-            :disabled="tableData.length === 0 || !importSettings.imageColumn"
+            :disabled="tableData.length === 0"
           >
             <el-icon><Plus /></el-icon>
             创建任务 ({{ tableData.length }})
@@ -734,9 +685,6 @@ const tableHeaders = ref([])
 const previewData = ref([])
 const importSettings = reactive({
   model: 'Video 3.0',
-  imageColumn: '',
-  promptColumn: '',
-  durationColumn: '',
   defaultDuration: 5
 })
 
@@ -1364,9 +1312,6 @@ const parseCSVFile = async (file) => {
         tableData.value = data
         previewData.value = data.slice(0, 10) // 只预览前10行
         
-        // 自动识别列
-        autoDetectColumns(headers)
-        
         ElMessage.success(`成功解析 ${data.length} 行数据`)
         resolve(data)
       } catch (error) {
@@ -1419,9 +1364,6 @@ const parseExcelFile = async (file) => {
         tableData.value = rows
         previewData.value = rows.slice(0, 10) // 只预览前10行
         
-        // 自动识别列
-        autoDetectColumns(headers)
-        
         resolve()
       } catch (error) {
         reject(new Error('Excel文件解析失败: ' + error.message))
@@ -1433,35 +1375,13 @@ const parseExcelFile = async (file) => {
 }
 
 // 自动识别列
-const autoDetectColumns = (headers) => {
-  headers.forEach(header => {
-    const lowerHeader = header.toLowerCase()
-    
-    // 识别图片路径列
-    if (lowerHeader.includes('图片') || lowerHeader.includes('image') || lowerHeader.includes('路径') || lowerHeader.includes('path')) {
-      importSettings.imageColumn = header
-    }
-    
-    // 识别提示词列
-    if (lowerHeader.includes('提示') || lowerHeader.includes('prompt') || lowerHeader.includes('备注') || lowerHeader.includes('描述')) {
-      importSettings.promptColumn = header
-    }
-    
-    // 识别时长列
-    if (lowerHeader.includes('时长') || lowerHeader.includes('秒') || lowerHeader.includes('duration') || lowerHeader.includes('second')) {
-      importSettings.durationColumn = header
-    }
-  })
-}
+
 
 // 重置表格导入对话框
 const resetTableImportDialog = () => {
   tableData.value = []
   tableHeaders.value = []
   previewData.value = []
-  importSettings.imageColumn = ''
-  importSettings.promptColumn = ''
-  importSettings.durationColumn = ''
   importSettings.model = 'Video 3.0'
   importSettings.defaultDuration = 5
 }
@@ -1473,21 +1393,25 @@ const submitTableImportTasks = async () => {
     return
   }
   
-  if (!importSettings.imageColumn) {
-    ElMessage.warning('请选择图片路径列')
+  if (tableHeaders.value.length < 4) {
+    ElMessage.warning('表格至少需要4列：图片路径、提示词、比例、时长')
     return
   }
   
   try {
     tableImportLoading.value = true
     
-    // 构建任务列表
-    const tasks = tableData.value.map(row => ({
-      image_path: row[importSettings.imageColumn] || '',
-      prompt: importSettings.promptColumn ? (row[importSettings.promptColumn] || '') : '',
-      model: importSettings.model,
-      second: importSettings.durationColumn ? (parseInt(row[importSettings.durationColumn]) || importSettings.defaultDuration) : importSettings.defaultDuration
-    })).filter(task => task.image_path.trim() !== '') // 过滤空的图片路径
+    // 按固定格式构建任务列表：第1列图片路径，第2列提示词，第3列比例，第4列时长
+    const tasks = tableData.value.map(row => {
+      const rowValues = Object.values(row)
+      return {
+        image_path: rowValues[0] || '',
+        prompt: rowValues[1] || '',
+        ratio: rowValues[2] || '16:9',
+        model: importSettings.model,
+        second: parseInt(rowValues[3]) || importSettings.defaultDuration
+      }
+    }).filter(task => task.image_path.trim() !== '') // 过滤空的图片路径
     
     if (tasks.length === 0) {
       ElMessage.warning('没有有效的任务数据')
@@ -2389,35 +2313,42 @@ onUnmounted(() => {
   gap: 24px;
 }
 
-.import-settings {
+.format-info {
   background: var(--bg-secondary);
   border-radius: var(--radius-lg);
   padding: 24px;
   border: 1px solid var(--border-light);
 }
 
-.import-settings h4 {
+.format-info h4 {
   margin: 0 0 16px 0;
   font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
 }
 
-.settings-form .settings-row {
+.format-description p {
+  margin: 0 0 12px 0;
+  color: var(--text-secondary);
+}
+
+.format-columns {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  align-items: center;
-  margin-bottom: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
 }
 
-.settings-form .settings-row:last-child {
-  margin-bottom: 0;
+.format-col {
+  background: var(--bg-primary);
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-light);
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-align: center;
 }
 
-.settings-form .el-form-item {
-  margin-bottom: 0;
-}
+
 
 .data-preview {
   background: var(--bg-secondary);
@@ -2447,27 +2378,5 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-.highlighted-cell {
-  background: rgba(102, 126, 234, 0.1);
-  color: var(--primary-color);
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-}
 
-.prompt-cell {
-  background: rgba(103, 194, 58, 0.1);
-  color: #67c23a;
-  font-weight: 500;
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-}
-
-.duration-cell {
-  background: rgba(230, 162, 60, 0.1);
-  color: #e6a23c;
-  font-weight: 500;
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-}
 </style>
