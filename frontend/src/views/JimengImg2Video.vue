@@ -547,26 +547,22 @@
             <div class="upload-text">
               <p class="primary-text">点击选择表格文件或拖拽到此处</p>
               <p class="secondary-text">支持 CSV、Excel (.xlsx, .xls) 格式</p>
-              <p class="hint-text">固定格式: 图片路径 | 提示词/备注 | 比例 | 时长(秒)</p>
+              <p class="hint-text">固定格式: 图片路径 | 提示词 | 秒数</p>
+              <el-button 
+                type="primary" 
+                size="small"
+                @click="downloadTemplate"
+                plain
+              >
+                下载表格模板
+              </el-button>
             </div>
           </div>
         </div>
 
         <!-- 数据预览区域 -->
         <div class="data-preview-area" v-if="tableData.length > 0">
-          <!-- 格式说明 -->
-          <div class="format-info">
-            <h4>表格格式说明</h4>
-            <div class="format-description">
-              <p>请确保表格按以下固定格式排列（前4列）：</p>
-              <div class="format-columns">
-                <span class="format-col">第1列: 图片路径</span>
-                <span class="format-col">第2列: 提示词/备注</span>
-                <span class="format-col">第3列: 比例 (如: 16:9)</span>
-                <span class="format-col">第4列: 时长 (秒)</span>
-              </div>
-            </div>
-          </div>
+
 
           <!-- 数据预览 -->
           <div class="data-preview">
@@ -1393,23 +1389,22 @@ const submitTableImportTasks = async () => {
     return
   }
   
-  if (tableHeaders.value.length < 4) {
-    ElMessage.warning('表格至少需要4列：图片路径、提示词、比例、时长')
+  if (tableHeaders.value.length < 3) {
+    ElMessage.warning('表格至少需要3列：图片路径、提示词、秒数')
     return
   }
   
   try {
     tableImportLoading.value = true
     
-    // 按固定格式构建任务列表：第1列图片路径，第2列提示词，第3列比例，第4列时长
+    // 按固定格式构建任务列表：第1列图片路径，第2列提示词，第3列秒数
     const tasks = tableData.value.map(row => {
       const rowValues = Object.values(row)
       return {
         image_path: rowValues[0] || '',
         prompt: rowValues[1] || '',
-        ratio: rowValues[2] || '16:9',
         model: importSettings.model,
-        second: parseInt(rowValues[3]) || importSettings.defaultDuration
+        second: parseInt(rowValues[2]) || importSettings.defaultDuration
       }
     }).filter(task => task.image_path.trim() !== '') // 过滤空的图片路径
     
@@ -1479,6 +1474,31 @@ const confirmImportFolder = async () => {
   } finally {
     importFolderLoading.value = false
   }
+}
+
+// 下载表格模板
+const downloadTemplate = () => {
+  // 创建CSV数据 - 只包含表头
+  const headers = ['图片路径', '提示词', '秒数']
+  
+  // 构建CSV内容 - 只有表头行
+  const csvContent = headers.join(',')
+  
+  // 创建Blob对象
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  
+  // 创建下载链接
+  const link = document.createElement('a')
+  const url = URL.createObjectURL(blob)
+  link.setAttribute('href', url)
+  link.setAttribute('download', '图片转视频导入模板.csv')
+  link.style.visibility = 'hidden'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+  
+  ElMessage.success('模板下载成功')
 }
 
 // 生命周期
