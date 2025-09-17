@@ -648,7 +648,7 @@ def delete_tasks_before_today():
         return jsonify({
             'success': False,
             'message': f'删除今日前任务失败: {str(e)}'
-        }), 500
+        }), 500 
 
 @jimeng_img2video_bp.route('/tasks/batch-create-from-table', methods=['POST'])
 def batch_create_tasks_from_table():

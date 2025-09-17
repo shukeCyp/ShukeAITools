@@ -536,10 +536,16 @@
             style="display: none"
             @change="handleTableFileSelect"
           />
-          <div class="upload-area" @click="triggerTableFileInput">
+          <div 
+            class="upload-area" 
+            @click="triggerTableFileInput"
+            @drop="handleTableFileDrop"
+            @dragover.prevent
+            @dragenter.prevent
+          >
             <el-icon size="48" class="upload-icon"><Upload /></el-icon>
             <div class="upload-text">
-              <p class="primary-text">点击选择表格文件</p>
+              <p class="primary-text">点击选择表格文件或拖拽到此处</p>
               <p class="secondary-text">支持 CSV、Excel (.xlsx, .xls) 格式</p>
               <p class="hint-text">表格格式: 类型 | 图片路径 | 提示词/备注 | 比例 | 秒数</p>
             </div>
@@ -682,6 +688,7 @@ import {
 } from '@element-plus/icons-vue'
 import { img2videoAPI } from '@/utils/api'
 import * as ElementPlus from 'element-plus'
+import * as XLSX from 'xlsx'
 
 // 响应式数据
 const loading = ref(false)
@@ -1296,6 +1303,24 @@ const handleTableFileSelect = async (event) => {
   }
 }
 
+// 处理表格文件拖拽
+const handleTableFileDrop = async (event) => {
+  event.preventDefault()
+  const files = event.dataTransfer?.files
+  if (!files || files.length === 0) return
+  
+  const file = files[0]
+  try {
+    tableImportLoading.value = true
+    await parseTableFile(file)
+  } catch (error) {
+    console.error('解析表格文件失败:', error)
+    ElMessage.error('解析表格文件失败')
+  } finally {
+    tableImportLoading.value = false
+  }
+}
+
 // 解析表格文件
 const parseTableFile = async (file) => {
   const fileExtension = file.name.split('.').pop()?.toLowerCase()
@@ -1355,10 +1380,56 @@ const parseCSVFile = async (file) => {
 
 // 解析Excel文件
 const parseExcelFile = async (file) => {
-  // 这里需要引入xlsx库来解析Excel文件
-  // 为了简化，我们先提示用户转换为CSV格式
-  ElMessage.warning('请将Excel文件转换为CSV格式后再导入')
-  throw new Error('暂不支持Excel格式，请转换为CSV格式')
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const arrayBuffer = new Uint8Array(e.target?.result)
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' })
+        
+        // 获取第一个工作表
+        const firstSheetName = workbook.SheetNames[0]
+        if (!firstSheetName) {
+          reject(new Error('Excel文件中没有找到工作表'))
+          return
+        }
+        
+        const worksheet = workbook.Sheets[firstSheetName]
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' })
+        
+        if (jsonData.length < 2) {
+          reject(new Error('表格数据不完整'))
+          return
+        }
+        
+        // 获取表头和数据
+        const headers = jsonData[0].map(h => String(h).trim())
+        const rows = jsonData.slice(1).map(row => {
+          const rowData = {}
+          headers.forEach((header, index) => {
+            rowData[header] = String(row[index] || '').trim()
+          })
+          return rowData
+        }).filter(row => {
+          // 过滤掉空行
+          return Object.values(row).some(value => value !== '')
+        })
+        
+        tableHeaders.value = headers
+        tableData.value = rows
+        previewData.value = rows.slice(0, 10) // 只预览前10行
+        
+        // 自动识别列
+        autoDetectColumns(headers)
+        
+        resolve()
+      } catch (error) {
+        reject(new Error('Excel文件解析失败: ' + error.message))
+      }
+    }
+    reader.onerror = () => reject(new Error('文件读取失败'))
+    reader.readAsArrayBuffer(file)
+  })
 }
 
 // 自动识别列
