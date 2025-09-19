@@ -1,5 +1,5 @@
 <template>
-  <div class="qingying-img2video-page">
+  <div class="jimeng-page qingying-img2video-page">
 
     <!-- 页面标题 -->
     <div class="page-header">
@@ -17,7 +17,7 @@
             size="large"
             @click="showImportFolderDialog = true"
             :loading="importFolderLoading"
-            class="import-btn"
+            class="add-task-btn"
           >
             <el-icon><FolderOpened /></el-icon>
             导入文件夹
@@ -28,7 +28,7 @@
             size="large"
             @click="showBatchAddDialog"
             :loading="batchAddLoading"
-            class="import-btn"
+            class="add-task-btn"
           >
             <el-icon><Plus /></el-icon>
             批量添加
@@ -38,55 +38,7 @@
     </div>
 
     <!-- 统计概览 -->
-    <div class="stats-overview">
-        <div class="stats-grid">
-        <div class="stat-card total">
-            <div class="stat-icon">
-              <el-icon size="24"><Document /></el-icon>
-            </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.total_tasks || 0 }}</div>
-            <div class="stat-label">总任务</div>
-            </div>
-          </div>
-        <div class="stat-card pending">
-          <div class="stat-icon">
-              <el-icon size="24"><Clock /></el-icon>
-            </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.pending_tasks || 0 }}</div>
-            <div class="stat-label">排队中</div>
-            </div>
-          </div>
-        <div class="stat-card processing">
-          <div class="stat-icon">
-              <el-icon size="24"><Loading /></el-icon>
-            </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.processing_tasks || 0 }}</div>
-            <div class="stat-label">生成中</div>
-            </div>
-          </div>
-        <div class="stat-card completed">
-          <div class="stat-icon">
-            <el-icon size="24"><CircleCheckFilled /></el-icon>
-            </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.completed_tasks || 0 }}</div>
-            <div class="stat-label">已完成</div>
-            </div>
-          </div>
-        <div class="stat-card failed">
-          <div class="stat-icon">
-            <el-icon size="24"><CircleCloseFilled /></el-icon>
-            </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.failed_tasks || 0 }}</div>
-            <div class="stat-label">失败</div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <StatusCountDisplay :stats="normalizedStats" />
 
     <!-- 任务管理 -->
     <div class="task-management">
@@ -260,11 +212,11 @@
         </el-table>
 
         <!-- 分页 -->
-        <div class="pagination-container">
+        <div class="pagination-wrapper">
           <el-pagination
             :current-page="pagination.page"
             :page-size="pagination.page_size"
-            :page-sizes="[10, 20, 50, 100, 500, 1000]"
+            :page-sizes="[10, 20, 50, 100]"
             :total="pagination.total"
             layout="total, sizes, prev, pager, next, jumper"
             @size-change="handleSizeChange"
@@ -609,9 +561,6 @@
 import { ref, reactive, computed, onMounted, onActivated } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
-  Document, 
-  Clock, 
-  Loading, 
   Select, 
   Close, 
   Plus, 
@@ -623,12 +572,11 @@ import {
   Download,
   FolderOpened,
   VideoCamera,
-  CircleCheckFilled,
-  CircleCloseFilled,
   VideoPlay,
   MagicStick as Magic
 } from '@element-plus/icons-vue'
 import { qingyingImg2videoAPI } from '@/utils/api'
+import StatusCountDisplay from '@/components/StatusCountDisplay.vue'
 
 // 响应式数据
 const loading = ref(false)
@@ -643,6 +591,15 @@ const stats = reactive({
   completed_tasks: 0,
   failed_tasks: 0
 })
+
+// 统一数据格式的计算属性
+const normalizedStats = computed(() => ({
+  total: stats.total_tasks || 0,
+  queued: stats.pending_tasks || 0,
+  processing: stats.processing_tasks || 0,
+  completed: stats.completed_tasks || 0,
+  failed: stats.failed_tasks || 0
+}))
 
 // 分页数据
 const pagination = reactive({
@@ -1309,80 +1266,9 @@ onActivated(() => {
 </script>
 
 <style scoped>
-.qingying-img2video-page {
-  padding: 16px 24px;
-  min-height: calc(100vh - 64px);
-  height: 100%;
-  overflow-y: auto;
-  position: relative;
-}
+@import '../styles/jimeng-common.css';
 
-
-
-/* 页面标题 */
-.page-header {
-  max-width: 1200px;
-  margin: 0 auto 24px auto;
-}
-
-.header-content {
-  background: var(--bg-primary);
-  padding: 24px 32px;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.header-content::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--primary-gradient);
-  opacity: 0.03;
-  z-index: -1;
-}
-
-.title-section {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.title-icon {
-  background: var(--primary-gradient);
-  color: white;
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--shadow-sm);
-}
-
-.page-title {
-  font-size: 32px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-  background: var(--primary-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.status-section {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
+/* 清影图生视频页面特定样式 */
 
 .import-btn {
   background: var(--primary-gradient);
@@ -1408,120 +1294,7 @@ onActivated(() => {
   background: var(--success-gradient);
 }
 
-/* 统计概览 */
-.stats-overview {
-  max-width: 1200px;
-  margin: 0 auto 32px auto;
-}
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 24px;
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  padding: 32px;
-  box-shadow: var(--shadow-lg);
-  position: relative;
-  overflow: hidden;
-}
-
-.stats-grid::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--secondary-gradient);
-  opacity: 0.02;
-  z-index: -1;
-}
-
-.stat-card {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  transition: var(--transition);
-  position: relative;
-  overflow: hidden;
-}
-
-.stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: var(--primary-gradient);
-  transition: var(--transition);
-  opacity: 0.05;
-  z-index: -1;
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border-color: rgba(102, 126, 234, 0.3);
-}
-
-.stat-card:hover::before {
-  left: 0;
-}
-
-.stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
-}
-
-.stat-card.pending .stat-icon {
-  background: rgba(64, 158, 255, 0.1);
-  color: #409eff;
-}
-
-.stat-card.processing .stat-icon {
-  background: rgba(230, 162, 60, 0.1);
-  color: #e6a23c;
-}
-
-.stat-card.completed .stat-icon {
-  background: rgba(103, 194, 58, 0.1);
-  color: #67c23a;
-}
-
-.stat-card.failed .stat-icon {
-  background: rgba(245, 108, 108, 0.1);
-  color: #f56c6c;
-}
-
-.stat-content {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.stat-value {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.stat-label {
-  font-size: 14px;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
 
 /* 任务管理 */
 .task-management {
@@ -1681,12 +1454,11 @@ onActivated(() => {
 }
 
 /* 分页样式 */
-.pagination-container {
+.pagination-wrapper {
   display: flex;
   justify-content: center;
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid #e4e7ed;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
 }
 
 /* 对话框样式 */

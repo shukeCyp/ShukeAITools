@@ -1,11 +1,16 @@
 <template>
-  <div class="account-configuration-page">
+  <div class="jimeng-page account-configuration-page">
     <!-- 页面标题 -->
     <div class="page-header">
       <div class="header-content">
         <div class="title-section">
-          <h1 class="page-title">账号配置</h1>
-          <p class="page-subtitle">管理各平台账号信息，配置自动化任务所需的登录凭证</p>
+          <div class="title-icon">
+            <el-icon size="32"><User /></el-icon>
+          </div>
+          <div class="title-content">
+            <h1 class="page-title">账号配置</h1>
+            <p class="page-subtitle">管理各平台账号信息，配置自动化任务所需的登录凭证</p>
+          </div>
         </div>
         <div class="status-section">
           <el-button 
@@ -325,55 +330,18 @@ export default {
 </script>
 
 <style scoped>
+@import '../styles/jimeng-common.css';
+
 .account-configuration-page {
   padding: 16px 24px;
   min-height: calc(100vh - 64px);
 }
 
-/* 页面标题 */
-.page-header {
-  margin-bottom: 32px;
-}
-
-.header-content {
-  background: var(--bg-primary);
-  padding: 32px;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+/* 账户配置页面特定样式 */
+.title-content {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.header-content::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--success-gradient);
-  opacity: 0.03;
-  z-index: -1;
-}
-
-.page-title {
-  font-size: 36px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0 0 8px 0;
-  background: var(--success-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.page-subtitle {
-  font-size: 16px;
-  color: var(--text-secondary);
-  margin: 0;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .account-btn {

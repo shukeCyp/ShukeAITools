@@ -32,10 +32,10 @@ def init_database():
         print("创建数据库目录: {}".format(DATABASE_DIR))
     
     # 导入模型
-    from backend.models.models import Config, JimengAccount, JimengText2ImgTask, JimengImg2VideoTask, JimengDigitalHumanTask, JimengTaskRecord, QingyingAccount, QingyingImage2VideoTask
+    from backend.models.models import Config, JimengAccount, JimengText2ImgTask, JimengImg2ImgTask, JimengImg2VideoTask, JimengDigitalHumanTask, JimengTaskRecord, QingyingAccount, QingyingImage2VideoTask
     
     # 定义所有模型类
-    models = [Config, JimengAccount, JimengText2ImgTask, JimengImg2VideoTask, JimengDigitalHumanTask, JimengTaskRecord, QingyingAccount, QingyingImage2VideoTask]
+    models = [Config, JimengAccount, JimengText2ImgTask, JimengImg2ImgTask, JimengImg2VideoTask, JimengDigitalHumanTask, JimengTaskRecord, QingyingAccount, QingyingImage2VideoTask]
     
     max_retries = 3
     retry_delay = 1  # 秒

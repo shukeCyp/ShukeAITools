@@ -1,10 +1,16 @@
 <template>
-  <div class="base-config-page">
+  <div class="jimeng-page base-config-page">
     <!-- 页面标题 -->
     <div class="page-header">
       <div class="header-content">
         <div class="title-section">
-          <h1 class="page-title">基础配置</h1>
+          <div class="title-icon">
+            <el-icon size="32"><Setting /></el-icon>
+          </div>
+          <div class="title-content">
+            <h1 class="page-title">基础配置</h1>
+            <p class="page-subtitle">配置系统基础参数和全局设置</p>
+          </div>
         </div>
         <div class="status-section">
           <el-tag 
@@ -290,50 +296,20 @@ export default {
 </script>
 
 <style scoped>
-.base-config-page {
-  padding: 16px 24px;
-  min-height: calc(100vh - 64px);
-}
+@import '../styles/jimeng-common.css';
 
-/* 页面标题 */
-.page-header {
-  max-width: 1200px;
-  margin: 0 auto 24px auto;
-}
-
-.header-content {
-  background: var(--bg-primary);
-  padding: 24px 32px;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+/* 基础配置页面特定样式 */
+.title-content {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.header-content::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--primary-gradient);
-  opacity: 0.03;
-  z-index: -1;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .page-title {
   font-size: 32px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: white;
   margin: 0;
-  background: var(--primary-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
 .status-tag {

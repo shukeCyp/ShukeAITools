@@ -483,21 +483,47 @@ def batch_download_videos():
                         
                 elif system == "Windows":  # Windows
                     try:
-                        # 使用PowerShell调用Windows文件选择器
+                        print("正在调用Windows文件选择器...")
+                        # 使用PowerShell调用Windows文件选择器，添加更详细的错误处理
                         ps_script = """
-                        Add-Type -AssemblyName System.Windows.Forms
-                        $folderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog
-                        $folderBrowser.Description = "选择视频下载文件夹"
-                        $folderBrowser.SelectedPath = [Environment]::GetFolderPath("MyDocuments")
-                        $result = $folderBrowser.ShowDialog()
-                        if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
-                            Write-Output $folderBrowser.SelectedPath
+                        try {
+                            Add-Type -AssemblyName System.Windows.Forms
+                            $folderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog
+                            $folderBrowser.Description = "选择视频下载文件夹"
+                            $folderBrowser.SelectedPath = [Environment]::GetFolderPath("MyDocuments")
+                            $folderBrowser.ShowNewFolderButton = $true
+                            $result = $folderBrowser.ShowDialog()
+                            if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
+                                Write-Output $folderBrowser.SelectedPath
+                                exit 0
+                            } else {
+                                Write-Output "CANCELLED"
+                                exit 1
+                            }
+                        } catch {
+                            Write-Error $_.Exception.Message
+                            exit 2
                         }
                         """
-                        result = subprocess.run(['powershell', '-Command', ps_script], 
-                                              capture_output=True, text=True, timeout=30)
-                        if result.returncode == 0 and result.stdout.strip():
+                        result = subprocess.run([
+                            'powershell', '-ExecutionPolicy', 'Bypass', '-Command', ps_script
+                        ], capture_output=True, text=True, timeout=60, encoding='utf-8')
+                        
+                        print(f"PowerShell返回码: {result.returncode}")
+                        print(f"PowerShell输出: {result.stdout}")
+                        print(f"PowerShell错误: {result.stderr}")
+                        
+                        if result.returncode == 0 and result.stdout.strip() and result.stdout.strip() != "CANCELLED":
                             download_dir = result.stdout.strip()
+                            print(f"用户选择了文件夹: {download_dir}")
+                        elif result.returncode == 1:
+                            print("用户取消了文件夹选择")
+                            return
+                        else:
+                            print(f"PowerShell执行失败，返回码: {result.returncode}")
+                    except subprocess.TimeoutExpired:
+                        print("Windows文件选择器超时，用户可能没有响应")
+                        return
                     except Exception as e:
                         print(f"Windows文件选择器失败: {str(e)}")
                         

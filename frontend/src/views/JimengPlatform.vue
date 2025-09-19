@@ -1,5 +1,5 @@
 <template>
-  <div class="jimeng-platform-page">
+  <div class="jimeng-page jimeng-platform-page">
     <!-- 页面标题 -->
     <div class="page-header">
       <div class="header-content">
@@ -7,9 +7,12 @@
           <div class="title-icon">
             <el-icon size="32"><Picture /></el-icon>
           </div>
-          <h1 class="page-title">即梦国际版</h1>
+          <div class="title-content">
+            <h1 class="page-title">即梦国际版</h1>
+            <p class="page-subtitle">AI图像生成和视频制作平台</p>
+          </div>
         </div>
-        <div class="header-actions">
+        <div class="status-section">
           <el-button 
             :icon="User"
             @click="showAccountManager = true"
@@ -254,15 +257,13 @@ export default {
 </script>
 
 <style scoped>
-.jimeng-platform-page {
-  padding: 16px 24px;
-  min-height: calc(100vh - 64px);
-}
+@import '../styles/jimeng-common.css';
 
-/* 页面标题 */
-.page-header {
-  max-width: 1200px;
-  margin: 0 auto 24px auto;
+/* 即梦平台页面特定样式 */
+.title-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .header-content {

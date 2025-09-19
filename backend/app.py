@@ -16,7 +16,7 @@ from datetime import datetime
 from backend.core.database import init_database
 from backend.core.middleware import before_request, after_request
 from backend.core.global_task_manager import global_task_manager
-from backend.models.models import JimengAccount, JimengText2ImgTask, JimengImg2VideoTask, JimengDigitalHumanTask, QingyingImage2VideoTask
+from backend.models.models import JimengAccount, JimengText2ImgTask, JimengImg2ImgTask, JimengImg2VideoTask, JimengDigitalHumanTask, QingyingImage2VideoTask
 from backend.utils.config_util import ConfigUtil
 # from backend.utils.retry_util import start_auto_retry_scheduler  # 暂时注释掉
 
@@ -25,6 +25,7 @@ from backend.api.v1.common_routes import common_bp
 from backend.api.v1.accounts_routes import jimeng_accounts_bp
 from backend.api.v1.qingying_accounts_routes import qingying_accounts_bp
 from backend.api.v1.text2img_routes import jimeng_text2img_bp
+from backend.api.v1.img2img_routes import jimeng_img2img_bp
 from backend.api.v1.img2video_routes import jimeng_img2video_bp
 from backend.api.v1.digital_human_routes import jimeng_digital_human_bp
 from backend.api.v1.qingying_img2video_routes import qingying_img2video_bp
@@ -68,6 +69,16 @@ def reset_processing_tasks():
                 task.update_status(0)  # 重置为排队状态
                 text2img_reset_count += 1
             
+            # 重置图生图任务
+            img2img_reset_count = 0
+            processing_img2img_tasks = JimengImg2ImgTask.select().where(
+                JimengImg2ImgTask.status == 1  # 生成中
+            )
+            
+            for task in processing_img2img_tasks:
+                task.update_status(0)  # 重置为排队状态
+                img2img_reset_count += 1
+            
             # 重置图生视频任务
             img2video_reset_count = 0
             processing_img2video_tasks = JimengImg2VideoTask.select().where(
@@ -98,9 +109,9 @@ def reset_processing_tasks():
                 task.update_status(0)  # 重置为排队状态
                 qingying_img2video_reset_count += 1
             
-            total_reset = text2img_reset_count + img2video_reset_count + digital_human_reset_count + qingying_img2video_reset_count
+            total_reset = text2img_reset_count + img2img_reset_count + img2video_reset_count + digital_human_reset_count + qingying_img2video_reset_count
             if total_reset > 0:
-                print(f"重置了 {text2img_reset_count} 个文生图任务, {img2video_reset_count} 个图生视频任务, {digital_human_reset_count} 个数字人任务和 {qingying_img2video_reset_count} 个清影图生视频任务为排队状态")
+                print(f"重置了 {text2img_reset_count} 个文生图任务, {img2img_reset_count} 个图生图任务, {img2video_reset_count} 个图生视频任务, {digital_human_reset_count} 个数字人任务和 {qingying_img2video_reset_count} 个清影图生视频任务为排队状态")
             else:
                 print("没有需要重置的生成中任务")
             
@@ -134,6 +145,7 @@ app.register_blueprint(common_bp)
 app.register_blueprint(jimeng_accounts_bp)
 app.register_blueprint(qingying_accounts_bp)
 app.register_blueprint(jimeng_text2img_bp)
+app.register_blueprint(jimeng_img2img_bp)
 app.register_blueprint(jimeng_img2video_bp)
 app.register_blueprint(jimeng_digital_human_bp)
 app.register_blueprint(qingying_img2video_bp)

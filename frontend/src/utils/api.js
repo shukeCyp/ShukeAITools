@@ -129,6 +129,40 @@ export const text2imgAPI = {
   deleteTasksBeforeToday: () => api.delete('/jimeng/text2img/tasks/delete-before-today')
 }
 
+// 即梦图生图任务相关API
+export const img2imgAPI = {
+  // 获取任务列表
+  getTasks: (params = {}) => {
+    const query = new URLSearchParams(params).toString()
+    return api.get(`/jimeng/img2img/tasks${query ? '?' + query : ''}`)
+  },
+  
+  // 创建新任务
+  createTask: (formData) => api.post('/jimeng/img2img/tasks', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  }),
+  
+  // 删除任务
+  deleteTask: (taskId) => api.delete(`/jimeng/img2img/tasks/${taskId}`),
+  
+  // 重试任务
+  retryTask: (taskId) => api.post(`/jimeng/img2img/tasks/${taskId}/retry`),
+  
+  // 批量重试失败任务
+  batchRetryTasks: (taskIds = []) => api.post('/jimeng/img2img/tasks/batch-retry', { task_ids: taskIds }),
+  
+  // 批量删除任务
+  batchDeleteTasks: (taskIds) => api.post('/jimeng/img2img/tasks/batch-delete', { task_ids: taskIds }),
+  
+  // 获取统计信息
+  getStats: () => api.get('/jimeng/img2img/stats'),
+  
+  // 批量下载图片
+  batchDownload: (taskIds) => api.post('/jimeng/img2img/tasks/batch-download', { task_ids: taskIds })
+}
+
 // 即梦图生视频任务相关API
 export const img2videoAPI = {
   // 获取任务列表

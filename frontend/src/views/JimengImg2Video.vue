@@ -1,5 +1,5 @@
 <template>
-  <div class="jimeng-img2video-page">
+  <div class="jimeng-page">
     <!-- 页面标题 -->
     <div class="page-header">
       <div class="header-content">
@@ -16,7 +16,7 @@
             size="large"
             @click="showImportFolderDialog"
             :loading="importFolderLoading"
-            class="import-btn"
+            class="add-task-btn"
           >
             <el-icon><FolderOpened /></el-icon>
             导入文件夹
@@ -27,7 +27,7 @@
             size="large"
             @click="showBatchAddDialog"
             :loading="batchAddLoading"
-            class="import-btn"
+            class="add-task-btn"
           >
             <el-icon><Plus /></el-icon>
             批量添加
@@ -38,7 +38,7 @@
             size="large"
             @click="showTableImportDialog"
             :loading="tableImportLoading"
-            class="import-btn"
+            class="add-task-btn"
           >
             <el-icon><Upload /></el-icon>
             表格导入
@@ -48,55 +48,7 @@
     </div>
 
     <!-- 统计概览 -->
-    <div class="stats-overview">
-        <div class="stats-grid">
-        <div class="stat-card total">
-            <div class="stat-icon">
-              <el-icon size="24"><Document /></el-icon>
-            </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.total_tasks || 0 }}</div>
-            <div class="stat-label">总任务</div>
-            </div>
-          </div>
-        <div class="stat-card pending">
-          <div class="stat-icon">
-              <el-icon size="24"><Clock /></el-icon>
-            </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.pending_tasks || 0 }}</div>
-            <div class="stat-label">排队中</div>
-            </div>
-          </div>
-        <div class="stat-card processing">
-          <div class="stat-icon">
-              <el-icon size="24"><Loading /></el-icon>
-            </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.processing_tasks || 0 }}</div>
-            <div class="stat-label">生成中</div>
-            </div>
-          </div>
-        <div class="stat-card completed">
-          <div class="stat-icon">
-            <el-icon size="24"><CircleCheckFilled /></el-icon>
-            </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.completed_tasks || 0 }}</div>
-            <div class="stat-label">已完成</div>
-            </div>
-          </div>
-        <div class="stat-card failed">
-          <div class="stat-icon">
-            <el-icon size="24"><CircleCloseFilled /></el-icon>
-            </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.failed_tasks || 0 }}</div>
-            <div class="stat-label">失败</div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <StatusCountDisplay :stats="normalizedStats" />
 
     <!-- 任务管理 -->
     <div class="task-management">
@@ -280,20 +232,20 @@
           </el-table-column>
         </el-table>
 
-      <!-- 分页 -->
-      <div class="pagination-wrapper">
-        <el-pagination
-          :current-page="pagination.page"
-          :page-size="pagination.page_size"
-          :page-sizes="[10, 20, 50, 100, 500, 1000]"
-          :total="pagination.total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
-            </div>
-            </div>
-            </div>
+        <!-- 分页 -->
+        <div class="pagination-wrapper">
+          <el-pagination
+            :current-page="pagination.page"
+            :page-size="pagination.page_size"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="pagination.total"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
+          />
+        </div>
+      </div>
+    </div>
 
     <!-- 图片预览对话框 -->
     <el-dialog 
@@ -537,25 +489,30 @@
             @change="handleTableFileSelect"
           />
           <div 
-            class="upload-area" 
+            class="upload-drag-area" 
             @click="triggerTableFileInput"
             @drop="handleTableFileDrop"
             @dragover.prevent
             @dragenter.prevent
           >
-            <el-icon size="48" class="upload-icon"><Upload /></el-icon>
-            <div class="upload-text">
-              <p class="primary-text">点击选择表格文件或拖拽到此处</p>
-              <p class="secondary-text">支持 CSV、Excel (.xlsx, .xls) 格式</p>
-              <p class="hint-text">固定格式: 图片路径 | 提示词 | 秒数</p>
-              <el-button 
-                type="primary" 
-                size="small"
-                @click="downloadTemplate"
-                plain
-              >
-                下载表格模板
-              </el-button>
+            <div class="upload-content">
+              <el-icon size="64" class="upload-icon"><Upload /></el-icon>
+              <div class="upload-text">
+                <h3 class="primary-text">点击选择表格文件或拖拽到此处</h3>
+                <p class="secondary-text">支持 CSV、Excel (.xlsx, .xls) 格式</p>
+                <p class="hint-text">固定格式: 图片路径 | 提示词 | 秒数</p>
+                <div class="template-download">
+                  <el-button 
+                    type="primary" 
+                    size="small"
+                    @click.stop="downloadTemplate"
+                    plain
+                  >
+                    <el-icon><Download /></el-icon>
+                    下载表格模板
+                  </el-button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -618,13 +575,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   VideoPlay,
   FolderOpened, 
-  Document,
   Delete, 
   Download,
-  Clock,
-  Loading,
-  CircleCheckFilled,
-  CircleCloseFilled,
   Refresh,
   RefreshRight,
   Plus,
@@ -636,6 +588,7 @@ import {
 import { img2videoAPI } from '@/utils/api'
 import * as ElementPlus from 'element-plus'
 import * as XLSX from 'xlsx'
+import StatusCountDisplay from '@/components/StatusCountDisplay.vue'
 
 // 响应式数据
 const loading = ref(false)
@@ -649,6 +602,15 @@ const statusFilter = ref(null)
   completed_tasks: 0,
   failed_tasks: 0
 })
+
+// 统一数据格式的计算属性
+const normalizedStats = computed(() => ({
+  total: stats.total_tasks || 0,
+  queued: stats.pending_tasks || 0,
+  processing: stats.processing_tasks || 0,
+  completed: stats.completed_tasks || 0,
+  failed: stats.failed_tasks || 0
+}))
 
 const pagination = reactive({
   page: 1,
@@ -1481,10 +1443,11 @@ const downloadTemplate = () => {
   // 创建CSV数据 - 只包含表头
   const headers = ['图片路径', '提示词', '秒数']
   
-  // 构建CSV内容 - 只有表头行
-  const csvContent = headers.join(',')
+  // 构建CSV内容 - 只有表头行，添加BOM以支持Excel正确显示中文
+  const BOM = '\uFEFF'
+  const csvContent = BOM + headers.join(',')
   
-  // 创建Blob对象
+  // 创建Blob对象，使用UTF-8编码
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
   
   // 创建下载链接
@@ -1545,94 +1508,16 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.jimeng-img2video-page {
-  padding: 16px 24px;
-  min-height: calc(100vh - 64px);
-  height: 100%;
-  overflow-y: auto;
-}
+@import '../styles/jimeng-common.css';
 
-/* 页面标题 */
-.page-header {
-  max-width: 1200px;
-  margin: 0 auto 24px auto;
-}
-
-.header-content {
-  background: var(--bg-primary);
-  padding: 24px 32px;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.header-content::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--primary-gradient);
-  opacity: 0.03;
-  z-index: -1;
-}
-
-.title-section {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.title-icon {
-  background: var(--primary-gradient);
-  color: white;
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--shadow-sm);
-}
-
-.page-title {
-  font-size: 32px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-  background: var(--primary-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
+/* 页面特定样式 */
 .status-section {
   display: flex;
   align-items: center;
   gap: 16px;
 }
 
-.import-btn {
-  background: var(--primary-gradient);
-  border: none;
-  color: white;
-  border-radius: var(--radius-md);
-  font-weight: 600;
-  padding: 12px 24px;
-  box-shadow: var(--shadow-sm);
-  transition: var(--transition);
-}
-
-.import-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
+/* 导入按钮特定样式 */
 .import-btn.el-button--success {
   background: var(--success-gradient);
 }
@@ -1641,155 +1526,10 @@ onUnmounted(() => {
   background: var(--success-gradient);
 }
 
-/* 统计概览 */
-.stats-overview {
-  max-width: 1200px;
-  margin: 0 auto 32px auto;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 24px;
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  padding: 32px;
-  box-shadow: var(--shadow-lg);
-  position: relative;
-  overflow: hidden;
-}
-
-.stats-grid::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--secondary-gradient);
-  opacity: 0.02;
-  z-index: -1;
-}
-
-.stat-card {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  transition: var(--transition);
-  position: relative;
-  overflow: hidden;
-}
-
-.stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: var(--primary-gradient);
-  transition: var(--transition);
-  opacity: 0.05;
-  z-index: -1;
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border-color: rgba(102, 126, 234, 0.3);
-}
-
-.stat-card:hover::before {
-  left: 0;
-}
-
-.stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
-}
-
-.stat-card.pending .stat-icon {
-  background: rgba(64, 158, 255, 0.1);
-  color: #409eff;
-}
-
-.stat-card.processing .stat-icon {
-  background: rgba(230, 162, 60, 0.1);
-  color: #e6a23c;
-}
-
-.stat-card.completed .stat-icon {
-  background: rgba(103, 194, 58, 0.1);
-  color: #67c23a;
-}
-
-.stat-card.failed .stat-icon {
-  background: rgba(245, 108, 108, 0.1);
-  color: #f56c6c;
-}
-
-.stat-content {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.stat-value {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.stat-label {
-  font-size: 14px;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-/* 任务管理 */
-.task-management {
-  max-width: 1200px;
-  margin: 0 auto;
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  overflow: hidden;
-}
-
+/* 任务管理特定样式 */
 .panel-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   padding: 24px 32px;
-  border-bottom: 1px solid var(--border-light);
   background: var(--bg-secondary);
-}
-
-.panel-title h3 {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.toolbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.status-filter {
-  width: 120px;
 }
 
 .refresh-btn {
@@ -1803,115 +1543,14 @@ onUnmounted(() => {
 
 
 
-/* 任务表格 */
-.task-table-container {
-  padding: 0;
-  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-  overflow: hidden;
-}
-
-.modern-table {
-  border: none;
-  font-size: 14px;
-}
-
-.modern-table :deep(.el-table__header-wrapper) {
-  border-radius: 0;
-}
-
-.modern-table :deep(.el-table__body-wrapper) {
-  border-radius: 0;
-}
-
-.modern-table :deep(.el-table__row) {
-  transition: var(--transition);
-}
-
-.modern-table :deep(.el-table__row:hover) {
-  background-color: var(--bg-hover) !important;
-}
-
-.image-cell {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
+/* 图生视频特定样式 */
 .image-filename {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.preview-btn {
-  padding: 4px 8px;
-  font-size: 12px;
-}
-
-.prompt-cell {
-  padding: 8px 0;
 }
 
 .prompt-text {
   font-size: 13px;
-  color: var(--text-primary);
   line-height: 1.4;
-  display: block;
-}
-
-.model-tag, .duration-tag {
-  font-size: 12px;
-  font-weight: 500;
-  border-radius: var(--radius-sm);
-}
-
-.status-tag {
-  font-size: 12px;
-  font-weight: 600;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.processing-tag {
-  animation: pulse 2s infinite;
-}
-
-.rotating-icon {
-  animation: rotate 1s linear infinite;
-}
-
-@keyframes rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
-.video-btn {
-  padding: 6px 12px;
-  font-size: 12px;
-  border-radius: var(--radius-sm);
-}
-
-.action-buttons {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-}
-
-.action-btn {
-  padding: 6px 12px;
-  font-size: 12px;
-  border-radius: var(--radius-sm);
 }
 
 .no-content {
@@ -1919,236 +1558,30 @@ onUnmounted(() => {
   font-size: 12px;
 }
 
-.pagination-wrapper {
-  display: flex;
-  justify-content: center;
-  padding: 24px;
-  background: var(--bg-secondary);
-}
-
-.image-preview, .video-preview {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 300px;
-}
-
-/* 批量添加对话框样式 */
-.batch-add-dialog {
-  --el-dialog-padding-primary: 0;
-}
-
-.batch-add-dialog .el-dialog__body {
-  padding: 0;
-  max-height: 70vh;
-  overflow: hidden;
-}
-
-.batch-add-wrapper {
-  position: relative;
-  height: 100%;
-}
-
-.batch-add-wrapper.drag-over {
-  background: rgba(102, 126, 234, 0.05);
-  border: 2px dashed var(--primary-color);
-}
-
-.batch-add-scrollable {
-  padding: 20px;
-  height: 70vh;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.drag-upload-area {
-  border: 2px dashed var(--border-light);
-  border-radius: var(--radius-lg);
-  padding: 48px 24px;
-  text-align: center;
-  background: var(--bg-secondary);
-  cursor: pointer;
-  transition: var(--transition);
-  position: relative;
-}
-
-
-
-.drag-upload-area:hover {
-  border-color: var(--primary-color);
-  background: rgba(102, 126, 234, 0.02);
-}
-
-.drag-upload-area.drag-over {
-  border-color: var(--primary-color);
-  background: rgba(102, 126, 234, 0.05);
-  transform: scale(1.02);
-}
-
-.upload-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-}
-
-.upload-icon {
-  color: var(--primary-color);
-  opacity: 0.6;
-}
-
-.upload-text {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.primary-text {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.secondary-text {
-  font-size: 14px;
-  color: var(--text-secondary);
-  margin: 0;
-}
-
-.image-task-list {
-  background: var(--bg-secondary);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  border: 1px solid var(--border-light);
-}
-
-.list-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border-light);
-}
-
-.list-header h4 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.header-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.task-items {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  max-height: 300px;
-  overflow-y: auto;
-}
-
+/* 图生视频特定对话框样式 */
 .task-item {
-  display: flex;
-  gap: 20px;
-  padding: 12px 12px;
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-light);
-  transition: var(--transition);
-  width: 95%;
   min-height: 280px;
   max-width: 600px;
+  width: 95%;
   margin: 0 auto;
   align-items: stretch;
   box-sizing: border-box;
 }
 
-.task-item:hover {
-  box-shadow: var(--shadow-md);
-  border-color: rgba(102, 126, 234, 0.3);
-}
 
 
-
-.generation-settings-compact {
-  background: var(--bg-secondary);
-  border-radius: var(--radius-md);
-  padding: 12px 16px;
-  border: 1px solid var(--border-light);
-}
-
-.settings-row-compact {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  align-items: flex-start;
-}
-
-.compact-form-item {
-  margin-bottom: 0;
-}
-
-.compact-form-item .el-form-item__label {
-  font-size: 14px;
-  font-weight: 500;
-}
-
+/* 图生视频任务特定样式 */
 .task-image-container {
-  flex: 1;
-  min-width: 0;
   max-width: 200px;
 }
 
 .task-image {
-  width: 100%;
   min-height: 200px;
-  border-radius: var(--radius-sm);
-  background: var(--bg-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-
-.task-image img {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
-  object-fit: contain;
-  border-radius: var(--radius-sm);
 }
 
 .task-content {
   flex: 2;
-  display: flex;
-  align-items: stretch;
   padding: 0 16px;
-  min-width: 0;
-}
-
-.task-prompt-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.prompt-textarea {
-  flex: 1;
-}
-
-.button-group {
-  display: flex;
-  gap: 8px;
-  align-items: center;
 }
 
 .ai-generate-btn {
@@ -2165,90 +1598,21 @@ onUnmounted(() => {
   background: rgba(245, 108, 108, 0.1);
 }
 
-/* 分页滑动样式 */
+/* 图生视频分页特定样式 */
 .task-pagination-container {
   height: 350px;
-  overflow: hidden;
-  position: relative;
   touch-action: pan-y;
 }
 
-.task-pagination-wrapper {
+.pagination-wrapper {
   display: flex;
-  flex-direction: column;
-  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  height: 100%;
-}
-
-.task-page {
-  height: 100%;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
   justify-content: center;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
 }
 
-.generation-settings {
-  background: var(--bg-secondary);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  border: 1px solid var(--border-light);
-}
-
-.generation-settings h4 {
-  margin: 0 0 16px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.settings-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  align-items: center;
-}
-
-.settings-row .el-form-item {
-  margin-bottom: 0;
-}
-
-/* 响应式设计 */
+/* 图生视频响应式样式 */
 @media (max-width: 768px) {
-  .jimeng-img2video-page {
-    padding: 16px;
-  }
-  
-  .header-content {
-    flex-direction: column;
-    text-align: center;
-    gap: 16px;
-    padding: 20px 24px;
-  }
-  
-  .page-title {
-    font-size: 28px;
-  }
-  
-  .stats-grid {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  }
-  
-  .panel-title {
-    flex-direction: column;
-    gap: 16px;
-    align-items: stretch;
-  }
-  
-  .toolbar-actions {
-    justify-content: center;
-  }
-
-  .settings-row {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
   .task-item {
     flex-direction: column;
   }
@@ -2260,7 +1624,7 @@ onUnmounted(() => {
   }
 }
 
-/* 失败原因图标样式 */
+/* 图生视频失败图标样式 */
 .failure-icon {
   color: #f56c6c;
   cursor: help;
@@ -2276,105 +1640,78 @@ onUnmounted(() => {
   transform: scale(1.1);
 }
 
-.action-buttons {
+/* 表格导入弹窗样式 */
+.table-import-container {
+  min-height: 200px;
+}
+
+.file-select-area {
+  margin: 20px 0;
+}
+
+.upload-drag-area {
+  border: 2px dashed #dcdfe6;
+  border-radius: 12px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  background: #fafbfc;
+  min-height: 260px;
   display: flex;
-  flex-direction: row;
-  gap: 8px;
   align-items: center;
   justify-content: center;
 }
 
-/* 表格导入对话框样式 */
-.table-import-container {
-  padding: 20px 0;
+.upload-drag-area:hover {
+  border-color: #409eff;
+  background: #f5f7fa;
 }
 
-.file-select-area {
+.upload-content {
   text-align: center;
   padding: 40px 20px;
 }
 
-.upload-area {
-  border: 2px dashed var(--border-light);
-  border-radius: var(--radius-lg);
-  padding: 60px 40px;
-  background: var(--bg-secondary);
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.upload-area:hover {
-  border-color: var(--primary-color);
-  background: rgba(102, 126, 234, 0.02);
-}
-
 .upload-icon {
-  color: var(--primary-color);
-  opacity: 0.6;
-  margin-bottom: 16px;
+  color: #c0c4cc;
+  margin-bottom: 20px;
+  transition: color 0.3s ease;
+}
+
+.upload-drag-area:hover .upload-icon {
+  color: #409eff;
 }
 
 .upload-text {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  color: #606266;
 }
 
-.hint-text {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin: 8px 0 0 0;
-  font-style: italic;
+.upload-text .primary-text {
+  font-size: 18px;
+  font-weight: 500;
+  color: #303133;
+  margin: 0 0 12px 0;
+}
+
+.upload-text .secondary-text {
+  font-size: 14px;
+  color: #909399;
+  margin: 8px 0;
+}
+
+.upload-text .hint-text {
+  font-size: 13px;
+  color: #c0c4cc;
+  margin: 8px 0 20px 0;
+}
+
+.template-download {
+  margin-top: 16px;
 }
 
 .data-preview-area {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.format-info {
-  background: var(--bg-secondary);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  border: 1px solid var(--border-light);
-}
-
-.format-info h4 {
-  margin: 0 0 16px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.format-description p {
-  margin: 0 0 12px 0;
-  color: var(--text-secondary);
-}
-
-.format-columns {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
-}
-
-.format-col {
-  background: var(--bg-primary);
-  padding: 12px 16px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border-light);
-  font-size: 14px;
-  color: var(--text-secondary);
-  text-align: center;
-}
-
-
-
-.data-preview {
-  background: var(--bg-secondary);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  border: 1px solid var(--border-light);
+  margin-top: 20px;
 }
 
 .preview-header {
@@ -2383,20 +1720,25 @@ onUnmounted(() => {
   align-items: center;
   margin-bottom: 16px;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid #e4e7ed;
 }
 
 .preview-header h4 {
   margin: 0;
   font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-weight: 500;
+  color: #303133;
 }
 
 .preview-table {
-  border-radius: var(--radius-md);
+  border-radius: 8px;
   overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
+
+
+
+
 
 
 </style>

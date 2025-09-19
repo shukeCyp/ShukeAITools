@@ -157,6 +157,140 @@ class JimengText2ImgTask(BaseModel):
             return True
         return False
 
+class JimengImg2ImgTask(BaseModel):
+    """即梦图生图任务"""
+    # 基本字段
+    prompt = TextField()  # 提示词
+    model = CharField(max_length=100, default="Nano Banana")  # 使用的模型
+    ratio = CharField(max_length=20, default="1:1")  # 分辨率比例
+    
+    # 状态字段 - 使用数字状态码
+    # 0: 排队中, 1: 生成中, 2: 已完成, 3: 失败
+    status = IntegerField(default=0)
+
+    # 输入图片 - 最多3张输入图片
+    input_image1 = CharField(max_length=500, null=True)
+    input_image2 = CharField(max_length=500, null=True)
+    input_image3 = CharField(max_length=500, null=True)
+    
+    # 生成的图片 - 4个图片字段
+    image1 = CharField(max_length=500, null=True)
+    image2 = CharField(max_length=500, null=True)
+    image3 = CharField(max_length=500, null=True)
+    image4 = CharField(max_length=500, null=True)
+    
+    task_id = CharField(max_length=100, null=True)  # 任务ID
+
+    # 重试相关字段
+    retry_count = IntegerField(default=0)  # 重试次数
+    max_retry = IntegerField(default=10)  # 最大重试次数
+    failure_reason = CharField(max_length=50, null=True)  # 失败原因类型
+    error_message = TextField(null=True)  # 详细错误信息
+    
+    # 时间戳
+    create_at = DateTimeField(default=datetime.now)
+    update_at = DateTimeField(default=datetime.now)
+    
+    class Meta:
+        table_name = 'jimeng_img2img_tasks'
+        
+    def get_status_text(self):
+        """获取状态文字描述"""
+        status_map = {
+            0: '排队中',
+            1: '生成中', 
+            2: '已完成',
+            3: '失败'
+        }
+        return status_map.get(self.status, '未知状态')
+        
+    def update_status(self, status):
+        """更新任务状态"""
+        self.status = status
+        self.update_at = datetime.now()
+        self.save()
+        
+    def set_input_images(self, image_paths):
+        """设置输入图片路径"""
+        if image_paths:
+            for i, path in enumerate(image_paths[:3]):  # 最多3张输入图片
+                if i == 0:
+                    self.input_image1 = path
+                elif i == 1:
+                    self.input_image2 = path
+                elif i == 2:
+                    self.input_image3 = path
+        self.update_at = datetime.now()
+        self.save()
+        
+    def get_input_images(self):
+        """获取所有输入图片路径列表"""
+        images = []
+        for img in [self.input_image1, self.input_image2, self.input_image3]:
+            if img:
+                images.append(img)
+        return images
+        
+    def set_images(self, image_paths):
+        """设置生成的图片路径"""
+        if image_paths:
+            for i, path in enumerate(image_paths[:4]):  # 最多4张图片
+                if i == 0:
+                    self.image1 = path
+                elif i == 1:
+                    self.image2 = path
+                elif i == 2:
+                    self.image3 = path
+                elif i == 3:
+                    self.image4 = path
+        self.update_at = datetime.now()
+        self.save()
+        
+    def get_images(self):
+        """获取所有生成图片路径列表"""
+        images = []
+        for img in [self.image1, self.image2, self.image3, self.image4]:
+            if img:
+                images.append(img)
+        return images
+    
+    def can_retry(self):
+        """判断任务是否可以重试"""
+        # 只有网络相关的失败才能重试
+        network_failure_reasons = ['WEB_INTERACTION_FAILED', 'TASK_ID_NOT_OBTAINED']
+        return (self.status == 3 and  # 任务失败
+                self.retry_count < self.max_retry and  # 重试次数未超限
+                self.failure_reason in network_failure_reasons)  # 是网络问题
+    
+    def set_failure(self, error_code, error_message=None):
+        """设置任务失败状态和原因"""
+        self.status = 3
+        self.error_message = error_message
+        
+        # 根据错误代码判断失败原因
+        if error_code in [600, 900, 'WEB_INTERACTION_FAILED']:
+            self.failure_reason = 'WEB_INTERACTION_FAILED'
+        elif error_code in [700, 'TASK_ID_NOT_OBTAINED']:
+            self.failure_reason = 'TASK_ID_NOT_OBTAINED'
+        elif error_code in [800, 'GENERATION_FAILED']:
+            self.failure_reason = 'GENERATION_FAILED'
+        else:
+            self.failure_reason = 'OTHER_ERROR'
+        
+        self.update_at = datetime.now()
+        self.save()
+    
+    def retry_task(self):
+        """重试任务"""
+        if self.can_retry():
+            self.retry_count += 1
+            self.status = 0  # 重新排队
+            self.error_message = None
+            self.update_at = datetime.now()
+            self.save()
+            return True
+        return False
+
 class JimengImg2VideoTask(BaseModel):
     """即梦图生视频任务"""
     # 基本字段
@@ -413,4 +547,3 @@ class QingyingImage2VideoTask(BaseModel):
             self.save()
             return True
         return False
-        

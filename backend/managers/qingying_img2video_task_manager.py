@@ -58,20 +58,29 @@ class QingyingImg2VideoTaskManager:
         
     def start(self):
         """启动任务管理器"""
-        if not self.running:
-            self.running = True
-            # 启动时重置账号计数器，确保计数正确
-            self.reset_account_counters()
-            self.worker_thread = threading.Thread(target=self._task_processor_loop, daemon=True)
-            self.worker_thread.start()
-            print("清影图生视频任务管理器已启动")
+        if self.running:
+            print("清影图生视频任务管理器已在运行中")
+            return False
+            
+        self.running = True
+        # 启动时重置账号计数器，确保计数正确
+        self.reset_account_counters()
+        self.worker_thread = threading.Thread(target=self._task_processor_loop, daemon=True)
+        self.worker_thread.start()
+        print("清影图生视频任务管理器已启动")
+        return True
     
     def stop(self):
         """停止任务管理器"""
+        if not self.running:
+            print("清影图生视频任务管理器已停止")
+            return False
+            
         self.running = False
         if self.worker_thread and self.worker_thread.is_alive():
             self.worker_thread.join()
         print("清影图生视频任务管理器已停止")
+        return True
     
     def set_global_executor(self, executor):
         """设置全局线程池执行器"""

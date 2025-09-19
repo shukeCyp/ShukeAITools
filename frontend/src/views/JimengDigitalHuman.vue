@@ -1,5 +1,5 @@
 <template>
-  <div class="jimeng-digital-human-page">
+  <div class="jimeng-page jimeng-digital-human-page">
     <!-- 页面标题 -->
     <div class="page-header">
       <div class="header-content">
@@ -24,55 +24,7 @@
     </div>
 
     <!-- 统计概览 -->
-    <div class="stats-overview">
-      <div class="stats-grid">
-        <div class="stat-card total">
-          <div class="stat-icon">
-            <el-icon size="24"><Document /></el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.total || 0 }}</div>
-            <div class="stat-label">总任务</div>
-          </div>
-        </div>
-        <div class="stat-card pending">
-          <div class="stat-icon">
-            <el-icon size="24"><Clock /></el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.today || 0 }}</div>
-            <div class="stat-label">今日任务</div>
-          </div>
-        </div>
-        <div class="stat-card processing">
-          <div class="stat-icon">
-            <el-icon size="24"><Loading /></el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.in_progress || 0 }}</div>
-            <div class="stat-label">生成中</div>
-          </div>
-        </div>
-        <div class="stat-card completed">
-          <div class="stat-icon">
-            <el-icon size="24"><CircleCheckFilled /></el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.completed || 0 }}</div>
-            <div class="stat-label">已完成</div>
-          </div>
-        </div>
-        <div class="stat-card failed">
-          <div class="stat-icon">
-            <el-icon size="24"><CircleCloseFilled /></el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.failed || 0 }}</div>
-            <div class="stat-label">失败</div>
-          </div>
-        </div>
-          </div>
-        </div>
+    <StatusCountDisplay :stats="normalizedStats" />
 
     <!-- 任务管理 -->
     <div class="task-management">
@@ -145,7 +97,7 @@
           @selection-change="handleSelectionChange"
           class="modern-table"
           stripe
-          :header-cell-style="{ background: '#f8fafc', color: '#374151', fontWeight: '600' }"
+          :header-cell-style="{ background: 'var(--bg-light)', color: 'var(--text-primary)', fontWeight: '600' }"
           empty-text="暂无数字人任务"
         >
           <el-table-column 
@@ -168,7 +120,7 @@
           <el-table-column label="音频名称" min-width="200" align="left">
             <template #default="{ row }">
               <div class="file-name-cell">
-                <el-icon class="file-icon"><Headphone /></el-icon>
+                <el-icon class="file-icon"><Microphone /></el-icon>
                 <el-tooltip :content="getAudioFileName(row.audio_path)" placement="top">
                   <span class="file-name">{{ truncateFileName(getAudioFileName(row.audio_path), 25) }}</span>
                 </el-tooltip>
@@ -251,17 +203,17 @@
           </div>
 
       <!-- 分页 -->
-      <div class="pagination-container">
-        <el-pagination
-          :current-page="currentPage"
-          :page-size="pageSize"
-          :page-sizes="[10, 20, 50, 100, 500, 1000]"
-          :total="totalTasks"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
-            </div>
+              <div class="pagination-wrapper">
+          <el-pagination
+            :current-page="currentPage"
+            :page-size="pageSize"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="totalTasks"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
+          />
+        </div>
             </div>
 
     <!-- 创建任务对话框 -->
@@ -311,7 +263,7 @@
           <div class="preview-section">
             <div class="preview-item">
               <div class="preview-header">
-                <el-icon><Headphone /></el-icon>
+                <el-icon><Microphone /></el-icon>
                 <span>语音文件</span>
                 <el-tag v-if="audioFileList.length > 0" type="success" size="small">
                   <el-icon><CircleCheck /></el-icon>
@@ -322,7 +274,7 @@
               <div class="preview-content">
                 <div v-if="audioFileList.length > 0" class="audio-preview-container">
                   <div class="audio-icon">
-                    <el-icon><Headphone /></el-icon>
+                    <el-icon><Microphone /></el-icon>
                   </div>
                   <div class="audio-info">
                     <div class="file-name">{{ audioFileList[0].name }}</div>
@@ -337,7 +289,7 @@
                   </div>
                 </div>
                 <div v-else class="empty-preview">
-                  <el-icon><Headphone /></el-icon>
+                  <el-icon><Microphone /></el-icon>
                   <span>未选择音频</span>
                 </div>
               </div>
@@ -384,7 +336,7 @@
           <!-- 音频上传 -->
           <div class="upload-section">
             <div class="upload-label">
-              <el-icon><Headphone /></el-icon>
+              <el-icon><Microphone /></el-icon>
               语音文件
             </div>
             <el-upload
@@ -458,17 +410,12 @@ import {
   Refresh, 
   Delete, 
   Picture,
-  Headphone,
-  Loading,
-  CircleCheckFilled,
-  CircleCloseFilled,
-  Clock,
+  Microphone,
   RefreshRight,
   DataAnalysis,
   Calendar,
   UploadFilled,
   Avatar, 
-  Document,
   VideoPlay,
   Download,
   View,
@@ -476,6 +423,7 @@ import {
   CircleCheck
 } from '@element-plus/icons-vue'
 import { digitalHumanAPI } from '../utils/api.js'
+import StatusCountDisplay from '@/components/StatusCountDisplay.vue'
 
 export default {
   name: 'JimengDigitalHuman',
@@ -484,22 +432,18 @@ export default {
     Refresh,
     Delete,
     Picture,
-    Headphone,
-    Loading,
-    CircleCheckFilled,
-    CircleCloseFilled,
-    Clock,
+    Microphone,
     RefreshRight,
     DataAnalysis,
     Calendar,
     UploadFilled,
     Avatar,
-    Document,
     VideoPlay,
     Download,
     View,
     Warning,
-    CircleCheck
+    CircleCheck,
+    StatusCountDisplay
   },
   setup() {
     // 响应式数据
@@ -515,6 +459,15 @@ export default {
       completed: 0,
       failed: 0
     })
+    
+    // 统一数据格式的计算属性
+    const normalizedStats = computed(() => ({
+      total: stats.value.total || 0,
+      queued: stats.value.today || 0,
+      processing: stats.value.in_progress || 0,
+      completed: stats.value.completed || 0,
+      failed: stats.value.failed || 0
+    }))
     
     // 对话框状态
     const showUploadDialog = ref(false)
@@ -1090,253 +1043,11 @@ export default {
 </script>
 
 <style scoped>
-.jimeng-digital-human-page {
-  padding: 16px 24px;
-  height: 100%;
-  overflow-y: auto;
-}
+@import '../styles/jimeng-common.css';
 
-/* 页面标题 */
-.page-header {
-  max-width: 1200px;
-  margin: 0 auto 24px auto;
-}
+/* 页面特定样式 */
 
-.header-content {
-  background: var(--bg-primary);
-  padding: 24px 32px;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: relative;
-  overflow: hidden;
-}
 
-.header-content::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--primary-gradient);
-  opacity: 0.03;
-  z-index: -1;
-}
-
-.title-section {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.title-icon {
-  background: var(--primary-gradient);
-  color: white;
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--shadow-sm);
-}
-
-.page-title {
-  font-size: 32px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-  background: var(--primary-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.status-section {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.add-task-btn {
-  background: var(--primary-gradient);
-  border: none;
-  color: white;
-  border-radius: var(--radius-md);
-  font-weight: 600;
-  padding: 12px 24px;
-  box-shadow: var(--shadow-sm);
-  transition: var(--transition);
-}
-
-.add-task-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
-/* 统计概览样式 */
-.stats-overview {
-  max-width: 1200px;
-  margin: 0 auto 32px auto;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 24px;
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  padding: 32px;
-  box-shadow: var(--shadow-lg);
-  position: relative;
-  overflow: hidden;
-}
-
-.stats-grid::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--secondary-gradient);
-  opacity: 0.02;
-  z-index: -1;
-}
-
-.stat-card {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  transition: var(--transition);
-  position: relative;
-  overflow: hidden;
-}
-
-.stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: var(--primary-gradient);
-  transition: var(--transition);
-  opacity: 0.05;
-  z-index: -1;
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border-color: rgba(102, 126, 234, 0.3);
-}
-
-.stat-card:hover::before {
-  left: 0;
-}
-
-.stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
-}
-
-.stat-card.pending .stat-icon {
-  background: rgba(230, 162, 60, 0.1);
-  color: #e6a23c;
-}
-
-.stat-card.processing .stat-icon {
-  background: rgba(64, 158, 255, 0.1);
-  color: #409eff;
-}
-
-.stat-card.completed .stat-icon {
-  background: rgba(103, 194, 58, 0.1);
-  color: #67c23a;
-}
-
-.stat-card.failed .stat-icon {
-  background: rgba(245, 108, 108, 0.1);
-  color: #f56c6c;
-}
-
-.stat-content {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.stat-value {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.stat-label {
-  font-size: 14px;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-/* 任务管理样式 */
-.task-management {
-  max-width: 1200px;
-  margin: 0 auto;
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  padding: 32px;
-  box-shadow: var(--shadow-lg);
-  position: relative;
-  overflow: hidden;
-}
-
-.task-management::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--accent-gradient);
-  opacity: 0.02;
-  z-index: -1;
-}
-
-.panel-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border-light);
-}
-
-.panel-title h3 {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.toolbar-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
 
 .status-filter .el-select {
   width: 150px;
@@ -1468,12 +1179,11 @@ export default {
 }
 
 /* 分页样式 */
-.pagination-container {
+.pagination-wrapper {
   display: flex;
   justify-content: center;
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid #e4e7ed;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
 }
 
 /* 对话框样式 */
@@ -1483,14 +1193,14 @@ export default {
 
 .create-task-dialog :deep(.el-dialog__header) {
   padding: 20px 24px 16px;
-  border-bottom: 1px solid #e4e7ed;
-  background: #fafafa;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg-light);
 }
 
 .create-task-dialog :deep(.el-dialog__title) {
   font-size: 18px;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--text-primary);
 }
 
 .create-task-dialog :deep(.el-dialog__body) {
@@ -1787,9 +1497,7 @@ export default {
     font-size: 28px;
   }
   
-  .stats-grid {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  }
+
   
   .task-management {
     padding: 24px;
@@ -1811,9 +1519,7 @@ export default {
     font-size: 24px;
   }
   
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
+
 }
 
 /* 失败原因图标样式 */

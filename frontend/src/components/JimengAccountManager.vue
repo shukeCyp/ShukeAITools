@@ -1,5 +1,5 @@
 <template>
-  <div class="jimeng-account-manager-page">
+  <div class="jimeng-page jimeng-account-manager-page">
     <!-- 页面头部 -->
     <div class="page-header">
       <div class="header-info">

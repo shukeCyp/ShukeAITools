@@ -11,6 +11,7 @@ from typing import Dict, List, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from backend.managers.jimeng_task_manager import JimengTaskManager
+from backend.managers.jimeng_img2img_task_manager import jimeng_img2img_task_manager
 from backend.managers.jimeng_img2video_task_manager import JimengImg2VideoTaskManager
 from backend.managers.jimeng_digital_human_task_manager import jimeng_digital_human_task_manager
 from backend.managers.qingying_img2video_task_manager import QingyingImg2VideoTaskManager
@@ -48,6 +49,9 @@ class GlobalTaskManager:
         """初始化所有平台任务管理器"""
         # 即梦国际版任务管理器
         self.platform_managers['jimeng'] = JimengTaskManager()
+        
+        # 即梦图生图任务管理器
+        self.platform_managers['jimeng_img2img'] = jimeng_img2img_task_manager
         
         # 即梦图生视频任务管理器
         self.platform_managers['jimeng_img2video'] = JimengImg2VideoTaskManager()

@@ -1,17 +1,20 @@
 <template>
-  <div class="prompt-manager">
-    <!-- 头部标题和统计 -->
-    <div class="header">
-      <div class="title-section">
-        <h1 class="page-title">
-          <el-icon><Collection /></el-icon>
-          提示词管理
-        </h1>
-        <p class="page-description">搜索和管理各平台的提示词模板</p>
-      </div>
-      
-      <!-- 统计卡片 -->
-      <div class="stats-grid" v-if="stats">
+  <div class="jimeng-page prompt-manager">
+    <!-- 页面标题 -->
+    <div class="page-header">
+      <div class="header-content">
+        <div class="title-section">
+          <div class="title-icon">
+            <el-icon size="32"><Collection /></el-icon>
+          </div>
+          <div class="title-content">
+            <h1 class="page-title">提示词管理</h1>
+            <p class="page-subtitle">搜索和管理各平台的提示词模板</p>
+          </div>
+        </div>
+        <div class="status-section">
+          <!-- 统计卡片 -->
+          <div class="stats-grid" v-if="stats">
         <div class="stat-card">
           <div class="stat-icon">
             <el-icon><Platform /></el-icon>
@@ -28,6 +31,8 @@
           <div class="stat-content">
             <div class="stat-value">{{ stats.total_prompts }}</div>
             <div class="stat-label">提示词总数</div>
+          </div>
+        </div>
           </div>
         </div>
       </div>
@@ -387,25 +392,74 @@ export default {
 </script>
 
 <style scoped>
-.prompt-manager {
-  padding: 20px;
-  background-color: #f5f7fa;
-  min-height: calc(100vh - 60px);
+@import '../styles/jimeng-common.css';
+
+/* 提示词管理页面特定样式 */
+.title-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-/* 头部样式 */
-.header {
-  margin-bottom: 24px;
+/* 统计卡片样式 */
+.stats-grid {
+  display: flex;
+  gap: 16px;
 }
 
-.title-section {
-  margin-bottom: 20px;
+.stat-card {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
 }
 
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: rgba(78, 205, 196, 0.1);
+  color: #4ecdc4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1;
+}
+
+/* 原有样式保持 */
 .page-title {
   font-size: 28px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text-primary);
   margin: 0 0 8px 0;
   display: flex;
   align-items: center;
@@ -413,7 +467,7 @@ export default {
 }
 
 .page-description {
-  color: #666;
+  color: var(--text-secondary);
   margin: 0;
   font-size: 14px;
 }
@@ -454,13 +508,13 @@ export default {
 .stat-value {
   font-size: 24px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text-primary);
   line-height: 1;
 }
 
 .stat-label {
   font-size: 14px;
-  color: #666;
+  color: var(--text-secondary);
   margin-top: 4px;
 }
 
@@ -495,7 +549,7 @@ export default {
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: #666;
+  color: var(--text-secondary);
   margin-left: auto;
 }
 
@@ -514,7 +568,7 @@ export default {
   align-items: center;
   justify-content: space-between;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text-primary);
 }
 
 .empty-state {
@@ -573,7 +627,7 @@ export default {
 }
 
 .prompt-image.placeholder {
-  color: #ccc;
+  color: var(--text-muted);
   font-size: 32px;
 }
 
@@ -583,7 +637,7 @@ export default {
 
 .prompt-name {
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text-primary);
   margin-bottom: 8px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -591,7 +645,7 @@ export default {
 }
 
 .prompt-text {
-  color: #666;
+  color: var(--text-secondary);
   font-size: 13px;
   line-height: 1.4;
   overflow: hidden;
@@ -630,13 +684,13 @@ export default {
 
 .detail-section h4 {
   margin: 0 0 8px 0;
-  color: #1a1a1a;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
 .detail-section p {
   margin: 0;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .detail-image {
@@ -664,7 +718,7 @@ export default {
   white-space: pre-wrap;
   word-wrap: break-word;
   font-family: inherit;
-  color: #1a1a1a;
+  color: var(--text-primary);
   line-height: 1.5;
 }
 

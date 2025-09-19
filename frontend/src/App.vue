@@ -61,6 +61,10 @@
                 <el-icon><EditPen /></el-icon>
                 <span>文生图</span>
               </el-menu-item>
+              <el-menu-item index="jimeng-img2img">
+                <el-icon><Picture /></el-icon>
+                <span>图生图</span>
+              </el-menu-item>
               <el-menu-item index="jimeng-img2video">
                 <el-icon><VideoPlay /></el-icon>
                 <span>图生视频</span>
@@ -160,6 +164,10 @@
             <!-- 即梦国际版功能页面 -->
             <div v-if="activeMenu === 'jimeng-text2img'" class="page-content">
               <JimengText2Img />
+            </div>
+            
+            <div v-if="activeMenu === 'jimeng-img2img'" class="page-content">
+              <JimengImg2Img />
             </div>
             
             <div v-if="activeMenu === 'jimeng-img2video'" class="page-content">
@@ -427,6 +435,7 @@ import JimengPlatform from './views/JimengPlatform.vue'
 import JimengAccountManager from './components/JimengAccountManager.vue'
 import QingyingAccountManager from './components/QingyingAccountManager.vue'
 import JimengText2Img from './views/JimengText2Img.vue'
+import JimengImg2Img from './views/JimengImg2Img.vue'
 import BaseConfig from './views/BaseConfig.vue'
 import JimengImg2Video from './views/JimengImg2Video.vue'
 import JimengDigitalHuman from './views/JimengDigitalHuman.vue'
@@ -443,6 +452,7 @@ export default {
     JimengAccountManager,
     QingyingAccountManager,
     JimengText2Img,
+    JimengImg2Img,
     JimengImg2Video,
     JimengDigitalHuman,
     QingyingImg2Video,
@@ -891,38 +901,28 @@ export default {
 .tools-share-page {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0;
+  padding: 32px;
 }
 
 .tools-share-page .page-header {
-  max-width: 1200px;
-  margin: 20px auto 24px auto;
-}
-
-.tools-share-page .header-content {
-  background: var(--bg-primary);
-  padding: 24px 32px;
+  background: var(--primary-gradient);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  margin-bottom: 24px;
+  padding: 32px;
   position: relative;
   overflow: hidden;
 }
 
-.tools-share-page .header-content::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--primary-gradient);
-  opacity: 0.03;
-  z-index: -1;
+
+
+.tools-share-page .header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
+/* 工具分享页面标题样式 */
 .tools-share-page .title-section {
   display: flex;
   align-items: center;
@@ -930,11 +930,12 @@ export default {
 }
 
 .tools-share-page .title-icon {
-  background: var(--primary-gradient);
+  width: 64px;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.2);
   color: white;
-  padding: 8px;
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -942,13 +943,9 @@ export default {
 
 .tools-share-page .page-title {
   margin: 0;
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--text-primary);
-  background: var(--primary-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-size: 32px;
+  font-weight: 700;
+  color: white;
 }
 
 .tools-share-page .status-section {
@@ -958,8 +955,8 @@ export default {
 }
 
 .tools-share-page .page-subtitle {
-  color: var(--text-secondary);
-  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 16px;
   font-weight: 400;
 }
 

@@ -685,13 +685,41 @@ def batch_download_videos():
                         download_dir = result.stdout.strip()
                         
                 elif system == "Windows":  # Windows
+                    print("正在调用Windows文件选择器...")
+                    ps_script = """
+                    try {
+                        Add-Type -AssemblyName System.Windows.Forms
+                        $folderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog
+                        $folderBrowser.Description = "选择视频保存文件夹"
+                        $folderBrowser.SelectedPath = [Environment]::GetFolderPath("MyDocuments")
+                        $folderBrowser.ShowNewFolderButton = $true
+                        $result = $folderBrowser.ShowDialog()
+                        if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
+                            Write-Output $folderBrowser.SelectedPath
+                            exit 0
+                        } else {
+                            Write-Output "CANCELLED"
+                            exit 1
+                        }
+                    } catch {
+                        Write-Error $_.Exception.Message
+                        exit 2
+                    }
+                    """
                     result = subprocess.run([
-                        'powershell', '-Command',
-                        'Add-Type -AssemblyName System.Windows.Forms; $folder = New-Object System.Windows.Forms.FolderBrowserDialog; $folder.Description = "选择视频保存文件夹"; $folder.ShowNewFolderButton = $true; if ($folder.ShowDialog() -eq "OK") { $folder.SelectedPath } else { "" }'
-                    ], capture_output=True, text=True, timeout=60)
+                        'powershell', '-ExecutionPolicy', 'Bypass', '-Command', ps_script
+                    ], capture_output=True, text=True, timeout=60, encoding='utf-8')
                     
-                    if result.returncode == 0 and result.stdout.strip():
+                    print(f"PowerShell返回码: {result.returncode}")
+                    print(f"PowerShell输出: {result.stdout}")
+                    print(f"PowerShell错误: {result.stderr}")
+                    
+                    if result.returncode == 0 and result.stdout.strip() and result.stdout.strip() != "CANCELLED":
                         download_dir = result.stdout.strip()
+                        print(f"用户选择了文件夹: {download_dir}")
+                    elif result.returncode == 1:
+                        print("用户取消了文件夹选择")
+                        return
                         
                 elif system == "Linux":  # Linux
                     result = subprocess.run([

@@ -1,9 +1,12 @@
 <template>
-  <div class="task-manager-page">
+  <div class="jimeng-page task-manager-page">
     <!-- 页面标题 -->
     <div class="page-header">
       <div class="header-content">
         <div class="title-section">
+          <div class="title-icon">
+            <el-icon size="32"><Setting /></el-icon>
+          </div>
           <h1 class="page-title">任务管理器</h1>
         </div>
         <div class="status-section">
@@ -552,6 +555,8 @@ export default {
 </script>
 
 <style scoped>
+@import '../styles/jimeng-common.css';
+
 .task-manager-page {
   min-height: calc(100vh - 64px);
   padding: 16px 24px;
@@ -563,29 +568,7 @@ export default {
   margin-right: auto;
 }
 
-/* 页面标题 */
-.page-header {
-  margin-bottom: 32px;
-}
-
-.header-content {
-  background: white;
-  padding: 32px;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.page-title {
-  font-size: 32px;
-  font-weight: 700;
-  color: #1a202c;
-  margin: 0;
-}
+/* 任务管理器页面特定样式 */
 
 .status-tag {
   font-size: 16px;

@@ -1,5 +1,5 @@
 <template>
-  <div class="jimeng-text2img-page">
+  <div class="jimeng-page">
     <!-- 页面标题 -->
     <div class="page-header">
       <div class="header-content">
@@ -19,60 +19,22 @@
             <el-icon><Plus /></el-icon>
             创建任务
           </el-button>
-            </div>
-            </div>
-            </div>
-
-    <!-- 统计概览 -->
-    <div class="stats-overview">
-      <div class="stats-grid">
-        <div class="stat-card total">
-          <div class="stat-icon">
-            <el-icon size="24"><Document /></el-icon>
-            </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.total || 0 }}</div>
-            <div class="stat-label">总任务</div>
-          </div>
-        </div>
-        <div class="stat-card pending">
-          <div class="stat-icon">
-            <el-icon size="24"><Clock /></el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.queued || 0 }}</div>
-            <div class="stat-label">排队中</div>
-          </div>
-        </div>
-        <div class="stat-card processing">
-          <div class="stat-icon">
-            <el-icon size="24"><Loading /></el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.processing || 0 }}</div>
-            <div class="stat-label">生成中</div>
-          </div>
-        </div>
-        <div class="stat-card completed">
-          <div class="stat-icon">
-            <el-icon size="24"><CircleCheckFilled /></el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.completed || 0 }}</div>
-            <div class="stat-label">已完成</div>
-          </div>
-        </div>
-        <div class="stat-card failed">
-          <div class="stat-icon">
-            <el-icon size="24"><CircleCloseFilled /></el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.failed || 0 }}</div>
-            <div class="stat-label">失败</div>
-          </div>
+          
+          <el-button 
+            type="success" 
+            size="large"
+            @click="showBatchAddDialog = true"
+            class="add-task-btn"
+          >
+            <el-icon><Document /></el-icon>
+            批量添加
+          </el-button>
         </div>
       </div>
     </div>
+
+    <!-- 统计概览 -->
+    <StatusCountDisplay :stats="stats" />
 
     <!-- 任务管理 -->
     <div class="task-management">
@@ -99,14 +61,6 @@
             >
             <el-icon><Refresh /></el-icon>
               刷新
-            </el-button>
-            <el-button 
-              type="success" 
-              @click="showBatchAddDialog = true"
-            class="batch-add-btn"
-            >
-            <el-icon><Document /></el-icon>
-              批量添加
             </el-button>
             <el-button 
               type="success" 
@@ -262,11 +216,11 @@
         </el-table>
 
         <!-- 分页 -->
-        <div class="pagination-container">
+        <div class="pagination-wrapper">
           <el-pagination
             :current-page="currentPage"
             :page-size="pageSize"
-            :page-sizes="[10, 20, 50, 100, 500, 1000]"
+            :page-sizes="[10, 20, 50, 100]"
             :total="pagination.total"
             layout="total, sizes, prev, pager, next, jumper"
             @size-change="handleSizeChange"
@@ -491,11 +445,6 @@ import { ElMessage } from 'element-plus'
 import {
   EditPen,
   Plus,
-  Document,
-  Clock,
-  Loading,
-  CircleCheckFilled,
-  CircleCloseFilled,
   WarningFilled,
   Refresh,
   Delete,
@@ -506,17 +455,13 @@ import {
   Download
 } from '@element-plus/icons-vue'
 import { text2imgAPI } from '../utils/api'
+import StatusCountDisplay from '@/components/StatusCountDisplay.vue'
 
 export default {
   name: 'JimengText2Img',
   components: {
     EditPen,
     Plus,
-    Document,
-    Clock,
-    Loading,
-    CircleCheckFilled,
-    CircleCloseFilled,
     WarningFilled,
     Refresh,
     Delete,
@@ -524,7 +469,8 @@ export default {
     View,
     InfoFilled,
     Picture,
-    Download
+    Download,
+    StatusCountDisplay
   },
   setup() {
     // 响应式数据
@@ -1055,98 +1001,16 @@ export default {
 </script>
 
 <style scoped>
-.jimeng-text2img-page {
-  padding: 16px 24px;
-  height: 100%;
-  overflow-y: auto;
-}
+@import '../styles/jimeng-common.css';
 
-/* 页面标题 */
-.page-header {
-  max-width: 1200px;
-  margin: 0 auto 24px auto;
-}
-
-.header-content {
-  background: var(--bg-primary);
-  padding: 24px 32px;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.header-content::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--primary-gradient);
-  opacity: 0.03;
-  z-index: -1;
-}
-
-.title-section {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.title-icon {
-  background: var(--primary-gradient);
-  color: white;
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--shadow-sm);
-}
-
-.page-title {
-  font-size: 32px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-  background: var(--primary-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
+/* 页面特定样式 */
 .status-section {
   display: flex;
   align-items: center;
   gap: 16px;
 }
 
-.add-task-btn {
-  background: var(--primary-gradient);
-  border: none;
-  color: white;
-  border-radius: var(--radius-md);
-  font-weight: 600;
-  padding: 12px 24px;
-  box-shadow: var(--shadow-sm);
-  transition: var(--transition);
-}
-
-.add-task-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
-.add-task-btn:hover {
-  background-color: #66b1ff;
-  border-color: #66b1ff;
-}
-
+/* 按钮样式覆盖 */
 .batch-add-btn {
   background-color: #67C23A;
   border-color: #67C23A;
@@ -1187,8 +1051,6 @@ export default {
   border-color: #f78989;
 }
 
-
-
 .refresh-btn {
   background-color: #E6A23C;
   border-color: #E6A23C;
@@ -1199,171 +1061,7 @@ export default {
   border-color: #ebb563;
 }
 
-/* 统计概览样式 */
-.stats-overview {
-  max-width: 1200px;
-  margin: 0 auto 32px auto;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 24px;
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  padding: 32px;
-  box-shadow: var(--shadow-lg);
-  position: relative;
-  overflow: hidden;
-}
-
-.stats-grid::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--secondary-gradient);
-  opacity: 0.02;
-  z-index: -1;
-}
-
-.stat-card {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  transition: var(--transition);
-  position: relative;
-  overflow: hidden;
-}
-
-.stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: var(--primary-gradient);
-  transition: var(--transition);
-  opacity: 0.05;
-  z-index: -1;
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border-color: rgba(102, 126, 234, 0.3);
-}
-
-.stat-card:hover::before {
-  left: 0;
-}
-
-.stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
-}
-
-.stat-card.pending .stat-icon {
-  background: rgba(230, 162, 60, 0.1);
-  color: #e6a23c;
-}
-
-.stat-card.processing .stat-icon {
-  background: rgba(64, 158, 255, 0.1);
-  color: #409eff;
-}
-
-.stat-card.completed .stat-icon {
-  background: rgba(103, 194, 58, 0.1);
-  color: #67c23a;
-}
-
-.stat-card.failed .stat-icon {
-  background: rgba(245, 108, 108, 0.1);
-  color: #f56c6c;
-}
-
-.stat-content {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.stat-value {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.stat-label {
-  font-size: 14px;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-/* 任务管理样式 */
-.task-management {
-  max-width: 1200px;
-  margin: 0 auto;
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  padding: 32px;
-  box-shadow: var(--shadow-lg);
-  position: relative;
-  overflow: hidden;
-}
-
-.task-management::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--accent-gradient);
-  opacity: 0.02;
-  z-index: -1;
-}
-
-.panel-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border-light);
-}
-
-.panel-title h3 {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.toolbar-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.status-filter .el-select {
-  width: 150px;
-}
-
+/* 表格特定样式 */
 .task-table-container {
   overflow-x: auto;
 }
@@ -1475,21 +1173,14 @@ export default {
 }
 
 /* 分页样式 */
-.pagination-container {
+.pagination-wrapper {
   display: flex;
   justify-content: center;
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid #e4e7ed;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
 }
 
-/* 空状态样式 */
-.empty-state {
-  padding: 40px 20px;
-  text-align: center;
-}
-
-/* 对话框样式 */
+/* 对话框特定样式 */
 .modern-dialog {
   border-radius: 12px;
 }
@@ -1711,49 +1402,12 @@ export default {
   justify-content: center;
 }
 
-/* 响应式设计 */
+/* 页面特定响应式样式 */
 @media (max-width: 768px) {
-  .jimeng-text2img-page {
-    padding: 16px;
-  }
-  
-  .header-content {
-    flex-direction: column;
-    text-align: center;
-    gap: 16px;
-    padding: 20px 24px;
-  }
-
-  .page-title {
-    font-size: 28px;
-  }
-  
-  .stats-grid {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  }
-  
-  .task-management {
-    padding: 24px;
-  }
-
   .toolbar-actions {
     flex-direction: column;
     gap: 12px;
     align-items: stretch;
-  }
-  
-  .status-filter .el-select {
-    width: 100%;
-  }
-}
-
-@media (max-width: 480px) {
-  .page-title {
-    font-size: 24px;
-  }
-  
-  .stats-grid {
-    grid-template-columns: 1fr;
   }
 }
 </style>
