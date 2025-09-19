@@ -10,15 +10,14 @@
           <h1 class="page-title">即梦图生图</h1>
         </div>
         <div class="status-section">
-          <el-button 
+          <ActionButton
             type="primary" 
             size="large"
             @click="showAddTaskDialog = true"
-            class="add-task-btn"
           >
-            <el-icon><Plus /></el-icon>
+            <template #icon><el-icon><Plus /></el-icon></template>
             创建任务
-          </el-button>
+          </ActionButton>
         </div>
       </div>
     </div>
@@ -44,32 +43,38 @@
             <el-option label="已完成" value="2" />
             <el-option label="失败" value="3" />
           </el-select>
-          <el-button 
+          <ActionButton 
+            type="primary" 
+            :loading="loading" 
             @click="refreshTasks"
-            :loading="loading"
-            class="refresh-btn"
           >
-            <el-icon><Refresh /></el-icon>
+            <template #icon>
+              <Refresh />
+            </template>
             刷新
-          </el-button>
-          <el-button 
+          </ActionButton>
+          
+          <ActionButton 
+            type="danger" 
+            :disabled="selectedTasks.length === 0"
             @click="handleBatchDelete"
-            :disabled="selectedTasks.length === 0"
-            type="danger"
-            class="batch-btn"
           >
-            <el-icon><Delete /></el-icon>
+            <template #icon>
+              <Delete />
+            </template>
             批量删除
-          </el-button>
-          <el-button 
-            @click="handleBatchDownload"
+          </ActionButton>
+          
+          <ActionButton 
+            type="success" 
             :disabled="selectedTasks.length === 0"
-            type="success"
-            class="batch-btn"
+            @click="handleBatchDownload"
           >
-            <el-icon><Download /></el-icon>
+            <template #icon>
+              <Download />
+            </template>
             批量下载
-          </el-button>
+          </ActionButton>
         </div>
       </div>
 
@@ -139,24 +144,36 @@
             </template>
           </el-table-column>
           <el-table-column prop="create_at" label="创建时间" width="160" />
-          <el-table-column label="操作" width="150">
+          <el-table-column label="操作" width="140">
             <template #default="scope">
               <div class="action-buttons">
-                <el-button 
+                <!-- 重试按钮 -->
+                <ActionButton 
                   v-if="scope.row.status === 3 && (scope.row.retry_count || 0) < (scope.row.max_retry || 3)"
+                  class="action-btn"
+                  type="warning" 
+                  size="small" 
                   @click="retryTask(scope.row.id)"
-                  type="warning"
-                  size="small"
                 >
+                  <template #icon>
+                    <RefreshRight />
+                  </template>
                   重试
-                </el-button>
-                <el-button 
+                </ActionButton>
+                
+                <!-- 删除按钮 -->
+                <ActionButton 
+                  class="action-btn"
+                  type="danger" 
+                  size="small" 
+                  :disabled="scope.row.status === 1"
                   @click="deleteTask(scope.row.id)"
-                  type="danger"
-                  size="small"
                 >
+                  <template #icon>
+                    <Delete />
+                  </template>
                   删除
-                </el-button>
+                </ActionButton>
               </div>
             </template>
           </el-table-column>
@@ -248,14 +265,14 @@
 
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="showAddTaskDialog = false">取消</el-button>
-          <el-button 
+          <ActionButton @click="showAddTaskDialog = false">取消</ActionButton>
+          <ActionButton 
             type="primary" 
             @click="submitTask"
             :loading="submitting"
           >
             创建任务
-          </el-button>
+          </ActionButton>
         </span>
       </template>
     </el-dialog>
@@ -268,6 +285,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   Plus, 
   Refresh, 
+  RefreshRight,
   Delete, 
   Download, 
   Picture
@@ -275,16 +293,19 @@ import {
 import axios from 'axios'
 import { img2imgAPI, accountAPI } from '@/utils/api'
 import StatusCountDisplay from '@/components/StatusCountDisplay.vue'
+import ActionButton from '@/components/common/ActionButton.vue'
 
 export default {
   name: 'JimengImg2Img',
   components: {
     Plus,
     Refresh,
+    RefreshRight,
     Delete,
     Download,
     Picture,
-    StatusCountDisplay
+    StatusCountDisplay,
+    ActionButton
   },
   setup() {
     // 响应式数据
@@ -839,7 +860,21 @@ export default {
 
 .action-buttons {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* 操作按钮样式 */
+.action-btn {
+  font-size: 12px;
+  padding: 4px 8px;
+  min-width: auto;
+}
+
+.action-btn .el-icon {
+  margin-right: 4px;
 }
 
 .pagination-wrapper {

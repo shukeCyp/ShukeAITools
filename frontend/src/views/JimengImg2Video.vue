@@ -11,38 +11,44 @@
         </div>
         <div class="status-section">
           <!-- 导入文件夹按钮 -->
-          <el-button 
-            type="primary" 
+          <ActionButton
+            type="primary"
             size="large"
             @click="showImportFolderDialog"
             :loading="importFolderLoading"
             class="add-task-btn"
           >
-            <el-icon><FolderOpened /></el-icon>
+            <template #icon>
+              <el-icon><FolderOpened /></el-icon>
+            </template>
             导入文件夹
-          </el-button>
+          </ActionButton>
           
-          <el-button 
-            type="success" 
+          <ActionButton
+            type="success"
             size="large"
             @click="showBatchAddDialog"
             :loading="batchAddLoading"
             class="add-task-btn"
           >
-            <el-icon><Plus /></el-icon>
+            <template #icon>
+              <el-icon><Plus /></el-icon>
+            </template>
             批量添加
-          </el-button>
+          </ActionButton>
           
-          <el-button 
-            type="warning" 
+          <ActionButton
+            type="warning"
             size="large"
             @click="showTableImportDialog"
             :loading="tableImportLoading"
             class="add-task-btn"
           >
-            <el-icon><Upload /></el-icon>
+            <template #icon>
+              <el-icon><Upload /></el-icon>
+            </template>
             表格导入
-          </el-button>
+          </ActionButton>
         </div>
       </div>
     </div>
@@ -68,45 +74,51 @@
             <el-option label="已完成" value="2" />
             <el-option label="失败" value="3" />
           </el-select>
-          <el-button 
+          <ActionButton
             @click="refreshTasks"
             :loading="loading"
             class="refresh-btn"
           >
-            <el-icon><Refresh /></el-icon>
+            <template #icon>
+              <Refresh />
+            </template>
             刷新
-          </el-button>
+          </ActionButton>
           <!-- 批量重试按钮 -->
-          <el-button 
-            type="warning" 
+          <ActionButton
+            type="warning"
             @click="batchRetryFailedTasks"
             :loading="batchRetryLoading"
             class="batch-retry-btn"
           >
-            <el-icon><RefreshRight /></el-icon>
-            批量重试失败任务
-          </el-button>
+            <template #icon>
+              <RefreshRight />
+            </template>
+            批量重试
+          </ActionButton>
           <!-- 批量操作按钮 -->
-          <el-button 
-            type="danger" 
-            @click="batchDeleteTasks" 
+          <ActionButton
+            type="danger"
+            @click="batchDeleteTasks"
             :disabled="selectedTasks.length === 0"
-            v-if="selectedTasks.length > 0"
           >
-            <el-icon><Delete /></el-icon>
-            删除选中 ({{ selectedTasks.length }})
-          </el-button>
+            <template #icon>
+              <Delete />
+            </template>
+            批量删除 ({{ selectedTasks.length }})
+          </ActionButton>
           
-          <el-button 
-            type="warning" 
-            @click="batchDownloadVideos" 
+          <ActionButton
+            type="success"
+            @click="batchDownloadVideos"
             :disabled="selectedCompletedTasks.length === 0"
             :loading="batchDownloadLoading"
-            v-if="selectedCompletedTasks.length > 0"
           >
-            <el-icon><Download /></el-icon>
-            下载选中 ({{ selectedCompletedTasks.length }})
-          </el-button>
+            <template #icon>
+              <Download />
+            </template>
+            批量下载 ({{ selectedCompletedTasks.length }})
+          </ActionButton>
           </div>
         </div>
         
@@ -171,23 +183,7 @@
             </template>
           </el-table-column>
 
-          <el-table-column label="视频" width="120" align="center">
-            <template #default="{ row }">
-              <el-button 
-                v-if="row.video_url" 
-                size="small" 
-                type="success" 
-                @click="previewVideo(row.video_url)"
-                class="video-btn"
-              >
-                <el-icon><VideoPlay /></el-icon>
-                查看
-              </el-button>
-              <span v-else class="no-content">-</span>
-            </template>
-          </el-table-column>
-
-          <el-table-column label="操作" width="180" fixed="right" align="center">
+          <el-table-column label="操作" width="200" fixed="right" align="center">
             <template #default="{ row }">
               <div class="action-buttons">
                 <!-- 失败原因图标 -->
@@ -202,31 +198,59 @@
                   </el-icon>
                 </el-tooltip>
                 
-                <el-button 
-                    size="small" 
-                    type="warning"
-                  @click="retryTask(row.id)"
-                  v-if="row.status === 3"
+                <!-- 查看视频按钮 -->
+                <ActionButton
+                  v-if="row.video_url"
+                  size="small"
+                  type="info"
+                  @click="previewVideo(row.video_url)"
                   class="action-btn"
                 >
-                  <el-icon><RefreshRight /></el-icon>
-                  重试
-                </el-button>
-                <el-popconfirm
-                  title="确定要删除这个任务吗？"
-                  @confirm="deleteTask(row.id)"
-                  >
-                  <template #reference>
-                    <el-button 
-                      size="small" 
-                      type="danger" 
-                      class="action-btn"
-                    >
-                      <el-icon><Delete /></el-icon>
-                      删除
-                    </el-button>
+                  <template #icon>
+                    <VideoPlay />
                   </template>
-                </el-popconfirm>
+                  查看
+                </ActionButton>
+                
+                <!-- 下载视频按钮 -->
+                <ActionButton
+                  v-if="row.video_url"
+                  size="small"
+                  type="success"
+                  @click="downloadVideo(row)"
+                  class="action-btn"
+                >
+                  <template #icon>
+                    <Download />
+                  </template>
+                  下载
+                </ActionButton>
+                
+                <!-- 重试按钮 -->
+                <ActionButton
+                  v-if="row.status === 3"
+                  size="small"
+                  type="warning"
+                  :disabled="row.status === 1"
+                  @click="retryTask(row.id)"
+                  class="action-btn"
+                >
+                  <template #icon>
+                    <RefreshRight />
+                  </template>
+                  重试
+                </ActionButton>
+                
+                <!-- 删除按钮 -->
+                <ActionButton
+                  size="small"
+                  type="danger"
+                  :disabled="row.status === 1"
+                  @click="deleteTask(row.id)"
+                  class="action-btn"
+                >
+                  删除
+                </ActionButton>
                 </div>
             </template>
           </el-table-column>
@@ -309,10 +333,10 @@
       </el-form>
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="importFolderDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="confirmImportFolder" :loading="importFolderLoading">
+          <ActionButton @click="importFolderDialogVisible = false">取消</ActionButton>
+          <ActionButton type="primary" @click="confirmImportFolder" :loading="importFolderLoading">
             确认并选择文件夹
-          </el-button>
+          </ActionButton>
         </span>
       </template>
     </el-dialog>
@@ -383,10 +407,12 @@
             <div class="list-header">
               <h4>待生成任务 ({{ imageTaskList.length }})</h4>
               <div class="header-actions">
-                <el-button size="small" @click="clearAllTasks" type="danger">
-                  <el-icon><Delete /></el-icon>
+                <ActionButton size="small" @click="clearAllTasks" type="danger">
+                  <template #icon>
+                    <Delete />
+                  </template>
                   清空
-                </el-button>
+                </ActionButton>
               </div>
             </div>
             
@@ -425,23 +451,25 @@
                           class="prompt-textarea"
                         />
                         <div class="button-group">
-                          <el-button 
-                            size="small" 
-                            type="primary" 
+                          <ActionButton
+                            size="small"
+                            type="primary"
                             @click="generateAIPrompt(index)"
                             class="ai-generate-btn"
                           >
-                            <el-icon><Magic /></el-icon>
+                            <template #icon>
+                              <Magic />
+                            </template>
                             AI生成
-                          </el-button>
-                          <el-button 
-                            size="small" 
-                            type="text" 
-                            @click="removeTask(index)" 
+                          </ActionButton>
+                          <ActionButton
+                            size="small"
+                            text
+                            @click="removeTask(index)"
                             class="delete-text-btn"
                           >
                             删除
-                          </el-button>
+                          </ActionButton>
                         </div>
                       </div>
                     </div>
@@ -455,16 +483,18 @@
 
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="batchAddDialogVisible = false">取消</el-button>
-          <el-button 
-            type="primary" 
-            @click="submitBatchTasks" 
+          <ActionButton @click="batchAddDialogVisible = false">取消</ActionButton>
+          <ActionButton
+            type="primary"
+            @click="submitBatchTasks"
             :loading="batchAddLoading"
             :disabled="imageTaskList.length === 0"
           >
-            <el-icon><Plus /></el-icon>
+            <template #icon>
+              <Plus />
+            </template>
             创建任务 ({{ imageTaskList.length }})
-          </el-button>
+          </ActionButton>
         </span>
       </template>
     </el-dialog>
@@ -502,15 +532,17 @@
                 <p class="secondary-text">支持 CSV、Excel (.xlsx, .xls) 格式</p>
                 <p class="hint-text">固定格式: 图片路径 | 提示词 | 秒数</p>
                 <div class="template-download">
-                  <el-button 
-                    type="primary" 
+                  <ActionButton
+                    type="primary"
                     size="small"
                     @click.stop="downloadTemplate"
                     plain
                   >
-                    <el-icon><Download /></el-icon>
+                    <template #icon>
+                      <Download />
+                    </template>
                     下载表格模板
-                  </el-button>
+                  </ActionButton>
                 </div>
               </div>
             </div>
@@ -525,10 +557,12 @@
           <div class="data-preview">
             <div class="preview-header">
               <h4>数据预览 (共 {{ tableData.length }} 行，显示前 10 行)</h4>
-              <el-button size="small" @click="resetTableImportDialog">
-                <el-icon><Close /></el-icon>
+              <ActionButton size="small" @click="resetTableImportDialog">
+                <template #icon>
+                  <Close />
+                </template>
                 重新选择文件
-              </el-button>
+              </ActionButton>
             </div>
             
             <div class="preview-table">
@@ -553,16 +587,18 @@
 
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="tableImportDialogVisible = false">取消</el-button>
-          <el-button 
-            type="primary" 
-            @click="submitTableImportTasks" 
+          <ActionButton @click="tableImportDialogVisible = false">取消</ActionButton>
+          <ActionButton
+            type="primary"
+            @click="submitTableImportTasks"
             :loading="tableImportLoading"
             :disabled="tableData.length === 0"
           >
-            <el-icon><Plus /></el-icon>
+            <template #icon>
+              <Plus />
+            </template>
             创建任务 ({{ tableData.length }})
-          </el-button>
+          </ActionButton>
         </span>
       </template>
     </el-dialog>
@@ -583,12 +619,15 @@ import {
   UploadFilled,
   Upload,
   Close,
-  MagicStick as Magic
+  MagicStick as Magic,
+  CircleCloseFilled,
+  Loading
 } from '@element-plus/icons-vue'
 import { img2videoAPI } from '@/utils/api'
 import * as ElementPlus from 'element-plus'
 import * as XLSX from 'xlsx'
 import StatusCountDisplay from '@/components/StatusCountDisplay.vue'
+import ActionButton from '@/components/common/ActionButton.vue'
 
 // 响应式数据
 const loading = ref(false)
@@ -1066,6 +1105,29 @@ const previewVideo = (videoUrl) => {
   }
 }
 
+const downloadVideo = async (row) => {
+  if (!row.video_url) {
+    ElMessage.warning('没有可下载的视频')
+    return
+  }
+  
+  try {
+    // 创建一个临时的a标签来触发下载
+    const link = document.createElement('a')
+    link.href = row.video_url
+    link.download = `video_${row.id}.mp4`
+    link.target = '_blank'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    ElMessage.success('开始下载视频')
+  } catch (error) {
+    console.error('下载视频失败:', error)
+    ElMessage.error('下载视频失败')
+  }
+}
+
 const getImageFilename = (imagePath) => {
   if (!imagePath) return '-'
   return imagePath.split(/[/\\]/).pop() || imagePath
@@ -1136,7 +1198,7 @@ const isTaskSelectable = (row) => {
   return true // 所有任务都可以选择
 }
 
-// 批量重试失败任务
+    // 批量重试
 const batchRetryFailedTasks = async () => {
   try {
     batchRetryLoading.value = true
@@ -1638,6 +1700,26 @@ onUnmounted(() => {
   color: #e74c3c;
   background: rgba(245, 108, 108, 0.2);
   transform: scale(1.1);
+}
+
+/* 操作列按钮布局 */
+.action-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* 操作按钮样式 */
+.action-btn {
+  font-size: 12px;
+  padding: 4px 8px;
+  min-width: auto;
+}
+
+.action-btn .el-icon {
+  margin-right: 4px;
 }
 
 /* 表格导入弹窗样式 */

@@ -4,6 +4,7 @@ import 'element-plus/dist/index.css'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import App from './App.vue'
 import './assets/global-styles.css'
+import './styles/macaron-colors.css'
 
 const app = createApp(App)
 

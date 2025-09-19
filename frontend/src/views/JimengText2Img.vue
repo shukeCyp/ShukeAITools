@@ -10,25 +10,23 @@
           <h1 class="page-title">即梦文生图</h1>
         </div>
         <div class="status-section">
-          <el-button 
+          <ActionButton 
             type="primary" 
             size="large"
+            icon="el-icon-plus"
             @click="showAddTaskDialog = true"
-            class="add-task-btn"
           >
-            <el-icon><Plus /></el-icon>
             创建任务
-          </el-button>
+          </ActionButton>
           
-          <el-button 
+          <ActionButton 
             type="success" 
             size="large"
+            icon="el-icon-document"
             @click="showBatchAddDialog = true"
-            class="add-task-btn"
           >
-            <el-icon><Document /></el-icon>
             批量添加
-          </el-button>
+          </ActionButton>
         </div>
       </div>
     </div>
@@ -54,48 +52,52 @@
               <el-option label="已完成" value="2" />
               <el-option label="失败" value="3" />
             </el-select>
-            <el-button 
+            
+            <ActionButton 
+              type="primary" 
+              :loading="loading" 
               @click="refreshTasks"
-              :loading="loading"
-            class="refresh-btn"
             >
-            <el-icon><Refresh /></el-icon>
-              刷新
-            </el-button>
-            <el-button 
-              type="success" 
-              @click="batchDownloadImages"
-              :disabled="selectedCompletedTasks.length === 0"
-              :loading="batchDownloadLoading"
-              class="batch-download-btn"
-            >
-              <el-icon v-if="!batchDownloadLoading"><Download /></el-icon>
-              {{ batchDownloadLoading ? '请选择文件夹...' : `下载选中 (${selectedCompletedTasks.length})` }}
-            </el-button>
-            <el-button 
-              type="warning" 
-              @click="batchRetryFailedTasks"
-              :loading="batchRetryLoading"
-              class="batch-retry-btn"
-            >
-              <el-icon><RefreshRight /></el-icon>
-              批量重试失败任务
-            </el-button>
-            <el-popconfirm
-              title="确定要删除选中的任务吗？"
-              @confirm="batchDeleteTasks"
-            >
-              <template #reference>
-                <el-button 
-                  type="danger" 
-                  :disabled="selectedTasks.length === 0"
-                class="batch-delete-btn"
-                >
-                <el-icon><Delete /></el-icon>
-                删除选中 ({{ selectedTasks.length }})
-                </el-button>
+              <template #icon>
+                <Refresh />
               </template>
-            </el-popconfirm>
+              刷新
+            </ActionButton>
+            
+            <ActionButton 
+              type="success" 
+              :disabled="selectedCompletedTasks.length === 0 && selectedTasks.length === 0"
+              @click="batchDownloadImages"
+            >
+              <template #icon>
+                <Download />
+              </template>
+              批量下载
+            </ActionButton>
+            
+            <ActionButton 
+              type="danger" 
+              :disabled="selectedCompletedTasks.length === 0 && selectedTasks.length === 0"
+              @click="batchDeleteTasks"
+            >
+              <template #icon>
+                <Delete />
+              </template>
+              批量删除
+            </ActionButton>
+            
+            <ActionButton 
+              v-for="action in customActions"
+              :key="action.key"
+              :type="action.type || 'default'"
+              :disabled="selectedCompletedTasks.length === 0 && selectedTasks.length === 0"
+              @click="handleCustomAction(action.key)"
+            >
+              <template #icon v-if="action.icon">
+                <component :is="action.icon" />
+              </template>
+              {{ action.text }}
+            </ActionButton>
           </div>
         </div>
 
@@ -116,7 +118,7 @@
           />
           <el-table-column prop="id" label="ID" width="80" align="center" />
           
-          <el-table-column label="提示词" min-width="250">
+          <el-table-column label="提示词" width="350">
             <template #default="{ row }">
               <div class="prompt-cell">
                 <el-tooltip :content="row.prompt || ''" placement="top">
@@ -126,21 +128,15 @@
             </template>
           </el-table-column>
 
-          <el-table-column prop="model" label="模型" width="120" align="center">
+          <el-table-column prop="model" label="模型" width="140" align="center">
             <template #default="{ row }">
               <el-tag class="model-tag">{{ row.model || '-' }}</el-tag>
             </template>
           </el-table-column>
 
-          <el-table-column prop="ratio" label="分辨率" width="100" align="center">
+          <el-table-column prop="ratio" label="分辨率" width="110" align="center">
             <template #default="{ row }">
               <el-tag type="warning" class="ratio-tag">{{ row.ratio || row.aspect_ratio }}</el-tag>
-            </template>
-          </el-table-column>
-
-          <el-table-column prop="quality" label="清晰度" width="100" align="center">
-            <template #default="{ row }">
-              <el-tag :type="getQualityType(row.quality)" class="quality-tag">{{ row.quality || '-' }}</el-tag>
             </template>
           </el-table-column>
 
@@ -156,7 +152,7 @@
             </template>
           </el-table-column>
 
-          <el-table-column label="操作" width="180" fixed="right" align="center">
+          <el-table-column label="操作" width="320" fixed="right" align="center">
             <template #default="{ row }">
               <div class="action-buttons">
                 <!-- 失败原因图标 -->
@@ -171,45 +167,47 @@
                   </el-icon>
                 </el-tooltip>
                 
-                <el-button 
+                <!-- 重试按钮 -->
+                <ActionButton 
                   v-if="row.status === 3"
+                  class="action-btn"
                   type="warning" 
-                  size="small"
+                  size="small" 
                   @click="retryTask(row)"
-                  class="action-btn"
                 >
-                  <el-icon><RefreshRight /></el-icon>
-                  重试
-                </el-button>
-                
-                <el-button 
-                  v-if="row.status === 2 && (row.result_image_url || (row.images && row.images.length > 0))"
-                  type="primary" 
-                  size="small"
-                  @click="viewResult(row)"
-                  class="action-btn"
-                >
-                  <el-icon><View /></el-icon>
-                  查看
-                </el-button>
-
-                <el-popconfirm
-                  :title="`确定删除任务 #${row.id} 吗？`"
-                  @confirm="deleteTask(row.id)"
-                >
-                  <template #reference>
-                    <el-button 
-                      type="danger" 
-                      size="small"
-                      :disabled="row.status === 1"
-                      text
-                      class="action-btn delete-btn"
-                    >
-                      <el-icon><Delete /></el-icon>
-                      删除
-                    </el-button>
+                  <template #icon>
+                    <RefreshRight />
                   </template>
-                </el-popconfirm>
+                  重试
+                </ActionButton>
+                
+                <!-- 查看按钮 -->
+                <ActionButton 
+                  v-if="row.status === 2 && (row.result_image_url || (row.images && row.images.length > 0))"
+                  class="action-btn"
+                  type="info" 
+                  size="small" 
+                  @click="viewResult(row)"
+                >
+                  <template #icon>
+                    <View />
+                  </template>
+                  查看
+                </ActionButton>
+                
+                <!-- 删除按钮 -->
+                <ActionButton 
+                  class="action-btn"
+                  type="danger" 
+                  size="small" 
+                  :disabled="row.status === 1"
+                  @click="deleteTask(row.id)"
+                >
+                  <template #icon>
+                    <Delete />
+                  </template>
+                  删除
+                </ActionButton>
               </div>
             </template>
           </el-table-column>
@@ -287,18 +285,20 @@
 
       <template #footer>
         <div class="dialog-footer">
-          <el-button @click="showAddTaskDialog = false" class="cancel-btn">
+          <ActionButton @click="showAddTaskDialog = false" class="cancel-btn">
             取消
-          </el-button>
-          <el-button 
-            type="primary" 
+          </ActionButton>
+          <ActionButton
+            type="primary"
             @click="addTask"
             :loading="addTaskLoading"
             class="confirm-btn"
           >
-            <el-icon><Plus /></el-icon>
+            <template #icon>
+              <Plus />
+            </template>
             创建任务
-          </el-button>
+          </ActionButton>
         </div>
       </template>
     </el-dialog>
@@ -376,18 +376,20 @@
 
       <template #footer>
         <div class="dialog-footer">
-          <el-button @click="showBatchAddDialog = false" class="cancel-btn">
+          <ActionButton @click="showBatchAddDialog = false" class="cancel-btn">
             取消
-          </el-button>
-          <el-button 
-            type="primary" 
+          </ActionButton>
+          <ActionButton
+            type="primary"
             @click="batchAddTasks"
             :loading="batchAddLoading"
             class="confirm-btn"
           >
-                            <el-icon><Document /></el-icon>
+            <template #icon>
+              <Document />
+            </template>
             批量创建
-          </el-button>
+          </ActionButton>
         </div>
       </template>
     </el-dialog>
@@ -456,6 +458,7 @@ import {
 } from '@element-plus/icons-vue'
 import { text2imgAPI } from '../utils/api'
 import StatusCountDisplay from '@/components/StatusCountDisplay.vue'
+import ActionButton from '@/components/common/ActionButton.vue'
 
 export default {
   name: 'JimengText2Img',
@@ -470,7 +473,8 @@ export default {
     InfoFilled,
     Picture,
     Download,
-    StatusCountDisplay
+    StatusCountDisplay,
+    ActionButton
   },
   setup() {
     // 响应式数据
@@ -867,7 +871,30 @@ export default {
     // 批量重试状态
     const batchRetryLoading = ref(false)
 
-    // 批量重试失败任务
+    // 自定义操作
+    const customActions = ref([
+      {
+        key: 'batch-retry',
+        text: '批量重试',
+        icon: 'el-icon-refresh-right',
+        type: 'warning',
+        tooltip: '重试所有失败的任务',
+        loading: false
+      }
+    ])
+
+    // 处理自定义操作
+    const handleCustomAction = (actionKey) => {
+      switch (actionKey) {
+        case 'batch-retry':
+          batchRetryFailedTasks()
+          break
+        default:
+          ElMessage.info(`执行操作: ${actionKey}`)
+      }
+    }
+
+    // 批量重试
     const batchRetryFailedTasks = async () => {
       try {
         batchRetryLoading.value = true
@@ -994,7 +1021,9 @@ export default {
             batchRetryFailedTasks,
       batchRetryLoading,
       getFailureReasonText,
-        getFailureTooltipContent
+      getFailureTooltipContent,
+      customActions,
+      handleCustomAction
     }
   }
 }
@@ -1095,7 +1124,7 @@ export default {
 }
 
 .prompt-cell {
-  max-width: 250px;
+  max-width: 200px;
 }
 
 .prompt-text {
@@ -1397,9 +1426,21 @@ export default {
 .action-buttons {
   display: flex;
   flex-direction: row;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
   justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* 操作按钮样式 */
+.action-btn {
+  font-size: 12px;
+  padding: 4px 8px;
+  min-width: auto;
+}
+
+.action-btn .el-icon {
+  margin-right: 4px;
 }
 
 /* 页面特定响应式样式 */

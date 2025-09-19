@@ -134,14 +134,18 @@
             </div>
             
             <div class="prompt-actions">
-              <el-button size="small" type="primary" @click.stop="copyPrompt(prompt.prompt)">
-                <el-icon><CopyDocument /></el-icon>
+              <ActionButton size="small" type="success" @click.stop="copyPrompt(prompt.prompt)">
+                <template #icon>
+                  <CopyDocument />
+                </template>
                 复制
-              </el-button>
-              <el-button size="small" @click.stop="showPromptDetail(prompt)">
-                <el-icon><View /></el-icon>
+              </ActionButton>
+              <ActionButton size="small" type="info" @click.stop="showPromptDetail(prompt)">
+                <template #icon>
+                  <View />
+                </template>
                 详情
-              </el-button>
+              </ActionButton>
             </div>
           </div>
         </div>
@@ -194,11 +198,13 @@
       
       <template #footer>
         <div class="dialog-footer">
-          <el-button @click="closeDetailDialog">关闭</el-button>
-          <el-button type="primary" @click="copyPrompt(selectedPrompt?.prompt)">
-            <el-icon><CopyDocument /></el-icon>
+          <ActionButton type="secondary" @click="closeDetailDialog">关闭</ActionButton>
+          <ActionButton type="primary" @click="copyPrompt(selectedPrompt?.prompt)">
+            <template #icon>
+              <CopyDocument />
+            </template>
             复制提示词
-          </el-button>
+          </ActionButton>
         </div>
       </template>
     </el-dialog>
@@ -213,12 +219,13 @@ import {
   CopyDocument, View 
 } from '@element-plus/icons-vue'
 import { promptAPI } from '@/utils/api'
+import ActionButton from '@/components/common/ActionButton.vue'
 
 export default {
   name: 'PromptManager',
   components: {
     Collection, Platform, Document, Search, Picture,
-    CopyDocument, View
+    CopyDocument, View, ActionButton
   },
   setup() {
     // 响应式数据

@@ -115,6 +115,7 @@
               </el-menu-item>
             </el-sub-menu>
             
+
             <el-menu-item index="about">
               <el-icon><InfoFilled /></el-icon>
               <span>关于我们</span>
@@ -442,6 +443,7 @@ import JimengDigitalHuman from './views/JimengDigitalHuman.vue'
 import QingyingImg2Video from './views/QingyingImg2Video.vue'
 import TaskManager from './views/TaskManager.vue'
 import PromptManager from './views/PromptManager.vue'
+
 import { accountAPI } from './utils/api'
 
 export default {
