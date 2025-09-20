@@ -208,7 +208,10 @@ class JimengText2ImageExecutor(BaseTaskExecutor):
         """输入提示词"""
         try:
             self.logger.info("输入提示词", prompt=prompt)
-            await self.page.fill('textarea.lv-textarea[placeholder="Describe the image you\'re imagining"]', prompt)
+            # 查找提示词输入框
+            textarea_selector = 'textarea.lv-textarea'
+            await self.page.wait_for_selector(textarea_selector, timeout=10000)
+            await self.page.fill(textarea_selector, prompt)
             await asyncio.sleep(2)
             return TaskResult(code=ErrorCode.SUCCESS.value, data=None, message="提示词输入成功")
         except Exception as e:
