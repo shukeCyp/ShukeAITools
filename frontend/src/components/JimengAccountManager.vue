@@ -8,10 +8,9 @@
       </div>
       <div class="header-actions">
         <el-button 
-          type="primary" 
+          class="btn-batch-add primary-btn"
           @click="showAddDialog = true"
           size="large"
-          class="primary-btn"
         >
           <el-icon><Plus /></el-icon>
           批量添加
@@ -35,10 +34,9 @@
         >
           <template #reference>
             <el-button 
-              type="danger" 
+              class="btn-clear danger-btn"
               :disabled="accounts.length === 0"
               size="large"
-              class="danger-btn"
             >
               <el-icon><Delete /></el-icon>
               清空所有
@@ -134,7 +132,7 @@
         class="empty-state"
       >
         <el-button 
-          type="primary" 
+          class="btn-add-first"
           @click="showAddDialog = true"
           :icon="Plus"
         >
@@ -282,7 +280,7 @@
             >
               <template #reference>
                 <el-button 
-                  type="danger" 
+                  class="btn-delete"
                   size="small" 
                   text
                 >
@@ -329,7 +327,7 @@
           
           <div class="format-examples">
             <div class="format-item">
-              <el-tag type="primary" size="small">格式1</el-tag>
+              <el-tag type="danger" size="small">格式1</el-tag>
               <code>账号----密码</code>
             </div>
             <div class="format-item">
@@ -369,7 +367,7 @@
             取消
           </el-button>
           <el-button 
-            type="primary" 
+            class="btn-confirm-add"
             @click="addAccounts"
             :loading="addLoading"
             :disabled="!newAccountsText.trim()"

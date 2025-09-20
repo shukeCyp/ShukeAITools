@@ -16,9 +16,8 @@
           <el-button 
             :icon="User"
             @click="showAccountManager = true"
-            type="primary"
+            class="btn-account action-btn"
             size="large"
-            class="action-btn"
           >
             <el-icon><User /></el-icon>
             账号管理 ({{ accountCount }})
@@ -325,21 +324,7 @@ export default {
   gap: 16px;
 }
 
-.action-btn {
-  background: var(--primary-gradient);
-  border: none;
-  color: white;
-  border-radius: var(--radius-md);
-  font-weight: 600;
-  padding: 12px 24px;
-  box-shadow: var(--shadow-sm);
-  transition: var(--transition);
-}
-
-.action-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
+/* 按钮样式已移至全局样式 */
 
 /* 功能导航 */
 .function-navigation {

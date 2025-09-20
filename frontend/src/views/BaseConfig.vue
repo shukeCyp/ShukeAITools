@@ -114,11 +114,10 @@
         <!-- 操作按钮 -->
         <div class="config-actions">
           <el-button 
-            type="primary" 
+            class="btn-save action-btn primary-btn"
             :loading="saveLoading" 
             @click="saveConfigs"
             size="large"
-            class="action-btn primary-btn"
           >
             <el-icon><Check /></el-icon>
             保存配置
@@ -470,14 +469,7 @@ export default {
   border-top: 1px solid var(--border-light);
 }
 
-.action-btn {
-  min-width: 140px;
-  font-weight: 600;
-  border-radius: var(--radius-md);
-  transition: var(--transition);
-  position: relative;
-  overflow: hidden;
-}
+/* 按钮样式已移至全局样式 */
 
 .primary-btn {
   background: var(--primary-gradient);

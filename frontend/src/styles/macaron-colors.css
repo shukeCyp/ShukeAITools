@@ -111,4 +111,261 @@
 
 .macaron-button-large .macaron-button-icon {
   font-size: 18px;
+}
+
+/* 按钮类型样式 - 渐变彩色版本 */
+.macaron-button-primary {
+  background: var(--macaron-primary);
+  color: var(--macaron-text-white);
+  border: none;
+}
+
+.macaron-button-primary:hover:not(:disabled) {
+  background: var(--macaron-primary-hover);
+}
+
+.macaron-button-primary:active:not(:disabled) {
+  background: var(--macaron-primary-active);
+}
+
+.macaron-button-success {
+  background: var(--macaron-success);
+  color: var(--macaron-text-white);
+  border: none;
+}
+
+.macaron-button-success:hover:not(:disabled) {
+  background: var(--macaron-success-hover);
+}
+
+.macaron-button-success:active:not(:disabled) {
+  background: var(--macaron-success-active);
+}
+
+.macaron-button-warning {
+  background: var(--macaron-warning);
+  color: var(--macaron-text-primary);
+  border: none;
+}
+
+.macaron-button-warning:hover:not(:disabled) {
+  background: var(--macaron-warning-hover);
+}
+
+.macaron-button-warning:active:not(:disabled) {
+  background: var(--macaron-warning-active);
+}
+
+.macaron-button-danger {
+  background: var(--macaron-danger);
+  color: var(--macaron-text-white);
+  border: none;
+}
+
+.macaron-button-danger:hover:not(:disabled) {
+  background: var(--macaron-danger-hover);
+}
+
+.macaron-button-danger:active:not(:disabled) {
+  background: var(--macaron-danger-active);
+}
+
+.macaron-button-info {
+  background: var(--macaron-info);
+  color: var(--macaron-text-white);
+  border: none;
+}
+
+.macaron-button-info:hover:not(:disabled) {
+  background: var(--macaron-info-hover);
+}
+
+.macaron-button-info:active:not(:disabled) {
+  background: var(--macaron-info-active);
+}
+
+.macaron-button-secondary {
+  background: var(--macaron-secondary);
+  color: var(--macaron-text-white);
+  border: none;
+}
+
+.macaron-button-secondary:hover:not(:disabled) {
+  background: var(--macaron-secondary-hover);
+}
+
+.macaron-button-secondary:active:not(:disabled) {
+  background: var(--macaron-secondary-active);
+}
+
+/* 圆形按钮样式 */
+.macaron-button-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  padding: 0;
+  justify-content: center;
+}
+
+.macaron-button-circle.macaron-button-small {
+  width: 32px;
+  height: 32px;
+}
+
+.macaron-button-circle.macaron-button-large {
+  width: 44px;
+  height: 44px;
+}
+
+/* 文本按钮样式 */
+.macaron-button-text-style {
+  background: transparent;
+  box-shadow: none;
+  color: var(--macaron-text-primary);
+}
+
+.macaron-button-text-style:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.04);
+  transform: none;
+  box-shadow: none;
+}
+
+.macaron-button-text-style:active:not(:disabled) {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* 文本内容样式 */
+.macaron-button-text {
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 只有图标的按钮隐藏文本 */
+.macaron-button-circle .macaron-button-text {
+  display: none;
+}
+
+/* 加载状态样式 */
+.macaron-button-loading {
+  position: relative;
+  pointer-events: none;
+}
+
+.macaron-button-loading::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: macaron-button-spin 1s linear infinite;
+}
+
+@keyframes macaron-button-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 按钮组样式 */
+.macaron-button-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.macaron-button-group--horizontal {
+  flex-direction: row;
+}
+
+.macaron-button-group--vertical {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* 间距控制 */
+.macaron-button-group--horizontal.macaron-button-group--gap-small > * {
+  margin-right: 6px;
+}
+
+.macaron-button-group--horizontal.macaron-button-group--gap-default > * {
+  margin-right: 8px;
+}
+
+.macaron-button-group--horizontal.macaron-button-group--gap-large > * {
+  margin-right: 12px;
+}
+
+.macaron-button-group--vertical.macaron-button-group--gap-small > * {
+  margin-bottom: 6px;
+}
+
+.macaron-button-group--vertical.macaron-button-group--gap-default > * {
+  margin-bottom: 8px;
+}
+
+.macaron-button-group--vertical.macaron-button-group--gap-large > * {
+  margin-bottom: 12px;
+}
+
+/* 移除最后一个元素的边距 */
+.macaron-button-group--horizontal > *:last-child {
+  margin-right: 0;
+}
+
+.macaron-button-group--vertical > *:last-child {
+  margin-bottom: 0;
+}
+
+/* 单项操作按钮组 */
+.macaron-item-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 12px;
+  padding-left: 12px;
+  border-left: 1px solid var(--macaron-border-light);
+}
+
+.macaron-button-group--vertical .macaron-item-actions-group {
+  margin-left: 0;
+  margin-top: 12px;
+  padding-left: 0;
+  padding-top: 12px;
+  border-left: none;
+  border-top: 1px solid var(--macaron-border-light);
+}
+
+/* 紧凑模式 */
+.macaron-button-group--compact .macaron-item-actions-group {
+  margin-left: 8px;
+  padding-left: 8px;
+}
+
+.macaron-button-group--compact.macaron-button-group--vertical .macaron-item-actions-group {
+  margin-left: 0;
+  margin-top: 8px;
+  padding-left: 0;
+  padding-top: 8px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .macaron-button-group {
+    gap: 6px;
+  }
+  
+  .macaron-button-group--horizontal > * {
+    margin-right: 6px;
+  }
+  
+  .macaron-item-actions-group {
+    margin-left: 8px;
+    padding-left: 8px;
+  }
 } 

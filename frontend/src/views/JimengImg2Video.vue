@@ -11,44 +11,32 @@
         </div>
         <div class="status-section">
           <!-- 导入文件夹按钮 -->
-          <ActionButton
-            type="primary"
+          <el-button
+            class="btn-folder"
             size="large"
             @click="showImportFolderDialog"
-            :loading="importFolderLoading"
-            class="add-task-btn"
+            :disabled="importFolderLoading"
           >
-            <template #icon>
-              <el-icon><FolderOpened /></el-icon>
-            </template>
-            导入文件夹
-          </ActionButton>
+            <el-icon><FolderOpened /></el-icon> 导入文件夹
+          </el-button>
           
-          <ActionButton
-            type="success"
+          <el-button
+            class="btn-batch-add"
             size="large"
             @click="showBatchAddDialog"
-            :loading="batchAddLoading"
-            class="add-task-btn"
+            :disabled="batchAddLoading"
           >
-            <template #icon>
-              <el-icon><Plus /></el-icon>
-            </template>
-            批量添加
-          </ActionButton>
+            <el-icon><Plus /></el-icon> 批量添加
+          </el-button>
           
-          <ActionButton
-            type="warning"
+          <el-button
+            class="btn-import"
             size="large"
             @click="showTableImportDialog"
-            :loading="tableImportLoading"
-            class="add-task-btn"
+            :disabled="tableImportLoading"
           >
-            <template #icon>
-              <el-icon><Upload /></el-icon>
-            </template>
-            表格导入
-          </ActionButton>
+            <el-icon><Upload /></el-icon> 导入表格
+          </el-button>
         </div>
       </div>
     </div>
@@ -74,51 +62,37 @@
             <el-option label="已完成" value="2" />
             <el-option label="失败" value="3" />
           </el-select>
-          <ActionButton
+          <el-button
+            class="btn-refresh"
             @click="refreshTasks"
-            :loading="loading"
-            class="refresh-btn"
+            :disabled="loading"
           >
-            <template #icon>
-              <Refresh />
-            </template>
-            刷新
-          </ActionButton>
+            <el-icon><Refresh /></el-icon> 刷新
+          </el-button>
           <!-- 批量重试按钮 -->
-          <ActionButton
-            type="warning"
+          <el-button
+            class="btn-batch-retry"
             @click="batchRetryFailedTasks"
-            :loading="batchRetryLoading"
-            class="batch-retry-btn"
+            :disabled="batchRetryLoading"
           >
-            <template #icon>
-              <RefreshRight />
-            </template>
-            批量重试
-          </ActionButton>
+            <el-icon><RefreshRight /></el-icon> 批量重试
+          </el-button>
           <!-- 批量操作按钮 -->
-          <ActionButton
-            type="danger"
+          <el-button
+            class="btn-batch-delete"
             @click="batchDeleteTasks"
             :disabled="selectedTasks.length === 0"
           >
-            <template #icon>
-              <Delete />
-            </template>
-            批量删除 ({{ selectedTasks.length }})
-          </ActionButton>
+            <el-icon><Delete /></el-icon> 批量删除 ({{ selectedTasks.length }})
+          </el-button>
           
-          <ActionButton
-            type="success"
+          <el-button
+            class="btn-batch-download"
             @click="batchDownloadVideos"
-            :disabled="selectedCompletedTasks.length === 0"
-            :loading="batchDownloadLoading"
+            :disabled="selectedCompletedTasks.length === 0 || batchDownloadLoading"
           >
-            <template #icon>
-              <Download />
-            </template>
-            批量下载 ({{ selectedCompletedTasks.length }})
-          </ActionButton>
+            <el-icon><Download /></el-icon> 批量下载 ({{ selectedCompletedTasks.length }})
+          </el-button>
           </div>
         </div>
         
@@ -199,58 +173,41 @@
                 </el-tooltip>
                 
                 <!-- 查看视频按钮 -->
-                <ActionButton
+                <el-button
                   v-if="row.video_url"
-                  size="small"
-                  type="info"
+                  class="btn-view" size="small"
                   @click="previewVideo(row.video_url)"
-                  class="action-btn"
                 >
-                  <template #icon>
-                    <VideoPlay />
-                  </template>
-                  查看
-                </ActionButton>
+                  <el-icon><VideoPlay /></el-icon> 查看
+                </el-button>
                 
                 <!-- 下载视频按钮 -->
-                <ActionButton
+                <el-button
                   v-if="row.video_url"
-                  size="small"
-                  type="success"
+                  class="btn-download" size="small"
                   @click="downloadVideo(row)"
-                  class="action-btn"
                 >
-                  <template #icon>
-                    <Download />
-                  </template>
-                  下载
-                </ActionButton>
+                  <el-icon><Download /></el-icon> 下载
+                </el-button>
                 
                 <!-- 重试按钮 -->
-                <ActionButton
+                <el-button
                   v-if="row.status === 3"
-                  size="small"
-                  type="warning"
+                  class="btn-retry" size="small"
                   :disabled="row.status === 1"
                   @click="retryTask(row.id)"
-                  class="action-btn"
                 >
-                  <template #icon>
-                    <RefreshRight />
-                  </template>
-                  重试
-                </ActionButton>
+                  <el-icon><RefreshRight /></el-icon> 重试
+                </el-button>
                 
                 <!-- 删除按钮 -->
-                <ActionButton
-                  size="small"
-                  type="danger"
+                <el-button
+                  class="btn-delete" size="small"
                   :disabled="row.status === 1"
                   @click="deleteTask(row.id)"
-                  class="action-btn"
                 >
                   删除
-                </ActionButton>
+                </el-button>
                 </div>
             </template>
           </el-table-column>
@@ -333,176 +290,26 @@
       </el-form>
       <template #footer>
         <span class="dialog-footer">
-          <ActionButton @click="importFolderDialogVisible = false">取消</ActionButton>
-          <ActionButton type="primary" @click="confirmImportFolder" :loading="importFolderLoading">
+          <el-button class="cancel-button" @click="importFolderDialogVisible = false">取消</el-button>
+          <el-button class="btn-batch-add" @click="confirmImportFolder" :loading="importFolderLoading">
             确认并选择文件夹
-          </ActionButton>
+          </el-button>
         </span>
       </template>
     </el-dialog>
 
     <!-- 批量添加对话框 -->
-    <el-dialog
-      v-model="batchAddDialogVisible"
-      width="40%"
-      max-width="600px"
-      destroy-on-close
-      :show-close="false"
-      :show-header="false"
-      class="batch-add-dialog"
-      @close="resetBatchAddDialog"
-    >
-      <div 
-        class="batch-add-wrapper"
-        @dragover.prevent="handleDragOver"
-        @dragleave.prevent="handleDragLeave"
-        @drop.prevent="handleDrop"
-        :class="{ 'drag-over': isDragOver }"
-      >
-        <div class="batch-add-scrollable">
-          <input 
-            ref="fileInput"
-            type="file"
-            multiple
-            accept="image/*"
-            style="display: none"
-            @change="handleFileSelect"
-          />
-
-          <!-- 生成设置 -->
-          <div class="generation-settings-compact">
-            <div class="settings-row-compact">
-              <el-form-item label="模型：" class="compact-form-item">
-                <el-radio-group v-model="batchAddForm.model" size="small">
-                  <el-radio value="Video 3.0">Video 3.0</el-radio>
-                  <el-radio value="Video S2.0 Pro">Video S2.0 Pro</el-radio>
-                </el-radio-group>
-              </el-form-item>
-              <el-form-item label="时长：" class="compact-form-item">
-                <el-radio-group v-model="batchAddForm.second" size="small">
-                  <el-radio :value="5">5秒</el-radio>
-                  <el-radio :value="10" v-if="batchAddForm.model === 'Video 3.0'">10秒</el-radio>
-                </el-radio-group>
-              </el-form-item>
-            </div>
-          </div>
-
-          <!-- 拖拽上传区域 -->
-          <div 
-            class="drag-upload-area"
-            v-show="imageTaskList.length === 0"
-            @click="triggerFileInput"
-          >
-            <div class="upload-content">
-              <el-icon size="48" class="upload-icon"><UploadFilled /></el-icon>
-              <div class="upload-text">
-                <p class="primary-text">拖拽图片到此处，或点击选择图片</p>
-                <p class="secondary-text">支持 jpg、png、gif 等格式</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- 图片任务列表 -->
-          <div class="image-task-list" v-if="imageTaskList.length > 0">
-            <div class="list-header">
-              <h4>待生成任务 ({{ imageTaskList.length }})</h4>
-              <div class="header-actions">
-                <ActionButton size="small" @click="clearAllTasks" type="danger">
-                  <template #icon>
-                    <Delete />
-                  </template>
-                  清空
-                </ActionButton>
-              </div>
-            </div>
-            
-            <div 
-              class="task-pagination-container" 
-              ref="paginationContainer"
-              @touchstart="handleTouchStart"
-              @touchmove="handleTouchMove"
-              @touchend="handleTouchEnd"
-              @wheel="handleWheel"
-            >
-              <div 
-                class="task-pagination-wrapper" 
-                :style="{ transform: `translateY(-${currentPage * 100}%)` }"
-              >
-                <div 
-                  v-for="(task, index) in imageTaskList" 
-                  :key="index"
-                  class="task-page"
-                >
-                  <div class="task-item">
-                    <div class="task-image-container">
-                      <div class="task-image">
-                        <img :src="task.previewUrl" :alt="task.file.name" />
-                      </div>
-                    </div>
-                    <div class="task-content">
-                      <div class="task-prompt-container">
-                        <el-input
-                          v-model="task.prompt"
-                          type="textarea"
-                          :rows="13"
-                          placeholder="请输入提示词（可选）"
-                          maxlength="500"
-                          show-word-limit
-                          class="prompt-textarea"
-                        />
-                        <div class="button-group">
-                          <ActionButton
-                            size="small"
-                            type="primary"
-                            @click="generateAIPrompt(index)"
-                            class="ai-generate-btn"
-                          >
-                            <template #icon>
-                              <Magic />
-                            </template>
-                            AI生成
-                          </ActionButton>
-                          <ActionButton
-                            size="small"
-                            text
-                            @click="removeTask(index)"
-                            class="delete-text-btn"
-                          >
-                            删除
-                          </ActionButton>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <template #footer>
-        <span class="dialog-footer">
-          <ActionButton @click="batchAddDialogVisible = false">取消</ActionButton>
-          <ActionButton
-            type="primary"
-            @click="submitBatchTasks"
-            :loading="batchAddLoading"
-            :disabled="imageTaskList.length === 0"
-          >
-            <template #icon>
-              <Plus />
-            </template>
-            创建任务 ({{ imageTaskList.length }})
-          </ActionButton>
-        </span>
-      </template>
-    </el-dialog>
+    <BatchAddDialog
+      :visible="batchAddDialogVisible"
+      service-type="jimeng"
+      @update:visible="batchAddDialogVisible = $event"
+      @submit="handleBatchSubmit"
+    />
 
     <!-- 表格导入对话框 -->
     <el-dialog
       v-model="tableImportDialogVisible"
-      title="表格导入"
+      title="导入表格"
       width="80%"
       max-width="1000px"
       destroy-on-close
@@ -532,17 +339,17 @@
                 <p class="secondary-text">支持 CSV、Excel (.xlsx, .xls) 格式</p>
                 <p class="hint-text">固定格式: 图片路径 | 提示词 | 秒数</p>
                 <div class="template-download">
-                  <ActionButton
-                    type="primary"
+                  <el-button
+                    class="btn-download"
                     size="small"
                     @click.stop="downloadTemplate"
                     plain
                   >
                     <template #icon>
-                      <Download />
+                      <el-icon><Download /></el-icon>
                     </template>
                     下载表格模板
-                  </ActionButton>
+                  </el-button>
                 </div>
               </div>
             </div>
@@ -557,12 +364,12 @@
           <div class="data-preview">
             <div class="preview-header">
               <h4>数据预览 (共 {{ tableData.length }} 行，显示前 10 行)</h4>
-              <ActionButton size="small" @click="resetTableImportDialog">
+              <el-button class="btn-clear" size="small" @click="resetTableImportDialog">
                 <template #icon>
-                  <Close />
+                  <el-icon><Close /></el-icon>
                 </template>
                 重新选择文件
-              </ActionButton>
+              </el-button>
             </div>
             
             <div class="preview-table">
@@ -587,18 +394,18 @@
 
       <template #footer>
         <span class="dialog-footer">
-          <ActionButton @click="tableImportDialogVisible = false">取消</ActionButton>
-          <ActionButton
-            type="primary"
+          <el-button class="cancel-button" @click="tableImportDialogVisible = false">取消</el-button>
+          <el-button
+            class="btn-import"
             @click="submitTableImportTasks"
             :loading="tableImportLoading"
             :disabled="tableData.length === 0"
           >
             <template #icon>
-              <Plus />
+              <el-icon><Plus /></el-icon>
             </template>
             创建任务 ({{ tableData.length }})
-          </ActionButton>
+          </el-button>
         </span>
       </template>
     </el-dialog>
@@ -627,7 +434,8 @@ import { img2videoAPI } from '@/utils/api'
 import * as ElementPlus from 'element-plus'
 import * as XLSX from 'xlsx'
 import StatusCountDisplay from '@/components/StatusCountDisplay.vue'
-import ActionButton from '@/components/common/ActionButton.vue'
+
+import BatchAddDialog from '@/components/BatchAddDialog.vue'
 
 // 响应式数据
 const loading = ref(false)
@@ -768,6 +576,41 @@ const showBatchAddDialog = () => {
   batchAddDialogVisible.value = true
 }
 
+// 处理批量提交（新组件回调）
+const handleBatchSubmit = async (submitData) => {
+  try {
+    // 创建FormData对象
+    const formData = new FormData()
+    
+    // 添加配置参数
+    formData.append('model', submitData.config.model)
+    formData.append('second', submitData.config.second)
+    
+    // 添加所有图片文件和对应的提示词
+    submitData.tasks.forEach((task, index) => {
+      formData.append('images', task.file)
+      formData.append(`prompts[${index}]`, task.prompt || '')
+    })
+    
+    const response = await jimengImg2videoAPI.batchAddTasks(formData)
+    
+    if (response.data.success) {
+      ElMessage.success(`成功创建 ${submitData.tasks.length} 个任务`)
+      batchAddDialogVisible.value = false
+      
+      // 刷新任务列表
+      setTimeout(() => {
+        refreshTasks()
+      }, 1000)
+    } else {
+      ElMessage.error(response.data.message || '创建任务失败')
+    }
+  } catch (error) {
+    console.error('创建批量任务失败:', error)
+    ElMessage.error('创建任务失败')
+  }
+}
+
 // 重置批量添加对话框
 const resetBatchAddDialog = () => {
   imageTaskList.value = []
@@ -888,7 +731,10 @@ const handleTouchStart = (event) => {
 }
 
 const handleTouchMove = (event) => {
-  event.preventDefault()
+  // 只阻止垂直滚动，允许水平滚动
+  if (Math.abs(event.touches[0].clientY - touchStartY) > 10) {
+    event.preventDefault()
+  }
 }
 
 const handleTouchEnd = (event) => {
@@ -906,13 +752,15 @@ const handleWheel = (event) => {
 }
 
 const handleSwipe = () => {
-  const swipeThreshold = 50
+  const swipeThreshold = 30 // 降低滑动阈值，提高灵敏度
   const diff = touchStartY - touchEndY
   
   if (Math.abs(diff) > swipeThreshold) {
     if (diff > 0) {
+      // 向上滑动，显示下一页
       nextPage()
     } else {
+      // 向下滑动，显示上一页
       prevPage()
     }
   }
@@ -933,6 +781,37 @@ const prevPage = () => {
 // 重置分页
 const resetPagination = () => {
   currentPage.value = 0
+}
+
+// 直接跳转到指定页面
+const goToPage = (index) => {
+  if (index >= 0 && index < imageTaskList.value.length) {
+    currentPage.value = index
+  }
+}
+
+// 键盘导航
+const handleKeydown = (event) => {
+  if (imageTaskList.value.length <= 1) return
+  
+  switch (event.key) {
+    case 'ArrowUp':
+      event.preventDefault()
+      prevPage()
+      break
+    case 'ArrowDown':
+      event.preventDefault()
+      nextPage()
+      break
+    case 'Home':
+      event.preventDefault()
+      currentPage.value = 0
+      break
+    case 'End':
+      event.preventDefault()
+      currentPage.value = imageTaskList.value.length - 1
+      break
+  }
 }
 
 // 提交批量任务
@@ -1560,12 +1439,18 @@ onMounted(() => {
       loadTasks()
     }
   }, 5000)
+  
+  // 添加键盘事件监听
+  document.addEventListener('keydown', handleKeydown)
 })
 
 onUnmounted(() => {
   if (refreshInterval) {
     clearInterval(refreshInterval)
   }
+  
+  // 移除键盘事件监听
+  document.removeEventListener('keydown', handleKeydown)
 })
 </script>
 
@@ -1622,28 +1507,84 @@ onUnmounted(() => {
 
 /* 图生视频特定对话框样式 */
 .task-item {
+  display: flex;
   min-height: 280px;
   max-width: 600px;
   width: 95%;
   margin: 0 auto;
   align-items: stretch;
   box-sizing: border-box;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
 }
 
 
 
 /* 图生视频任务特定样式 */
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.navigation-hint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hint-text {
+  font-size: 12px;
+  color: #666;
+  background: #f5f5f5;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.current-page {
+  font-size: 14px;
+  color: #409eff;
+  font-weight: 500;
+}
+
 .task-image-container {
+  flex: 0 0 auto;
   max-width: 200px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-right: 16px;
 }
 
 .task-image {
-  min-height: 200px;
+  max-width: 100%;
+  max-height: 200px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .task-content {
-  flex: 2;
-  padding: 0 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
 }
 
 .ai-generate-btn {
@@ -1660,10 +1601,97 @@ onUnmounted(() => {
   background: rgba(245, 108, 108, 0.1);
 }
 
+/* 任务内容样式 */
+.task-prompt {
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 8px;
+  word-wrap: break-word;
+}
+
+.task-status {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.task-status.pending {
+  background: #f0f9ff;
+  color: #0369a1;
+}
+
+.task-status.processing {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.task-status.completed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.task-status.failed {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.task-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+}
+
 /* 图生视频分页特定样式 */
 .task-pagination-container {
-  height: 350px;
+  height: 400px;
+  overflow: hidden;
   touch-action: pan-y;
+  position: relative;
+}
+
+.task-pagination-wrapper {
+  height: 100%;
+  transition: transform 0.3s ease-out;
+  will-change: transform;
+}
+
+.task-page {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.swipe-indicators {
+  position: absolute;
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+
+.indicator-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.indicator-dot.active {
+  background: #409eff;
+  transform: scale(1.2);
+}
+
+.indicator-dot:hover {
+  background: rgba(64, 158, 255, 0.7);
 }
 
 .pagination-wrapper {
@@ -1677,12 +1705,40 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .task-item {
     flex-direction: column;
+    align-items: center;
+  }
+
+  .task-image-container {
+    margin-right: 0;
+    margin-bottom: 16px;
+    max-width: 280px;
   }
 
   .task-image {
-    width: 100%;
-    height: 120px;
-    align-self: center;
+    max-height: 280px;
+  }
+
+  .task-pagination-container {
+    height: 500px;
+  }
+
+  .swipe-indicators {
+    bottom: 10px;
+  }
+
+  .indicator-dot {
+    width: 10px;
+    height: 10px;
+  }
+
+  .navigation-hint {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .hint-text {
+    font-size: 11px;
   }
 }
 

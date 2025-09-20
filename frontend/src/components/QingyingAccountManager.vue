@@ -8,11 +8,10 @@
       </div>
       <div class="header-actions">
         <el-button 
-          type="primary" 
+          class="btn-add primary-btn"
           @click="addAccount"
           :loading="addLoading"
           size="large"
-          class="primary-btn"
         >
           <el-icon><Plus /></el-icon>
           添加账号
@@ -35,10 +34,9 @@
         >
           <template #reference>
             <el-button 
-              type="danger" 
+              class="btn-clear danger-btn"
               :disabled="accounts.length === 0"
               size="large"
-              class="danger-btn"
             >
               <el-icon><Delete /></el-icon>
               清空所有
@@ -93,7 +91,7 @@
         <el-table-column label="操作" width="120" fixed="right" align="center">
           <template #default="scope">
             <el-button 
-              type="danger" 
+              class="btn-delete"
               size="small"
               @click="deleteAccount(scope.row)"
             >

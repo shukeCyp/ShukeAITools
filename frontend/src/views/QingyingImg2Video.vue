@@ -12,31 +12,21 @@
         </div>
         <div class="status-section">
           <!-- 导入文件夹按钮 -->
-          <ActionButton
-            type="primary"
-            size="large"
+          <el-button
+            class="btn-folder" size="large"
             @click="showImportFolderDialog = true"
-            :loading="importFolderLoading"
-            class="add-task-btn"
+            :disabled="importFolderLoading"
           >
-            <template #icon>
-              <FolderOpened />
-            </template>
-            导入文件夹
-          </ActionButton>
+            <el-icon><FolderOpened /></el-icon> 导入文件夹
+          </el-button>
           
-          <ActionButton
-            type="success"
-            size="large"
+          <el-button
+            class="btn-batch-add" size="large"
             @click="showBatchAddDialog"
-            :loading="batchAddLoading"
-            class="add-task-btn"
+            :disabled="batchAddLoading"
           >
-            <template #icon>
-              <Plus />
-            </template>
-            批量添加
-          </ActionButton>
+            <el-icon><Plus /></el-icon> 批量添加
+          </el-button>
         </div>
       </div>
     </div>
@@ -62,51 +52,37 @@
             <el-option label="已完成" value="2" />
             <el-option label="失败" value="3" />
           </el-select>
-          <ActionButton
+          <el-button
+            class="btn-refresh"
             @click="refreshTasks"
-            :loading="loading"
-            class="refresh-btn"
+            :disabled="loading"
           >
-            <template #icon>
-              <Refresh />
-            </template>
-            刷新
-          </ActionButton>
+            <el-icon><Refresh /></el-icon> 刷新
+          </el-button>
           <!-- 批量重试按钮 -->
-          <ActionButton
-            type="warning"
+          <el-button
+            class="btn-batch-retry"
             @click="batchRetryTasks"
-            :loading="batchRetryLoading"
-            class="batch-retry-btn"
+            :disabled="batchRetryLoading"
           >
-            <template #icon>
-              <RefreshRight />
-            </template>
-            批量重试
-          </ActionButton>
+            <el-icon><RefreshRight /></el-icon> 批量重试
+          </el-button>
           <!-- 批量操作按钮 -->
-          <ActionButton
-            type="danger"
+          <el-button
+            class="btn-batch-delete"
             @click="batchDeleteTasks"
             :disabled="selectedTasks.length === 0"
           >
-            <template #icon>
-              <Delete />
-            </template>
-            批量删除 ({{ selectedTasks.length }})
-          </ActionButton>
+            <el-icon><Delete /></el-icon> 批量删除 ({{ selectedTasks.length }})
+          </el-button>
           
-          <ActionButton
-            type="warning"
+          <el-button
+            class="btn-batch-download"
             @click="batchDownloadVideos"
-            :disabled="selectedCompletedTasks.length === 0"
-            :loading="batchDownloadLoading"
+            :disabled="selectedCompletedTasks.length === 0 || batchDownloadLoading"
           >
-            <template #icon>
-              <Download />
-            </template>
-            批量下载 ({{ selectedCompletedTasks.length }})
-          </ActionButton>
+            <el-icon><Download /></el-icon> 批量下载 ({{ selectedCompletedTasks.length }})
+          </el-button>
           </div>
         </div>
         
@@ -146,7 +122,7 @@
           <el-table-column prop="params" label="参数" width="160" align="center">
             <template #default="{ row }">
               <div class="param-info">
-                <el-tag size="small" type="primary">{{ row.generation_mode || '-' }}</el-tag>
+                <el-tag size="small" type="danger">{{ row.generation_mode || '-' }}</el-tag>
                 <el-tag size="small" type="warning">{{ row.frame_rate }}FPS</el-tag>
                 <el-tag size="small" type="success">{{ row.resolution }}</el-tag>
                 <el-tag size="small" type="info">{{ row.duration }}</el-tag>
@@ -182,46 +158,31 @@
                 </el-tooltip>
                 
                 <!-- 重试按钮 -->
-                <ActionButton 
+                <el-button 
                   v-if="row.status === 3"
-                  class="action-btn"
-                  type="warning" 
-                  size="small" 
+                  class="btn-retry" size="small"
                   @click="retryTask(row)"
                 >
-                  <template #icon>
-                    <RefreshRight />
-                  </template>
-                  重试
-                </ActionButton>
+                  <el-icon><RefreshRight /></el-icon> 重试
+                </el-button>
                 
                 <!-- 查看按钮 -->
-                <ActionButton 
+                <el-button 
                   v-if="row.status === 2 && row.video_url"
-                  class="action-btn"
-                  type="info" 
-                  size="small" 
+                  class="btn-view" size="small"
                   @click="openVideo(row.video_url)"
                 >
-                  <template #icon>
-                    <VideoPlay />
-                  </template>
-                  查看
-                </ActionButton>
+                  <el-icon><VideoPlay /></el-icon> 查看
+                </el-button>
                 
                 <!-- 删除按钮 -->
-                <ActionButton 
-                  class="action-btn"
-                  type="danger" 
-                  size="small" 
+                <el-button 
+                  class="btn-delete" size="small"
                   :disabled="row.status === 1"
                   @click="deleteTask(row.id)"
                 >
-                  <template #icon>
-                    <Delete />
-                  </template>
-                  删除
-                </ActionButton>
+                  <el-icon><Delete /></el-icon> 删除
+                </el-button>
               </div>
             </template>
           </el-table-column>
@@ -320,14 +281,16 @@
 
       <template #footer>
         <div class="dialog-footer">
-          <ActionButton @click="showCreateDialog = false">取消</ActionButton>
-          <ActionButton
-            type="primary"
+          <el-button type="info" @click="showCreateDialog = false">
+            取消
+          </el-button>
+          <el-button
+            class="btn-create"
             @click="createTask"
-            :loading="createLoading"
+            :disabled="createLoading"
           >
             创建任务
-          </ActionButton>
+          </el-button>
         </div>
       </template>
     </el-dialog>
@@ -391,191 +354,27 @@
 
       <template #footer>
         <div class="dialog-footer">
-          <ActionButton @click="showImportFolderDialog = false">取消</ActionButton>
-          <ActionButton
-            type="primary"
+          <el-button type="info" @click="showImportFolderDialog = false">
+            取消
+          </el-button>
+          <el-button
+            class="btn-batch-add"
             @click="confirmImportFolder"
-            :loading="importFolderLoading"
+            :disabled="importFolderLoading"
           >
             确定并选择文件夹
-          </ActionButton>
+          </el-button>
         </div>
       </template>
     </el-dialog>
 
     <!-- 批量添加对话框 -->
-    <el-dialog
-      v-model="batchAddDialogVisible"
-      width="40%"
-      max-width="600px"
-      destroy-on-close
-      :show-close="false"
-      :show-header="false"
-      class="batch-add-dialog"
-      @close="resetBatchAddDialog"
-    >
-      <div 
-        class="batch-add-wrapper"
-        @dragover.prevent="handleDragOver"
-        @dragleave.prevent="handleDragLeave"
-        @drop.prevent="handleDrop"
-        :class="{ 'drag-over': isDragOver }"
-      >
-        <div class="batch-add-scrollable">
-        <input 
-          ref="fileInput"
-          type="file"
-          multiple
-          accept="image/*"
-          style="display: none"
-          @change="handleFileSelect"
-        />
-
-        <!-- 生成设置 -->
-        <div class="generation-settings-compact">
-          <div class="settings-grid-compact">
-            <el-form-item label="模式：" class="compact-form-item">
-              <el-radio-group v-model="batchAddForm.generation_mode" size="small">
-                <el-radio value="fast">速度更快</el-radio>
-                <el-radio value="quality">质量更佳</el-radio>
-              </el-radio-group>
-            </el-form-item>
-            <el-form-item label="帧率：" class="compact-form-item">
-              <el-radio-group v-model="batchAddForm.frame_rate" size="small">
-                <el-radio value="30">30 FPS</el-radio>
-                <el-radio value="60">60 FPS</el-radio>
-              </el-radio-group>
-            </el-form-item>
-            <el-form-item label="分辨率：" class="compact-form-item">
-              <el-radio-group v-model="batchAddForm.resolution" size="small">
-                <el-radio value="720p">720P</el-radio>
-                <el-radio value="1080p">1080P</el-radio>
-                <el-radio value="4k">4K</el-radio>
-              </el-radio-group>
-            </el-form-item>
-            <el-form-item label="时长：" class="compact-form-item">
-              <el-radio-group v-model="batchAddForm.duration" size="small">
-                <el-radio value="5s">5秒</el-radio>
-                <el-radio value="10s">10秒</el-radio>
-              </el-radio-group>
-            </el-form-item>
-            <el-form-item label="AI音效：" class="compact-form-item">
-              <el-switch v-model="batchAddForm.ai_audio" size="small" />
-            </el-form-item>
-          </div>
-        </div>
-
-        <!-- 拖拽上传区域 -->
-        <div 
-          class="drag-upload-area"
-          v-show="imageTaskList.length === 0"
-          @click="triggerFileInput"
-        >
-          <div class="upload-content">
-            <el-icon size="48" class="upload-icon"><Upload /></el-icon>
-            <div class="upload-text">
-              <p class="primary-text">拖拽图片到此处，或点击选择图片</p>
-              <p class="secondary-text">支持 jpg、png、gif 等格式</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- 图片任务列表 -->
-        <div class="image-task-list" v-if="imageTaskList.length > 0">
-          <div class="list-header">
-            <h4>待生成任务 ({{ imageTaskList.length }})</h4>
-            <div class="header-actions">
-              <ActionButton size="small" @click="clearAllTasks" type="danger">
-                <template #icon>
-                  <Delete />
-                </template>
-                清空
-              </ActionButton>
-            </div>
-          </div>
-          
-          <div 
-            class="task-pagination-container" 
-            ref="paginationContainer"
-            @touchstart="handleTouchStart"
-            @touchmove="handleTouchMove"
-            @touchend="handleTouchEnd"
-            @wheel="handleWheel"
-          >
-            <div 
-              class="task-pagination-wrapper" 
-              :style="{ transform: `translateY(-${currentPage * 100}%)` }"
-            >
-              <div 
-                v-for="(task, index) in imageTaskList" 
-                :key="index"
-                class="task-page"
-              >
-                <div class="task-item">
-              <div class="task-image-container">
-                <div class="task-image">
-                  <img :src="task.previewUrl" :alt="task.file.name" />
-                </div>
-              </div>
-              <div class="task-content">
-                <div class="task-prompt-container">
-                  <el-input
-                    v-model="task.prompt"
-                    type="textarea"
-                    :rows="13"
-                    placeholder="请输入提示词（可选）"
-                    maxlength="500"
-                    show-word-limit
-                    class="prompt-textarea"
-                  />
-                  <div class="button-group">
-                    <ActionButton
-                      size="small"
-                      type="primary"
-                      @click="generateAIPrompt(index)"
-                      class="ai-generate-btn"
-                    >
-                      <template #icon>
-                        <Magic />
-                      </template>
-                      AI生成
-                    </ActionButton>
-                    <ActionButton
-                      size="small"
-                      text
-                      @click="removeTask(index)"
-                      class="delete-text-btn"
-                    >
-                      删除
-                    </ActionButton>
-                  </div>
-                </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        </div>
-      </div>
-      </div>
-
-      <template #footer>
-        <span class="dialog-footer">
-          <ActionButton @click="batchAddDialogVisible = false">取消</ActionButton>
-          <ActionButton
-            type="primary"
-            @click="submitBatchTasks"
-            :loading="batchAddLoading"
-            :disabled="imageTaskList.length === 0"
-          >
-            <template #icon>
-              <Plus />
-            </template>
-            创建任务 ({{ imageTaskList.length }})
-          </ActionButton>
-        </span>
-      </template>
-    </el-dialog>
+    <BatchAddDialog
+      :visible="batchAddDialogVisible"
+      service-type="qingying"
+      @update:visible="batchAddDialogVisible = $event"
+      @submit="handleBatchSubmit"
+    />
   </div>
 </template>
 
@@ -600,7 +399,7 @@ import {
 } from '@element-plus/icons-vue'
 import { qingyingImg2videoAPI } from '@/utils/api'
 import StatusCountDisplay from '@/components/StatusCountDisplay.vue'
-import ActionButton from '@/components/common/ActionButton.vue'
+import BatchAddDialog from '@/components/BatchAddDialog.vue'
 
 // 响应式数据
 const loading = ref(false)
@@ -1035,6 +834,44 @@ const confirmImportFolder = async () => {
 // 显示批量添加对话框
 const showBatchAddDialog = () => {
   batchAddDialogVisible.value = true
+}
+
+// 处理批量提交（新组件回调）
+const handleBatchSubmit = async (submitData) => {
+  try {
+    // 创建FormData对象
+    const formData = new FormData()
+    
+    // 添加配置参数
+    formData.append('generation_mode', submitData.config.generation_mode)
+    formData.append('frame_rate', submitData.config.frame_rate)
+    formData.append('resolution', submitData.config.resolution)
+    formData.append('duration', submitData.config.duration)
+    formData.append('ai_audio', submitData.config.ai_audio)
+    
+    // 添加所有图片文件和对应的提示词
+    submitData.tasks.forEach((task, index) => {
+      formData.append('images', task.file)
+      formData.append(`prompts[${index}]`, task.prompt || '')
+    })
+    
+    const response = await qingyingImg2videoAPI.batchAddTasks(formData)
+    
+    if (response.data.success) {
+      ElMessage.success(`成功创建 ${submitData.tasks.length} 个任务`)
+      batchAddDialogVisible.value = false
+      
+      // 刷新任务列表
+      setTimeout(() => {
+        refreshTasks()
+      }, 1000)
+    } else {
+      ElMessage.error(response.data.message || '创建任务失败')
+    }
+  } catch (error) {
+    console.error('创建批量任务失败:', error)
+    ElMessage.error('创建任务失败')
+  }
 }
 
 // 重置批量添加对话框

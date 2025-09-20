@@ -32,47 +32,43 @@
       </div>
       <div class="control-buttons">
         <el-button 
-          type="success" 
-          :icon="VideoPlay" 
+          class="btn-create" size="large"
           @click="startManager"
-          :loading="loading.start"
-          :disabled="status.status === 'running'"
-          size="large"
-          class="control-btn"
+          :disabled="loading.start || status.status === 'running'"
         >
+          <span >
+            <VideoPlay />
+          </span>
           启动系统
         </el-button>
         <el-button 
-          type="warning" 
-          :icon="VideoPause" 
+          class="btn-batch-retry" size="large"
           @click="pauseManager"
-          :loading="loading.pause"
-          :disabled="status.status !== 'running'"
-          size="large"
-          class="control-btn"
+          :disabled="loading.pause || status.status !== 'running'"
         >
+          <span >
+            <VideoPause />
+          </span>
           暂停处理
         </el-button>
         <el-button 
-          type="primary" 
-          :icon="VideoPlay" 
+          class="btn-refresh" size="large"
           @click="resumeManager"
-          :loading="loading.resume"
-          :disabled="status.status !== 'paused'"
-          size="large"
-          class="control-btn"
+          :disabled="loading.resume || status.status !== 'paused'"
         >
+          <span >
+            <VideoPlay />
+          </span>
           恢复处理
         </el-button>
         <el-button 
-          type="danger" 
-          :icon="VideoStop" 
+          class="btn-batch-delete" size="large"
           @click="stopManager"
-          :loading="loading.stop"
-          :disabled="status.status === 'stopped'"
-          size="large"
-          class="control-btn"
+          :disabled="loading.stop || status.status === 'stopped'"
         >
+          <span >
+            <VideoPause />
+          </span>
           停止系统
         </el-button>
       </div>
@@ -82,9 +78,8 @@
     <div class="stats-overview">
       <div class="panel-title">
         <h3>全局统计</h3>
-        <el-button text @click="refreshAll" :loading="loading.status">
-          <el-icon><Refresh /></el-icon>
-          刷新数据
+        <el-button class="btn-refresh-data" @click="refreshAll" :disabled="loading.status">
+          <el-icon><Refresh /></el-icon> 刷新数据
         </el-button>
       </div>
       <div class="stats-grid">
@@ -216,7 +211,6 @@ import { ElMessage } from 'element-plus'
 import { 
   VideoPlay, 
   VideoPause, 
-  VideoStop, 
   Refresh,
   CircleCheckFilled,
   CircleCloseFilled,
@@ -233,7 +227,6 @@ export default {
   components: {
     VideoPlay,
     VideoPause, 
-    VideoStop,
     Refresh,
     CircleCheckFilled,
     CircleCloseFilled,

@@ -10,17 +10,12 @@
           <h1 class="page-title">即梦数字人</h1>
         </div>
         <div class="status-section">
-          <ActionButton
-            type="primary"
-            size="large"
+          <el-button
+            class="btn-create" size="large"
             @click="showUploadDialog = true"
-            class="add-task-btn"
           >
-            <template #icon>
-              <Plus />
-            </template>
-            创建任务
-          </ActionButton>
+            <el-icon><Plus /></el-icon> 创建任务
+          </el-button>
         </div>
       </div>
     </div>
@@ -46,54 +41,37 @@
             <el-option label="已完成" value="2" />
             <el-option label="失败" value="3" />
           </el-select>
-          <ActionButton
-            type="info"
+          <el-button
+            class="btn-refresh"
             @click="refreshTasks"
-            :loading="loading"
-            class="refresh-btn"
+            :disabled="loading"
           >
-            <template #icon>
-              <Refresh />
-            </template>
-            刷新
-          </ActionButton>
-          <ActionButton
-            type="warning"
+            <el-icon><Refresh /></el-icon> 刷新
+          </el-button>
+          <el-button
+            class="btn-batch-retry"
             @click="batchRetryFailedTasks"
-            class="batch-retry-btn"
           >
-            <template #icon>
-              <RefreshRight />
-            </template>
-            批量重试
-          </ActionButton>
-          <ActionButton
-            type="success"
+            <el-icon><RefreshRight /></el-icon> 批量重试
+          </el-button>
+          <el-button
+            class="btn-batch-download"
             @click="batchDownloadVideos"
-            :disabled="selectedCompletedTasks.length === 0"
-            :loading="batchDownloadLoading"
-            class="batch-download-btn"
+            :disabled="selectedCompletedTasks.length === 0 || batchDownloadLoading"
           >
-            <template #icon>
-              <Download />
-            </template>
-            批量下载 ({{ selectedCompletedTasks.length }})
-          </ActionButton>
+            <el-icon><Download /></el-icon> 批量下载 ({{ selectedCompletedTasks.length }})
+          </el-button>
           <el-popconfirm
             title="确定要批量删除选中的任务吗？"
             @confirm="batchDeleteSelected"
           >
             <template #reference>
-              <ActionButton
-                type="danger"
+              <el-button
+                class="btn-batch-delete"
                 :disabled="selectedTasks.length === 0"
-                class="batch-delete-btn"
               >
-                <template #icon>
-                  <Delete />
-                </template>
-                批量删除 ({{ selectedTasks.length }})
-              </ActionButton>
+                <el-icon><Delete /></el-icon> 批量删除 ({{ selectedTasks.length }})
+              </el-button>
             </template>
           </el-popconfirm>
             </div>
@@ -166,61 +144,41 @@
                 </el-tooltip>
                 
                 <!-- 查看视频按钮 -->
-                <ActionButton
+                <el-button
                   v-if="row.status === 2 && row.video_url"
-                  size="small"
-                  type="info"
+                  class="btn-view" size="small"
                   @click="previewVideo(row.video_url)"
-                  class="action-btn"
                 >
-                  <template #icon>
-                    <View />
-                  </template>
-                  查看
-                </ActionButton>
+                  <el-icon><View /></el-icon> 查看
+                </el-button>
                 
                 <!-- 下载视频按钮 -->
-                <ActionButton
+                <el-button
                   v-if="row.status === 2 && row.video_url"
-                  size="small"
-                  type="success"
+                  class="btn-download" size="small"
                   @click="downloadVideo(row.video_url)"
-                  class="action-btn"
                 >
-                  <template #icon>
-                    <Download />
-                  </template>
-                  下载
-                </ActionButton>
+                  <el-icon><Download /></el-icon> 下载
+                </el-button>
                 
                 <!-- 重试按钮 -->
-                <ActionButton
+                <el-button
                   v-if="row.status === 3"
-                  size="small"
-                  type="warning"
+                  class="btn-retry" size="small"
                   :disabled="row.status === 1"
                   @click="retryTask(row.id)"
-                  class="action-btn"
                 >
-                  <template #icon>
-                    <RefreshRight />
-                  </template>
-                  重试
-                </ActionButton>
+                  <el-icon><RefreshRight /></el-icon> 重试
+                </el-button>
                 
                 <!-- 删除按钮 -->
-                <ActionButton
-                  size="small"
-                  type="danger"
+                <el-button
+                  class="btn-delete" size="small"
                   :disabled="row.status === 1"
                   @click="deleteTask(row.id)"
-                  class="action-btn"
                 >
-                  <template #icon>
-                    <Delete />
-                  </template>
-                  删除
-                </ActionButton>
+                  <el-icon><Delete /></el-icon> 删除
+                </el-button>
             </div>
             </template>
           </el-table-column>
@@ -392,19 +350,16 @@
 
       <template #footer>
         <div class="dialog-footer">
-          <ActionButton @click="resetUploadForm" size="large">取消</ActionButton>
-          <ActionButton
-            type="primary"
+          <el-button type="info" @click="resetUploadForm">
+            取消
+          </el-button>
+          <el-button
+            class="btn-create" size="large"
             @click="createTask"
-            :loading="uploading"
-            :disabled="audioInfo.duration > 10 || imageFileList.length === 0 || audioFileList.length === 0"
-            size="large"
+            :disabled="uploading || audioInfo.duration > 10 || imageFileList.length === 0 || audioFileList.length === 0"
           >
-            <template #icon>
-              <Plus v-if="!uploading" />
-            </template>
-            {{ uploading ? '创建中...' : '创建任务' }}
-          </ActionButton>
+            <el-icon><Plus /></el-icon> {{ uploading ? '创建中...' : '创建任务' }}
+          </el-button>
         </div>
       </template>
     </el-dialog>
@@ -452,7 +407,7 @@ import {
 } from '@element-plus/icons-vue'
 import { digitalHumanAPI } from '../utils/api.js'
 import StatusCountDisplay from '@/components/StatusCountDisplay.vue'
-import ActionButton from '@/components/common/ActionButton.vue'
+
 
 export default {
   name: 'JimengDigitalHuman',
@@ -473,8 +428,7 @@ export default {
   Warning,
       CircleCheck,
     CircleCloseFilled,
-    StatusCountDisplay,
-    ActionButton
+    StatusCountDisplay
   },
   setup() {
     // 响应式数据
@@ -1609,14 +1563,5 @@ export default {
   flex-wrap: wrap;
 }
 
-/* 操作按钮样式 */
-.action-btn {
-  font-size: 12px;
-  padding: 4px 8px;
-  min-width: auto;
-}
-
-.action-btn .el-icon {
-  margin-right: 4px;
-}
+/* 按钮样式已移至全局样式 */
 </style>

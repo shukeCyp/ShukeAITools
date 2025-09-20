@@ -257,7 +257,7 @@
       <template #footer>
         <div class="contact-footer">
           <el-button @click="contactDialogVisible = false">关闭</el-button>
-          <el-button type="primary" @click="copyContactInfo">复制微信号</el-button>
+          <el-button class="btn-copy" @click="copyContactInfo">复制微信号</el-button>
         </div>
       </template>
     </el-dialog>

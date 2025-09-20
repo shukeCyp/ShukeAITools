@@ -70,10 +70,9 @@
               <el-icon><Search /></el-icon>
             </template>
           </el-input>
-          <el-button type="primary" @click="handleSearch" class="search-btn">
-            <el-icon><Search /></el-icon>
-            搜索
-          </el-button>
+                  <el-button class="btn-search" @click="handleSearch">
+          <el-icon><Search /></el-icon> 搜索
+        </el-button>
         </div>
         
         <div class="page-size-select">
@@ -134,18 +133,12 @@
             </div>
             
             <div class="prompt-actions">
-              <ActionButton size="small" type="success" @click.stop="copyPrompt(prompt.prompt)">
-                <template #icon>
-                  <CopyDocument />
-                </template>
-                复制
-              </ActionButton>
-              <ActionButton size="small" type="info" @click.stop="showPromptDetail(prompt)">
-                <template #icon>
-                  <View />
-                </template>
-                详情
-              </ActionButton>
+              <el-button class="btn-copy" size="small" @click.stop="copyPrompt(prompt.prompt)">
+                <el-icon><CopyDocument /></el-icon> 复制
+              </el-button>
+              <el-button class="btn-view" size="small" @click.stop="showPromptDetail(prompt)">
+                <el-icon><View /></el-icon> 查看
+              </el-button>
             </div>
           </div>
         </div>
@@ -198,13 +191,12 @@
       
       <template #footer>
         <div class="dialog-footer">
-          <ActionButton type="secondary" @click="closeDetailDialog">关闭</ActionButton>
-          <ActionButton type="primary" @click="copyPrompt(selectedPrompt?.prompt)">
-            <template #icon>
-              <CopyDocument />
-            </template>
-            复制提示词
-          </ActionButton>
+          <el-button type="info" @click="closeDetailDialog">
+            关闭
+          </el-button>
+          <el-button class="btn-copy" @click="copyPrompt(selectedPrompt?.prompt)">
+            <el-icon><CopyDocument /></el-icon> 复制提示词
+          </el-button>
         </div>
       </template>
     </el-dialog>
@@ -219,13 +211,11 @@ import {
   CopyDocument, View 
 } from '@element-plus/icons-vue'
 import { promptAPI } from '@/utils/api'
-import ActionButton from '@/components/common/ActionButton.vue'
-
 export default {
   name: 'PromptManager',
   components: {
     Collection, Platform, Document, Search, Picture,
-    CopyDocument, View, ActionButton
+    CopyDocument, View
   },
   setup() {
     // 响应式数据

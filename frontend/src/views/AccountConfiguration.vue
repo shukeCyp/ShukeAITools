@@ -53,7 +53,7 @@
                 <el-badge 
                   :value="jimengCount" 
                   :hidden="jimengCount === 0"
-                  type="primary"
+                  type="danger"
                   class="tab-badge"
                 />
               </div>

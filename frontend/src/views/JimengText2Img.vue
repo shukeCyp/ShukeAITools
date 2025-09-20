@@ -10,23 +10,19 @@
           <h1 class="page-title">即梦文生图</h1>
         </div>
         <div class="status-section">
-          <ActionButton 
-            type="primary" 
-            size="large"
-            icon="el-icon-plus"
+          <el-button
+            class="btn-create" size="large"
             @click="showAddTaskDialog = true"
           >
-            创建任务
-          </ActionButton>
-          
-          <ActionButton 
-            type="success" 
-            size="large"
-            icon="el-icon-document"
+            <el-icon><Plus /></el-icon> 创建任务
+          </el-button>
+
+          <el-button
+            class="btn-batch-add" size="large"
             @click="showBatchAddDialog = true"
           >
-            批量添加
-          </ActionButton>
+            <el-icon><FolderAdd /></el-icon> 批量添加
+          </el-button>
         </div>
       </div>
     </div>
@@ -53,40 +49,38 @@
               <el-option label="失败" value="3" />
             </el-select>
             
-            <ActionButton 
-              type="primary" 
-              :loading="loading" 
-              @click="refreshTasks"
-            >
-              <template #icon>
-                <Refresh />
-              </template>
-              刷新
-            </ActionButton>
+            <el-button
+            class="btn-refresh"
+            @click="refreshTasks"
+            :disabled="loading"
+          >
+            <el-icon><Refresh /></el-icon> 刷新
+          </el-button>
+
+          <el-button
+            class="btn-batch-retry"
+            @click="batchRetryFailedTasks"
+          >
+            <el-icon><RefreshRight /></el-icon> 批量重试
+          </el-button>
+
+          <el-button
+            class="btn-batch-download"
+            @click="batchDownloadImages"
+            :disabled="selectedCompletedTasks.length === 0"
+          >
+            <el-icon><Download /></el-icon> 批量下载
+          </el-button>
+
+          <el-button
+            class="btn-batch-delete"
+            @click="batchDeleteTasks"
+            :disabled="selectedCompletedTasks.length === 0"
+          >
+            <el-icon><Delete /></el-icon> 批量删除
+          </el-button>
             
-            <ActionButton 
-              type="success" 
-              :disabled="selectedCompletedTasks.length === 0 && selectedTasks.length === 0"
-              @click="batchDownloadImages"
-            >
-              <template #icon>
-                <Download />
-              </template>
-              批量下载
-            </ActionButton>
-            
-            <ActionButton 
-              type="danger" 
-              :disabled="selectedCompletedTasks.length === 0 && selectedTasks.length === 0"
-              @click="batchDeleteTasks"
-            >
-              <template #icon>
-                <Delete />
-              </template>
-              批量删除
-            </ActionButton>
-            
-            <ActionButton 
+            <el-button 
               v-for="action in customActions"
               :key="action.key"
               :type="action.type || 'default'"
@@ -97,7 +91,7 @@
                 <component :is="action.icon" />
               </template>
               {{ action.text }}
-            </ActionButton>
+            </el-button>
           </div>
         </div>
 
@@ -168,46 +162,40 @@
                 </el-tooltip>
                 
                 <!-- 重试按钮 -->
-                <ActionButton 
+                <el-button 
                   v-if="row.status === 3"
-                  class="action-btn"
-                  type="warning" 
-                  size="small" 
+                  class="btn-retry" size="small"
                   @click="retryTask(row)"
                 >
-                  <template #icon>
+                  <span >
                     <RefreshRight />
-                  </template>
+                  </span>
                   重试
-                </ActionButton>
+                </el-button>
                 
                 <!-- 查看按钮 -->
-                <ActionButton 
+                <el-button 
                   v-if="row.status === 2 && (row.result_image_url || (row.images && row.images.length > 0))"
-                  class="action-btn"
-                  type="info" 
-                  size="small" 
+                  class="btn-view" size="small"
                   @click="viewResult(row)"
                 >
-                  <template #icon>
+                  <span >
                     <View />
-                  </template>
+                  </span>
                   查看
-                </ActionButton>
+                </el-button>
                 
                 <!-- 删除按钮 -->
-                <ActionButton 
-                  class="action-btn"
-                  type="danger" 
-                  size="small" 
+                <el-button 
+                  class="btn-delete" size="small"
                   :disabled="row.status === 1"
                   @click="deleteTask(row.id)"
                 >
-                  <template #icon>
+                  <span >
                     <Delete />
-                  </template>
+                  </span>
                   删除
-                </ActionButton>
+                </el-button>
               </div>
             </template>
           </el-table-column>
@@ -285,20 +273,20 @@
 
       <template #footer>
         <div class="dialog-footer">
-          <ActionButton @click="showAddTaskDialog = false" class="cancel-btn">
+          <el-button @click="showAddTaskDialog = false" class="cancel-button">
             取消
-          </ActionButton>
-          <ActionButton
-            type="primary"
+          </el-button>
+          <el-button
+            class="btn-create"
             @click="addTask"
             :loading="addTaskLoading"
-            class="confirm-btn"
+            :disabled="!taskForm.prompt"
           >
             <template #icon>
               <Plus />
             </template>
             创建任务
-          </ActionButton>
+          </el-button>
         </div>
       </template>
     </el-dialog>
@@ -376,20 +364,20 @@
 
       <template #footer>
         <div class="dialog-footer">
-          <ActionButton @click="showBatchAddDialog = false" class="cancel-btn">
+          <el-button @click="showBatchAddDialog = false" class="cancel-button">
             取消
-          </ActionButton>
-          <ActionButton
-            type="primary"
+          </el-button>
+          <el-button
+            class="btn-batch-create"
             @click="batchAddTasks"
             :loading="batchAddLoading"
-            class="confirm-btn"
+            :disabled="!batchForm.prompts"
           >
             <template #icon>
               <Document />
             </template>
             批量创建
-          </ActionButton>
+          </el-button>
         </div>
       </template>
     </el-dialog>
@@ -454,11 +442,11 @@ import {
   View,
   InfoFilled,
   Picture,
-  Download
+  Download,
+  FolderAdd
 } from '@element-plus/icons-vue'
 import { text2imgAPI } from '../utils/api'
 import StatusCountDisplay from '@/components/StatusCountDisplay.vue'
-import ActionButton from '@/components/common/ActionButton.vue'
 
 export default {
   name: 'JimengText2Img',
@@ -473,8 +461,8 @@ export default {
     InfoFilled,
     Picture,
     Download,
-    StatusCountDisplay,
-    ActionButton
+    FolderAdd,
+    StatusCountDisplay
   },
   setup() {
     // 响应式数据
