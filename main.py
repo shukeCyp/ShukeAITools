@@ -362,8 +362,21 @@ def main():
         window.show()
         log.info("主窗口已显示")
 
-        # 延迟检查更新(启动后3秒)
+        # 显示QQ群提示对话框（如果需要）
+        def show_qq_group_dialog():
+            try:
+                from app.view.qq_group_dialog import QQGroupDialog
+                if QQGroupDialog.should_show():
+                    dialog = QQGroupDialog(window)
+                    dialog.exec_()
+            except Exception as e:
+                log.error(f"显示QQ群对话框失败: {e}")
+
+        # 延迟显示QQ群对话框（主窗口显示后1秒）
         from PyQt5.QtCore import QTimer
+        QTimer.singleShot(1000, show_qq_group_dialog)
+
+        # 延迟检查更新(启动后3秒)
         QTimer.singleShot(3000, lambda: check_for_updates(window))
 
     splash.finished.connect(show_main_window)

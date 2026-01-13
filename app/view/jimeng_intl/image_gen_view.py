@@ -180,6 +180,9 @@ class ImageGenIntlView(QWidget):
         self.downloadBtn = PushButton(FIF.DOWNLOAD, "下载", self)
         self.downloadBtn.clicked.connect(self.onDownload)
         top.addWidget(self.downloadBtn)
+        self.batchDeleteBtn = PushButton(FIF.DELETE, "批量删除", self)
+        self.batchDeleteBtn.clicked.connect(self.onBatchDelete)
+        top.addWidget(self.batchDeleteBtn)
         layout.addLayout(top)
         self.table = TableWidget(self)
         self.table.setBorderVisible(True)
@@ -949,6 +952,37 @@ class ImageGenIntlView(QWidget):
                 self.loadTasks()
             else:
                 InfoBar.error(title="删除失败", content="任务不存在", parent=self, position=InfoBarPosition.TOP)
+
+    def onBatchDelete(self):
+        """批量删除"""
+        selected_ids = self._getSelectedTaskIds()
+        if not selected_ids:
+            InfoBar.warning(title="提示", content="请先勾选要删除的任务", parent=self, position=InfoBarPosition.TOP)
+            return
+
+        msg_box = MessageBox("确认批量删除", f"确定要删除选中的 {len(selected_ids)} 个任务吗？", self)
+        if msg_box.exec():
+            success_count = 0
+            fail_count = 0
+            for task_id in selected_ids:
+                try:
+                    ok = JimengIntlImageTask.mark_deleted(task_id)
+                    if ok:
+                        success_count += 1
+                    else:
+                        fail_count += 1
+                except Exception as e:
+                    log.error(f"删除任务 {task_id} 失败: {e}")
+                    fail_count += 1
+
+            self.loadTasks()
+            if success_count > 0:
+                msg = f"成功删除 {success_count} 个任务"
+                if fail_count > 0:
+                    msg += f"，{fail_count} 个失败"
+                InfoBar.success(title="批量删除完成", content=msg, parent=self, duration=2000, position=InfoBarPosition.TOP)
+            else:
+                InfoBar.error(title="批量删除失败", content="所有任务删除失败", parent=self, position=InfoBarPosition.TOP)
 
     def onBatchAdd(self):
         dlg = BatchAddImageTaskIntlDialog(self)

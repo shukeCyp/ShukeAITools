@@ -168,6 +168,10 @@ class VideoGenIntlView(QWidget):
         self.downloadBtn.clicked.connect(self.onDownload)
         top.addWidget(self.downloadBtn)
 
+        self.batchDeleteBtn = PushButton(FIF.DELETE, "批量删除", self)
+        self.batchDeleteBtn.clicked.connect(self.onBatchDelete)
+        top.addWidget(self.batchDeleteBtn)
+
         layout.addLayout(top)
 
         # 任务表格
@@ -866,6 +870,37 @@ class VideoGenIntlView(QWidget):
             else:
                 InfoBar.error(title="删除失败", content="任务不存在", parent=self, position=InfoBarPosition.TOP)
 
+    def onBatchDelete(self):
+        """批量删除"""
+        selected_ids = self._getSelectedTaskIds()
+        if not selected_ids:
+            InfoBar.warning(title="提示", content="请先勾选要删除的任务", parent=self, position=InfoBarPosition.TOP)
+            return
+
+        msg_box = MessageBox("确认批量删除", f"确定要删除选中的 {len(selected_ids)} 个任务吗？", self)
+        if msg_box.exec():
+            success_count = 0
+            fail_count = 0
+            for task_id in selected_ids:
+                try:
+                    ok = JimengIntlVideoTask.mark_deleted(task_id)
+                    if ok:
+                        success_count += 1
+                    else:
+                        fail_count += 1
+                except Exception as e:
+                    log.error(f"删除任务 {task_id} 失败: {e}")
+                    fail_count += 1
+
+            self.loadTasks()
+            if success_count > 0:
+                msg = f"成功删除 {success_count} 个任务"
+                if fail_count > 0:
+                    msg += f"，{fail_count} 个失败"
+                InfoBar.success(title="批量删除完成", content=msg, parent=self, duration=2000, position=InfoBarPosition.TOP)
+            else:
+                InfoBar.error(title="批量删除失败", content="所有任务删除失败", parent=self, position=InfoBarPosition.TOP)
+
     def onBatchAdd(self):
         """批量添加"""
         dlg = BatchAddVideoTaskIntlDialog(self)
@@ -942,12 +977,15 @@ class BatchAddVideoTaskIntlDialog(Dialog):
 
         self.text_widget = _TextPromptVideoImportIntlWidget(self.stacked)
         self.folder_widget = _FolderVideoImportIntlWidget(self.stacked)
+        self.table_widget = _TableVideoImportIntlWidget(self.stacked)
 
         self.stacked.addWidget(self.text_widget)
         self.stacked.addWidget(self.folder_widget)
+        self.stacked.addWidget(self.table_widget)
 
         self.pivot.addItem(routeKey='text', text='文本导入', onClick=lambda: self.stacked.setCurrentWidget(self.text_widget))
         self.pivot.addItem(routeKey='folder', text='文件夹导入', onClick=lambda: self.stacked.setCurrentWidget(self.folder_widget))
+        self.pivot.addItem(routeKey='table', text='表格导入', onClick=lambda: self.stacked.setCurrentWidget(self.table_widget))
 
         self.pivot.setCurrentItem('text')
         self.stacked.setCurrentWidget(self.text_widget)
@@ -1139,3 +1177,250 @@ class _FolderVideoImportIntlWidget(QWidget, _VideoModelSettingsMixin):
                 'input_images': [p]
             })
         return tasks
+
+
+class _TableVideoImportIntlWidget(QWidget):
+    """表格（CSV）导入视频任务"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.csv_path = ""
+        self._initUI()
+
+    def _initUI(self):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(15, 10, 15, 10)
+        layout.setSpacing(10)
+
+        # 文件选择和模板下载按钮行
+        fl = QHBoxLayout()
+        fl.addWidget(BodyLabel("选择文件:", self))
+        self.file_edit = LineEdit(self)
+        self.file_edit.setReadOnly(True)
+        fl.addWidget(self.file_edit)
+
+        btn = PushButton(FIF.DOCUMENT, "浏览", self)
+        btn.clicked.connect(self._on_select_file)
+        fl.addWidget(btn)
+
+        template_btn = PushButton(FIF.DOWNLOAD, "导出模板", self)
+        template_btn.clicked.connect(self._on_download_template)
+        fl.addWidget(template_btn)
+
+        layout.addLayout(fl)
+
+        # 预览表格
+        self.preview_table = QTableWidget(self)
+        self.preview_table.setColumnCount(6)
+        self.preview_table.setHorizontalHeaderLabels(['提示词', '首帧图片路径', '比例', '时长', '质量', '模型'])
+        h = self.preview_table.horizontalHeader()
+        h.setSectionResizeMode(0, QHeaderView.Stretch)
+        h.setSectionResizeMode(1, QHeaderView.Stretch)
+        h.setSectionResizeMode(2, QHeaderView.Fixed)
+        h.setSectionResizeMode(3, QHeaderView.Fixed)
+        h.setSectionResizeMode(4, QHeaderView.Fixed)
+        h.setSectionResizeMode(5, QHeaderView.Fixed)
+        self.preview_table.setColumnWidth(2, 80)
+        self.preview_table.setColumnWidth(3, 60)
+        self.preview_table.setColumnWidth(4, 70)
+        self.preview_table.setColumnWidth(5, 130)
+        self.preview_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.preview_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.preview_table.setStyleSheet(
+            "QTableWidget{background-color:#1f1f1f;color:#e5e5e5;gridline-color:#2d2d2d;}"
+            "QTableWidget::item:selected{background-color:#2a2a2a;color:#ffffff;}"
+            "QTableWidget::item{padding:6px;}"
+            "QTableWidget QHeaderView::section{background-color:#2b2b2b;color:#dcdcdc;border:0px;"
+            "border-bottom:1px solid #3a3a3a;padding:8px 6px;}"
+        )
+        self.preview_table.verticalHeader().setVisible(False)
+        self.preview_table.horizontalHeader().setStyleSheet(
+            "QHeaderView::section{background-color:#303030;color:#dcdcdc;border:0px;border-bottom:1px solid #3a3a3a;padding:8px 6px;}"
+        )
+        layout.addWidget(self.preview_table)
+
+        self.status_label = BodyLabel("请选择CSV文件", self)
+        layout.addWidget(self.status_label)
+        layout.addStretch()
+
+    def _on_download_template(self):
+        """下载CSV模板（UTF-8格式）"""
+        import csv
+
+        save_path, _ = QFileDialog.getSaveFileName(
+            self, "保存CSV模板", "视频任务模板.csv", "CSV Files (*.csv)"
+        )
+
+        if not save_path:
+            return
+
+        try:
+            # 确保文件以 .csv 结尾
+            if not save_path.lower().endswith('.csv'):
+                save_path += '.csv'
+
+            with open(save_path, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                # 写入表头
+                writer.writerow(['提示词', '首帧图片路径', '比例', '时长', '质量', '模型'])
+                # 写入示例数据
+                writer.writerow([
+                    '一只可爱的小猫咪在草地上奔跑',
+                    'C:\\images\\cat.jpg',
+                    '16:9',
+                    '5s',
+                    '720p',
+                    'jimeng-video-3.0'
+                ])
+                writer.writerow([
+                    '蓝天白云下的风景',
+                    '',
+                    '9:16',
+                    '10s',
+                    '1080p',
+                    'jimeng-video-3.0'
+                ])
+
+            InfoBar.success(
+                title="成功",
+                content=f"模板已保存到：{save_path}",
+                parent=self,
+                duration=3000,
+                position=InfoBarPosition.TOP
+            )
+        except Exception as e:
+            log.error(f"保存模板失败: {e}")
+            InfoBar.error(
+                title="失败",
+                content=f"保存模板失败：{str(e)}",
+                parent=self,
+                position=InfoBarPosition.TOP
+            )
+
+    def _on_select_file(self):
+        fp, _ = QFileDialog.getOpenFileName(self, "选择CSV文件", "", "CSV Files (*.csv)")
+        if fp:
+            self.csv_path = fp
+            self.file_edit.setText(fp)
+            self._load_csv()
+
+    def _load_csv(self):
+        try:
+            import csv
+
+            self.preview_table.setRowCount(0)
+            rows = []
+
+            # 尝试使用 utf-8 编码读取
+            try:
+                with open(self.csv_path, 'r', encoding='utf-8') as f:
+                    reader = csv.reader(f)
+                    # 跳过表头
+                    next(reader, None)
+                    for row in reader:
+                        if len(row) >= 1:
+                            rows.append(row)
+            except UnicodeDecodeError:
+                # 如果 utf-8 失败，尝试 utf-8-sig（带BOM）
+                with open(self.csv_path, 'r', encoding='utf-8-sig') as f:
+                    reader = csv.reader(f)
+                    next(reader, None)
+                    for row in reader:
+                        if len(row) >= 1:
+                            rows.append(row)
+
+            if not rows:
+                self.status_label.setText("CSV文件为空或格式不正确")
+                return
+
+            # 填充预览表格
+            for row_idx, row in enumerate(rows):
+                self.preview_table.insertRow(row_idx)
+                # 提示词（必填）
+                self.preview_table.setItem(row_idx, 0, QTableWidgetItem(row[0] if len(row) > 0 else ''))
+                # 首帧图片路径（可选）
+                self.preview_table.setItem(row_idx, 1, QTableWidgetItem(row[1] if len(row) > 1 else ''))
+                # 比例（默认16:9）
+                self.preview_table.setItem(row_idx, 2, QTableWidgetItem(row[2] if len(row) > 2 else '16:9'))
+                # 时长（默认5s）
+                self.preview_table.setItem(row_idx, 3, QTableWidgetItem(row[3] if len(row) > 3 else '5s'))
+                # 质量（默认720p）
+                self.preview_table.setItem(row_idx, 4, QTableWidgetItem(row[4] if len(row) > 4 else '720p'))
+                # 模型（默认jimeng-video-3.0）
+                self.preview_table.setItem(row_idx, 5, QTableWidgetItem(row[5] if len(row) > 5 else 'jimeng-video-3.0'))
+
+            self.status_label.setText(f"成功加载 {len(rows)} 条记录")
+        except Exception as e:
+            log.error(f"加载CSV文件失败: {e}")
+            self.status_label.setText(f"加载失败: {str(e)}")
+
+    def get_tasks_data(self):
+        if not self.csv_path:
+            return []
+
+        try:
+            import csv
+
+            tasks = []
+
+            # 尝试使用 utf-8 编码读取
+            try:
+                with open(self.csv_path, 'r', encoding='utf-8') as f:
+                    reader = csv.reader(f)
+                    # 跳过表头
+                    next(reader, None)
+
+                    for row in reader:
+                        if len(row) >= 1 and row[0].strip():
+                            tasks.append(self._parse_row(row))
+            except UnicodeDecodeError:
+                # 如果 utf-8 失败，尝试 utf-8-sig
+                with open(self.csv_path, 'r', encoding='utf-8-sig') as f:
+                    reader = csv.reader(f)
+                    next(reader, None)
+
+                    for row in reader:
+                        if len(row) >= 1 and row[0].strip():
+                            tasks.append(self._parse_row(row))
+
+            return tasks
+        except Exception as e:
+            log.error(f"解析CSV文件失败: {e}")
+            return []
+
+    def _parse_row(self, row):
+        """解析CSV行数据"""
+        prompt = row[0].strip() if len(row) > 0 else ''
+        img_path = row[1].strip() if len(row) > 1 else ''
+        ratio = row[2].strip() if len(row) > 2 and row[2].strip() else '16:9'
+        duration = row[3].strip() if len(row) > 3 and row[3].strip() else '5s'
+        quality = row[4].strip() if len(row) > 4 and row[4].strip() else '720p'
+        model = row[5].strip() if len(row) > 5 and row[5].strip() else 'jimeng-video-3.0'
+
+        # 处理首帧图片路径
+        input_images = []
+        if img_path and img_path.lower() != 'nan':
+            input_images = [img_path]
+
+        # 验证比例
+        valid_ratios = ['16:9', '9:16', '1:1', '4:3', '3:4']
+        if ratio not in valid_ratios:
+            ratio = '16:9'
+
+        # 验证时长
+        valid_durations = ['5s', '10s']
+        if duration not in valid_durations:
+            duration = '5s'
+
+        # 验证质量
+        valid_qualities = ['720p', '1080p']
+        if quality not in valid_qualities:
+            quality = '720p'
+
+        return {
+            'prompt': prompt,
+            'model': model,
+            'ratio': ratio,
+            'duration': duration,
+            'quality': quality,
+            'input_images': input_images
+        }
